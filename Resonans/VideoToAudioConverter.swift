@@ -10,7 +10,7 @@ enum AudioFormat: String, CaseIterable {
 
 final class VideoToAudioConverter {
     static func convert(videoURL: URL, format: AudioFormat, completion: @escaping (Result<URL, Error>) -> Void) {
-        let asset = AVAsset(url: videoURL)
+        let asset = AVURLAsset(url: videoURL)
         let baseName = videoURL.deletingPathExtension().lastPathComponent + "_out"
         let tmp = FileManager.default.temporaryDirectory
         switch format {
@@ -46,11 +46,12 @@ final class VideoToAudioConverter {
         }
         exporter.outputURL = outputURL
         exporter.outputFileType = fileType
-        exporter.exportAsynchronously {
-            if exporter.status == .completed {
+        Task {
+            do {
+                try await exporter.export(to: outputURL, as: fileType)
                 completion(.success(outputURL))
-            } else {
-                completion(.failure(exporter.error ?? NSError(domain: "export", code: -2)))
+            } catch {
+                completion(.failure(error))
             }
         }
     }
@@ -60,7 +61,7 @@ final class VideoToAudioConverter {
         defer { fclose(pcm) }
         guard let mp3 = fopen(mp3URL.path, "wb") else { throw NSError(domain: "lame", code: -2) }
         defer { fclose(mp3) }
-        let lame = lame_init()
+        guard let lame: OpaquePointer = lame_init() else { throw NSError(domain: "lame", code: -3) }
         lame_set_in_samplerate(lame, 44100)
         lame_set_VBR(lame, vbr_default)
         lame_init_params(lame)
@@ -69,16 +70,16 @@ final class VideoToAudioConverter {
         var mp3Buffer = [UInt8](repeating: 0, count: Int(8192))
         var read: Int32
         repeat {
-            read = pcmBuffer.withUnsafeMutableBufferPointer { ptr in
+            read = Int32(pcmBuffer.withUnsafeMutableBufferPointer { ptr in
                 fread(ptr.baseAddress, MemoryLayout<Int16>.size, Int(pcmBufferSize), pcm)
-            }
+            })
             let write = lame_encode_buffer_interleaved(lame, &pcmBuffer, read / 2, &mp3Buffer, 8192)
-            mp3Buffer.withUnsafeBufferPointer { ptr in
+            _ = mp3Buffer.withUnsafeBufferPointer { ptr in
                 fwrite(ptr.baseAddress, Int(write), 1, mp3)
             }
         } while read != 0
         let flush = lame_encode_flush(lame, &mp3Buffer, 8192)
-        mp3Buffer.withUnsafeBufferPointer { ptr in
+        _ = mp3Buffer.withUnsafeBufferPointer { ptr in
             fwrite(ptr.baseAddress, Int(flush), 1, mp3)
         }
         lame_close(lame)

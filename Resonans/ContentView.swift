@@ -44,7 +44,7 @@ struct ContentView: View {
                     )
 
                 Picker("Format", selection: $selectedFormat) {
-                    ForEach(AudioFormat.allCases, id: \.#self) { format in
+                    ForEach(AudioFormat.allCases, id: \.self) { format in
                         Text(format.rawValue).tag(format)
                     }
                 }
