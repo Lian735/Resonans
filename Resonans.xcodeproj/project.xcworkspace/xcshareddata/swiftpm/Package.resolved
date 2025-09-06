@@ -1,0 +1,15 @@
+{
+  "originHash" : "cb011132675efbbb41f3f5401ae3616414b80cdc0264e919efc48d557b01068f",
+  "pins" : [
+    {
+      "identity" : "lame-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/BB9z/LAME-xcframework",
+      "state" : {
+        "revision" : "3f906714cf8a8cf2a82a8cf5bc760e639febf7b2",
+        "version" : "3.100.3"
+      }
+    }
+  ],
+  "version" : 3
+}
