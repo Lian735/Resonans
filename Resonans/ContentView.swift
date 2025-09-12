@@ -84,6 +84,9 @@ struct ContentView: View {
                 convert()
             }
         }
+        .onAppear {
+            loadGallery()
+        }
     }
 
     // MARK: - Subviews
@@ -234,6 +237,51 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private func loadGallery() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        if status == .authorized || status == .limited {
+            fetchVideos()
+        } else {
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+                if newStatus == .authorized || newStatus == .limited {
+                    fetchVideos()
+                }
+            }
+        }
+    }
+
+    private func fetchVideos() {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+        let assets = PHAsset.fetchAssets(with: fetchOptions)
+        let manager = PHImageManager.default()
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.deliveryMode = .highQualityFormat
+        requestOptions.isSynchronous = true
+        var loaded: [GalleryItem] = []
+        let targetSize = CGSize(width: 200, height: 200)
+        assets.enumerateObjects { asset, index, stop in
+            if loaded.count >= 6 { stop.pointee = true; return }
+            manager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions) { image, _ in
+                if let image = image {
+                    let duration = formatDuration(asset.duration)
+                    loaded.append(GalleryItem(image: image, duration: duration))
+                }
+            }
+        }
+        DispatchQueue.main.async {
+            self.gallery = loaded
+        }
+    }
+
+    private func formatDuration(_ time: TimeInterval) -> String {
+        let totalSeconds = Int(time.rounded())
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
