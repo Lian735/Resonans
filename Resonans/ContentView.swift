@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import Photos
 
 struct RecentItem: Identifiable {
     let id = UUID()
@@ -9,6 +10,7 @@ struct RecentItem: Identifiable {
 
 struct GalleryItem: Identifiable {
     let id = UUID()
+    let image: UIImage
     let duration: String
 }
 
@@ -28,10 +30,7 @@ struct ContentView: View {
     ]
 
     // Bottom gallery items (2 rows × 3 cols)
-    private let gallery: [GalleryItem] = [
-        .init(duration: "00:14"), .init(duration: "01:56"), .init(duration: "00:01"),
-        .init(duration: "00:14"), .init(duration: "01:56"), .init(duration: "00:01")
-    ]
+    @State private var gallery: [GalleryItem] = []
 
     var body: some View {
         ZStack {
@@ -79,6 +78,9 @@ struct ContentView: View {
                 videoURL = url
                 convert()
             }
+        }
+        .onAppear {
+            loadGallery()
         }
     }
 
@@ -197,6 +199,51 @@ struct ContentView: View {
             }
         }
     }
+
+    private func loadGallery() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        if status == .authorized || status == .limited {
+            fetchVideos()
+        } else {
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+                if newStatus == .authorized || newStatus == .limited {
+                    fetchVideos()
+                }
+            }
+        }
+    }
+
+    private func fetchVideos() {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+        let assets = PHAsset.fetchAssets(with: fetchOptions)
+        let manager = PHImageManager.default()
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.deliveryMode = .highQualityFormat
+        requestOptions.isSynchronous = true
+        var loaded: [GalleryItem] = []
+        let targetSize = CGSize(width: 200, height: 200)
+        assets.enumerateObjects { asset, index, stop in
+            if loaded.count >= 6 { stop.pointee = true; return }
+            manager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions) { image, _ in
+                if let image = image {
+                    let duration = formatDuration(asset.duration)
+                    loaded.append(GalleryItem(image: image, duration: duration))
+                }
+            }
+        }
+        DispatchQueue.main.async {
+            self.gallery = loaded
+        }
+    }
+
+    private func formatDuration(_ time: TimeInterval) -> String {
+        let totalSeconds = Int(time.rounded())
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
 }
 
 private struct RecentRow: View {
@@ -259,25 +306,28 @@ private struct BottomSheetGallery: View {
         VStack(spacing: 12) {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(items) { item in
-                    Thumb(duration: item.duration)
+                    Thumb(image: item.image, duration: item.duration)
                 }
             }
         }
     }
 
     private struct Thumb: View {
+        let image: UIImage
         let duration: String
         var body: some View {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(LinearGradient(colors: [.white.opacity(0.08), .white.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(height: 100)
-                .overlay(alignment: .bottomLeading) {
-                    Text(duration)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .padding(8)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
-                }
+            ZStack(alignment: .bottomLeading) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                Text(duration)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .padding(8)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+            }
         }
     }
 }
