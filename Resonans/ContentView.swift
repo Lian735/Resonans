@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var showSourceSheet = false
     @State private var showToast = false
     @State private var toastColor: Color = .green
+    @State private var showSourceOptions = false
 
     // Recents mocked for the visual 1:1
     @State private var recents: [RecentItem] = [
@@ -38,6 +39,7 @@ struct ContentView: View {
     @State private var displayedItemCount = 30
 
     @State private var selectedTab: Int = 0
+    @State private var addCardPage: Int = 0
 
     var body: some View {
         ZStack {
@@ -126,7 +128,7 @@ struct ContentView: View {
                                 Button(action: {
                                     selectedTab = 1
                                 }) {
-                                    Image(systemName: "rectangle.stack.fill")
+                                    Image(systemName: "photo.on.rectangle.angled")
                                         .font(.system(size: 24, weight: .semibold))
                                         .foregroundStyle(.white.opacity(selectedTab == 1 ? 0.9 : 0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
@@ -144,7 +146,7 @@ struct ContentView: View {
                             }
                             .padding(.horizontal, 40)
                             .padding(.vertical, 12)
-                            .padding(.bottom, 12)
+                            .padding(.bottom, 0)
                         }
                     }
                 }
@@ -176,11 +178,7 @@ struct ContentView: View {
                 }
             }
         }
-        .confirmationDialog("Add from", isPresented: $showSourceSheet, titleVisibility: .hidden) {
-            Button("Photos") { showPhotoPicker = true }
-            Button("Files") { showFilePicker = true }
-            Button("Cancel", role: .cancel) {}
-        }
+        // Removed unused .confirmationDialog
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
                 videoURL = url
@@ -217,31 +215,120 @@ struct ContentView: View {
     }
 
     private var addCard: some View {
-        Button(action: { showSourceSheet = true }) {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(Color.white.opacity(0.09))
-                .overlay(
+        GeometryReader { geo in
+            let fullWidth = geo.size.width - 44 // horizontal padding
+            let targetWidth = (fullWidth - 16) / 2
+            ZStack {
+                // Large rectangle (plus)
+                ZStack {
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-                )
-                .overlay(
-                    VStack(spacing: 14) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 56, weight: .bold))
-                            .foregroundStyle(.white)
-                        Text("click to add files")
-                            .font(.system(size: 24, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
+                        .fill(Color.white.opacity(0.09))
+                        .overlay(
+                            VStack(spacing: 14) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 56, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text("Click to Extract Audio")
+                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                        )
+                        .frame(width: fullWidth, height: 165)
+                        .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = true
+                            }
+                        }
+                        .scaleEffect(showSourceOptions ? 0.75 : 1.0)
+                        .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
+                        .opacity(showSourceOptions ? 0.0 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: showSourceOptions)
+                        .allowsHitTesting(!showSourceOptions)
+                        .zIndex(showSourceOptions ? 0 : 1)
+                }
+                // Two small rectangles (Files and Gallery)
+                HStack(spacing: 16) {
+                    // Files rectangle
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(Color.white.opacity(0.09))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "doc.fill")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text("Files")
+                                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white)
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                        )
+                        .frame(width: targetWidth, height: 165)
+                        .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                        .onTapGesture {
+                            showFilePicker = true
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = false
+                            }
+                        }
+                    // Gallery rectangle
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(Color.white.opacity(0.09))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text("Gallery")
+                                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white)
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                        )
+                        .frame(width: targetWidth, height: 165)
+                        .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                        .onTapGesture {
+                            selectedTab = 1
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = false
+                            }
+                        }
+                }
+                .scaleEffect(showSourceOptions ? 1.0 : 0.75)
+                .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
+                .opacity(showSourceOptions ? 1.0 : 0.0)
+                .animation(.easeInOut(duration: 0.3), value: showSourceOptions)
+                .allowsHitTesting(showSourceOptions)
+                .zIndex(showSourceOptions ? 1 : 0)
+            }
+            .padding(.horizontal, 22)
+            .frame(height: 165)
+            .gesture(
+                DragGesture(minimumDistance: 24, coordinateSpace: .local)
+                    .onEnded { value in
+                        if abs(value.translation.width) > abs(value.translation.height), abs(value.translation.width) > 36 {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = false
+                            }
+                        }
                     }
-                    .padding(.vertical, 28)
-                )
-                .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
-                .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
-                .frame(height: 230)
-                .padding(.horizontal, 22)
+            )
         }
-        .buttonStyle(.plain)
-        .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .frame(height: 165)
     }
 
     private var recentSection: some View {
@@ -435,7 +522,7 @@ private struct BottomSheetGallery: View {
         @State private var image: UIImage?
 
         var body: some View {
-            ZStack {
+        ZStack {
                 if let image = image {
                     Image(uiImage: image)
                         .resizable()
