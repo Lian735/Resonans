@@ -10,8 +10,9 @@ struct RecentItem: Identifiable {
 
 struct GalleryItem: Identifiable {
     let id: String
-    let thumbnail: UIImage
+    var thumbnail: UIImage?
     let duration: String
+    let creationDate: Date
 }
 
 struct ContentView: View {
@@ -22,6 +23,8 @@ struct ContentView: View {
     @State private var isConverting = false
     @State private var message: String?
     @State private var showSourceSheet = false
+    @State private var showToast = false
+    @State private var toastColor: Color = .green
 
     // Recents mocked for the visual 1:1
     @State private var recents: [RecentItem] = [
@@ -29,8 +32,12 @@ struct ContentView: View {
         .init(title: "video1827-extracted", duration: "00:18")
     ]
 
-    // Bottom gallery items (2 rows × 3 cols)
-    @State private var gallery: [GalleryItem] = []
+    // Bottom gallery items (raw PHAssets)
+    @State private var assets: [PHAsset] = []
+    private let thumbSize = CGSize(width: 200, height: 200)
+    @State private var displayedItemCount = 30
+
+    @State private var selectedTab: Int = 0
 
     var body: some View {
         ZStack {
@@ -41,30 +48,132 @@ struct ContentView: View {
                 )
             VStack(spacing: 0) {
                 header
-                TabView {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 24) {
-                            addCard
-                            recentSection
-                            Spacer(minLength: 40)
-                            statusMessage
+                ZStack {
+                    TabView(selection: $selectedTab) {
+                        ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 24) {
+                                Spacer(minLength: 0)
+                                addCard
+                                recentSection
+                                Spacer(minLength: 40)
+                                // statusMessage removed
+                            }
                         }
-                    }
-                    ScrollView {
-                        VStack {
-                            BottomSheetGallery(items: gallery)
+                        .tag(0)
+                        ScrollView {
+                            LazyVStack {
+                                BottomSheetGallery(
+                                    assets: Array(assets.prefix(displayedItemCount)),
+                                    onLastItemAppear: loadMoreItems
+                                )
                                 .padding(.horizontal, 14)
                                 .padding(.top, 20)
-                            Spacer()
+                                Spacer()
+                            }
                         }
+                        .onAppear {
+                            if assets.isEmpty {
+                                loadGallery()
+                            }
+                        }
+                        .tag(1)
+                        ScrollView {
+                            VStack {
+                                Spacer(minLength: 60)
+                                Text("Settings")
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.8))
+                                    .padding()
+                                Spacer()
+                            }
+                        }
+                        .tag(2)
                     }
-                    .onAppear {
-                        if gallery.isEmpty {
-                            loadGallery()
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
+                    .overlay(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.black, Color.black.opacity(0.0)]),
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                        .frame(height: 200) // increased height so fade starts lower
+                        .allowsHitTesting(false),
+                        alignment: .bottom
+                    )
+                    // Custom Tab Bar pinned at the bottom with gradient background
+                    VStack {
+                        Spacer()
+                        ZStack {
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.black, Color.black.opacity(0.0)]),
+                                startPoint: .bottom,
+                                endPoint: .top
+                            )
+                            .frame(height: 80)
+                            .ignoresSafeArea(edges: .bottom)
+                            HStack {
+                                Spacer()
+                                Button(action: {
+                                    selectedTab = 0
+                                }) {
+                                    Image(systemName: "house.fill")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(selectedTab == 0 ? 0.9 : 0.5))
+                                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                                }
+                                Spacer()
+                                Button(action: {
+                                    selectedTab = 1
+                                }) {
+                                    Image(systemName: "rectangle.stack.fill")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(selectedTab == 1 ? 0.9 : 0.5))
+                                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                                }
+                                Spacer()
+                                Button(action: {
+                                    selectedTab = 2
+                                }) {
+                                    Image(systemName: "gearshape.fill")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(selectedTab == 2 ? 0.9 : 0.5))
+                                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 40)
+                            .padding(.vertical, 12)
+                            .padding(.bottom, 12)
                         }
                     }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            }
+            // Toast overlay at the very top
+            if showToast, let msg = message {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text(msg)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(toastColor.opacity(0.85))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Spacer()
+                    }
+                    .padding(.top, 44) // closer to the top safe area
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        withAnimation {
+                            showToast = false
+                        }
+                    }
+                }
             }
         }
         .confirmationDialog("Add from", isPresented: $showSourceSheet, titleVisibility: .hidden) {
@@ -169,17 +278,7 @@ struct ContentView: View {
         .padding(.horizontal, 22)
     }
 
-    private var statusMessage: some View {
-        Group {
-            if let msg = message {
-                Text(msg)
-                    .font(.footnote)
-                    .foregroundStyle(.green)
-                    .padding(.bottom, 8)
-                    .transition(.opacity)
-            }
-        }
-    }
+    // statusMessage is no longer needed; replaced by toast overlay
 
     // MARK: - Actions
 
@@ -189,23 +288,11 @@ struct ContentView: View {
             let fetchOptions = PHFetchOptions()
             fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
             fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-            fetchOptions.fetchLimit = 6
-            let assets = PHAsset.fetchAssets(with: fetchOptions)
-            var newItems: [GalleryItem] = []
-            let manager = PHImageManager.default()
-            let imageOptions = PHImageRequestOptions()
-            imageOptions.isSynchronous = true
-            assets.enumerateObjects { asset, _, _ in
-                let size = CGSize(width: 200, height: 200)
-                manager.requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: imageOptions) { image, _ in
-                    if let image = image {
-                        let duration = formatDuration(asset.duration)
-                        newItems.append(GalleryItem(id: asset.localIdentifier, thumbnail: image, duration: duration))
-                    }
-                }
-            }
+            let result = PHAsset.fetchAssets(with: fetchOptions)
+            var list: [PHAsset] = []
+            result.enumerateObjects { asset, _, _ in list.append(asset) }
             DispatchQueue.main.async {
-                gallery = newItems
+                assets = list
             }
         }
     }
@@ -229,10 +316,21 @@ struct ContentView: View {
                     let item = RecentItem(title: url.deletingPathExtension().lastPathComponent, duration: "00:18")
                     recents.insert(item, at: 0)
                     message = "Gespeichert: \(url.lastPathComponent)"
+                    toastColor = .green
                 case .failure(let error):
                     message = "Fehler: \(error.localizedDescription)"
+                    toastColor = .red
+                }
+                withAnimation {
+                    showToast = true
                 }
             }
+        }
+    }
+
+    private func loadMoreItems() {
+        if displayedItemCount < assets.count {
+            displayedItemCount = min(displayedItemCount + 30, assets.count)
         }
     }
 }
@@ -266,10 +364,6 @@ private struct RecentRow: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.white.opacity(0.12))
-                    )
             }
             .buttonStyle(.plain)
         }
@@ -289,38 +383,108 @@ private struct RecentRow: View {
 }
 
 private struct BottomSheetGallery: View {
-    let items: [GalleryItem]
+    let assets: [PHAsset]
+    let onLastItemAppear: () -> Void
 
     private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
 
     var body: some View {
-        VStack(spacing: 12) {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(items) { item in
-                    Thumb(image: item.thumbnail, duration: item.duration)
+        // Group assets by day (date only, ignoring time)
+        let grouped = Dictionary(grouping: assets) { asset in
+            asset.creationDate.map { Calendar.current.startOfDay(for: $0) } ?? Date.distantPast
+        }
+        let sortedDates = grouped.keys.sorted(by: >)
+        LazyVStack(alignment: .leading, spacing: 18) {
+            ForEach(sortedDates, id: \.self) { date in
+                if let items = grouped[date] {
+                    Section(header:
+                        Text(dateFormatted(date))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.leading, 6)
+                            .padding(.bottom, 4)
+                    ) {
+                        LazyVGrid(columns: columns, spacing: 16) {
+                            ForEach(items.indices, id: \.self) { idx in
+                                let asset = items[idx]
+                                let globalIndex = assets.firstIndex(where: { $0.localIdentifier == asset.localIdentifier })
+                                Thumb(asset: asset)
+                                    .onAppear {
+                                        // Only call onLastItemAppear for the last asset in the entire assets list
+                                        if let gi = globalIndex, gi == assets.count - 1 {
+                                            onLastItemAppear()
+                                        }
+                                    }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
+    private func dateFormatted(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
     private struct Thumb: View {
-        let image: UIImage
-        let duration: String
+        let asset: PHAsset
+        @State private var image: UIImage?
+
         var body: some View {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(height: 100)
-                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                .overlay(alignment: .bottomLeading) {
-                    Text(duration)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .padding(8)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+            ZStack {
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                        .overlay(alignment: .bottomLeading) {
+                            Text(formatDuration(asset.duration))
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .padding(8)
+                                .foregroundStyle(.white)
+                                .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                        }
+                } else {
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 100, height: 100)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                        )
+                        .onAppear {
+                            if image == nil {
+                                loadThumbnail()
+                            }
+                        }
                 }
+            }
+        }
+
+        private func loadThumbnail() {
+            let manager = PHCachingImageManager()
+            manager.requestImage(for: asset,
+                                 targetSize: CGSize(width: 200, height: 200),
+                                 contentMode: .aspectFill,
+                                 options: nil) { result, _ in
+                image = result
+            }
+        }
+
+        private func formatDuration(_ duration: Double) -> String {
+            let totalSeconds = Int(duration.rounded())
+            let minutes = totalSeconds / 60
+            let seconds = totalSeconds % 60
+            return String(format: "%02d:%02d", minutes, seconds)
         }
     }
 }
+
+// (No longer needed: OnAppearIfLastModifier)
 
 #Preview { ContentView() }
