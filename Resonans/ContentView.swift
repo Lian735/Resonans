@@ -9,8 +9,8 @@ struct RecentItem: Identifiable {
 }
 
 struct GalleryItem: Identifiable {
-    let id = UUID()
-    let image: UIImage
+    let id: String
+    let thumbnail: UIImage
     let duration: String
 }
 
@@ -56,6 +56,11 @@ struct ContentView: View {
                                 .padding(.horizontal, 14)
                                 .padding(.top, 20)
                             Spacer()
+                        }
+                    }
+                    .onAppear {
+                        if gallery.isEmpty {
+                            loadGallery()
                         }
                     }
                 }
@@ -180,6 +185,40 @@ struct ContentView: View {
     }
 
     // MARK: - Actions
+
+    private func loadGallery() {
+        PHPhotoLibrary.requestAuthorization { status in
+            guard status == .authorized || status == .limited else { return }
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+            fetchOptions.fetchLimit = 6
+            let assets = PHAsset.fetchAssets(with: fetchOptions)
+            var newItems: [GalleryItem] = []
+            let manager = PHImageManager.default()
+            let imageOptions = PHImageRequestOptions()
+            imageOptions.isSynchronous = true
+            assets.enumerateObjects { asset, _, _ in
+                let size = CGSize(width: 200, height: 200)
+                manager.requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: imageOptions) { image, _ in
+                    if let image = image {
+                        let duration = formatDuration(asset.duration)
+                        newItems.append(GalleryItem(id: asset.localIdentifier, thumbnail: image, duration: duration))
+                    }
+                }
+            }
+            DispatchQueue.main.async {
+                gallery = newItems
+            }
+        }
+    }
+
+    private func formatDuration(_ duration: Double) -> String {
+        let totalSeconds = Int(duration.rounded())
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
 
     private func convert() {
         guard let videoURL else { return }
@@ -306,7 +345,7 @@ private struct BottomSheetGallery: View {
         VStack(spacing: 12) {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(items) { item in
-                    Thumb(image: item.image, duration: item.duration)
+                    Thumb(image: item.thumbnail, duration: item.duration)
                 }
             }
         }
@@ -316,18 +355,18 @@ private struct BottomSheetGallery: View {
         let image: UIImage
         let duration: String
         var body: some View {
-            ZStack(alignment: .bottomLeading) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 100)
-                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                Text(duration)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .padding(8)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
-            }
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .overlay(alignment: .bottomLeading) {
+                    Text(duration)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(8)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                }
         }
     }
 }
