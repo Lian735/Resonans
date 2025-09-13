@@ -28,6 +28,7 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var addCardPage: Int = 0
     @State private var selectedAsset: PHAsset?
+    @State private var isRefreshing = false
 
     var body: some View {
         ZStack {
@@ -52,19 +53,28 @@ struct ContentView: View {
                         .tag(0)
                         ScrollView {
                             LazyVStack {
+                                if isRefreshing {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .padding(.top, 20)
+                                }
                                 BottomSheetGallery(
                                     assets: Array(assets.prefix(displayedItemCount)),
                                     onLastItemAppear: loadMoreItems,
                                     selectedAsset: $selectedAsset
                                 )
                                 .padding(.horizontal, 14)
-                                .padding(.top, 20)
+                                .padding(.top, isRefreshing ? 40 : 20)
+                                .animation(.easeInOut(duration: 0.25), value: isRefreshing)
                                 Spacer()
                             }
                         }
                         .refreshable {
                             selectedAsset = nil
-                            loadGallery()
+                            isRefreshing = true
+                            loadGallery {
+                                isRefreshing = false
+                            }
                         }
                         .onAppear {
                             if assets.isEmpty {
@@ -100,15 +110,19 @@ struct ContentView: View {
                     VStack {
                         Spacer()
                         if selectedAsset != nil {
-                            Text("Extract audio")
-                                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                                .padding(.bottom, 90)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                            Button(action: {
+                                convert()
+                            }) {
+                                Text("Extract audio")
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.black)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 12)
+                                    .background(Color.white)
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.bottom, 60)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                         ZStack {
                             LinearGradient(
@@ -399,7 +413,7 @@ struct ContentView: View {
 
     // MARK: - Actions
 
-    private func loadGallery() {
+    private func loadGallery(completion: (() -> Void)? = nil) {
         PHPhotoLibrary.requestAuthorization { status in
             guard status == .authorized || status == .limited else { return }
             let fetchOptions = PHFetchOptions()
@@ -409,7 +423,10 @@ struct ContentView: View {
             var list: [PHAsset] = []
             result.enumerateObjects { asset, _, _ in list.append(asset) }
             DispatchQueue.main.async {
-                assets = list
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    assets = list
+                }
+                completion?()
             }
         }
     }
