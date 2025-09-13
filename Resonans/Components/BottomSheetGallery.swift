@@ -14,7 +14,7 @@ struct BottomSheetGallery: View {
             asset.creationDate.map { Calendar.current.startOfDay(for: $0) } ?? Date.distantPast
         }
         let sortedDates = grouped.keys.sorted(by: >)
-        LazyVStack(alignment: .leading, spacing: 18) {
+        LazyVStack(alignment: .leading, spacing: 18, pinnedViews: [.sectionHeaders]) {
             ForEach(sortedDates, id: \.self) { date in
                 if let items = grouped[date] {
                     Section(header:
@@ -23,6 +23,7 @@ struct BottomSheetGallery: View {
                             .foregroundStyle(.white.opacity(0.85))
                             .padding(.leading, 6)
                             .padding(.bottom, 4)
+                            .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: -1)
                     ) {
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(items.indices, id: \.self) { idx in
