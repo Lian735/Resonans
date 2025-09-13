@@ -1,6 +1,7 @@
 import SwiftUI
 import Photos
 import UIKit
+import AVFoundation
 
 struct BottomSheetGallery: View {
     let assets: [PHAsset]
@@ -65,7 +66,7 @@ struct BottomSheetGallery: View {
         let isSelected: Bool
         let tapAction: () -> Void
         @State private var image: UIImage?
-        @State private var borderWidth: CGFloat = 2
+        @State private var durationText: String = ""
         @State private var hasAppeared = false
 
         var body: some View {
@@ -80,11 +81,13 @@ struct BottomSheetGallery: View {
                             .fill(Color.white.opacity(0.08))
                     }
                 }
-                Text(formatDuration(asset.duration))
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .padding(8)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                if !durationText.isEmpty {
+                    Text(durationText)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(8)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                }
             }
             .frame(width: 100, height: 100)
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -94,7 +97,8 @@ struct BottomSheetGallery: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white, lineWidth: isSelected ? borderWidth : 0)
+                    .stroke(Color.white, lineWidth: isSelected ? 4 : 0)
+                    .animation(.easeInOut(duration: 0.25), value: isSelected)
             )
             .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .scaleEffect(hasAppeared ? 1 : 0.8)
@@ -107,19 +111,15 @@ struct BottomSheetGallery: View {
                 if image == nil {
                     loadThumbnail()
                 }
-                if isSelected { animateBorder() }
+                loadDuration()
                 if !hasAppeared {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
                         hasAppeared = true
                     }
                 }
             }
-            .onChange(of: isSelected) { newValue in
-                if newValue {
-                    animateBorder()
-                } else {
-                    borderWidth = 2
-                }
+            .onChange(of: asset.localIdentifier) { _ in
+                loadDuration()
             }
         }
 
@@ -133,10 +133,20 @@ struct BottomSheetGallery: View {
             }
         }
 
-        private func animateBorder() {
-            borderWidth = 2
-            withAnimation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                borderWidth = 6
+        private func loadDuration() {
+            if asset.duration > 0 {
+                durationText = formatDuration(asset.duration)
+            } else {
+                let options = PHVideoRequestOptions()
+                options.isNetworkAccessAllowed = true
+                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                    if let avAsset = avAsset {
+                        let dur = CMTimeGetSeconds(avAsset.duration)
+                        DispatchQueue.main.async {
+                            durationText = formatDuration(dur)
+                        }
+                    }
+                }
             }
         }
 
