@@ -28,7 +28,6 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var addCardPage: Int = 0
     @State private var selectedAsset: PHAsset?
-    @State private var isRefreshing = false
 
     var body: some View {
         ZStack {
@@ -53,28 +52,19 @@ struct ContentView: View {
                         .tag(0)
                         ScrollView {
                             LazyVStack {
-                                if isRefreshing {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .padding(.top, 20)
-                                }
                                 BottomSheetGallery(
                                     assets: Array(assets.prefix(displayedItemCount)),
                                     onLastItemAppear: loadMoreItems,
                                     selectedAsset: $selectedAsset
                                 )
                                 .padding(.horizontal, 14)
-                                .padding(.top, isRefreshing ? 40 : 20)
-                                .animation(.easeInOut(duration: 0.25), value: isRefreshing)
+                                .padding(.top, 20)
                                 Spacer()
                             }
                         }
                         .refreshable {
                             selectedAsset = nil
-                            isRefreshing = true
-                            loadGallery {
-                                isRefreshing = false
-                            }
+                            loadGallery()
                         }
                         .onAppear {
                             if assets.isEmpty {
@@ -201,6 +191,10 @@ struct ContentView: View {
             if showSourceOptions {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
+                }
+            } else if selectedAsset != nil {
+                withAnimation {
+                    selectedAsset = nil
                 }
             }
         }
