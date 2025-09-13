@@ -242,16 +242,6 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .padding(.trailing, 8)
         }
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(
-            LinearGradient(
-                colors: [Color.black.opacity(0.8), Color.black.opacity(0)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea(edges: .top)
-        )
     }
 
     private var addCard: some View {
