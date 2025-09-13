@@ -70,7 +70,8 @@ struct BottomSheetGallery: View {
         @State private var hasAppeared = false
 
         var body: some View {
-            ZStack(alignment: .bottomLeading) {
+            // Image or placeholder
+            ZStack {
                 Group {
                     if let image = image {
                         Image(uiImage: image)
@@ -81,6 +82,22 @@ struct BottomSheetGallery: View {
                             .fill(Color.white.opacity(0.08))
                     }
                 }
+            }
+            .frame(width: 100, height: 100)
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            // Border
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+            )
+            // Selection highlight
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(Color.white, lineWidth: isSelected ? 4 : 0)
+                    .animation(.easeInOut(duration: 0.25), value: isSelected)
+            )
+            // Duration label anchored to the *frame*, independent of the cropped image.
+            .overlay(alignment: .bottomLeading) {
                 if !durationText.isEmpty {
                     Text(durationText)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -89,17 +106,6 @@ struct BottomSheetGallery: View {
                         .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
                 }
             }
-            .frame(width: 100, height: 100)
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white, lineWidth: isSelected ? 4 : 0)
-                    .animation(.easeInOut(duration: 0.25), value: isSelected)
-            )
             .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .scaleEffect(hasAppeared ? 1 : 0.8)
             .onTapGesture {
@@ -134,16 +140,33 @@ struct BottomSheetGallery: View {
         }
 
         private func loadDuration() {
+            // Photos already knows the duration?  Great, use it.
             if asset.duration > 0 {
                 durationText = formatDuration(asset.duration)
-            } else {
-                let options = PHVideoRequestOptions()
-                options.isNetworkAccessAllowed = true
-                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-                    if let avAsset = avAsset {
-                        let dur = CMTimeGetSeconds(avAsset.duration)
+                return
+            }
+
+            // Otherwise we need to query the AVAsset (covers iCloud‑only videos, Live‑Photo movies, etc.).
+            let options = PHVideoRequestOptions()
+            options.isNetworkAccessAllowed = true
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                guard let avAsset = avAsset else {
+                    DispatchQueue.main.async { durationText = "—" }
+                    return
+                }
+
+                let key = "duration"
+                if avAsset.statusOfValue(forKey: key, error: nil) == .loaded {
+                    let sec = avAsset.duration.seconds
+                    DispatchQueue.main.async {
+                        durationText = sec > 0 ? formatDuration(sec) : "—"
+                    }
+                } else {
+                    // Duration isn’t ready yet – load it explicitly.
+                    avAsset.loadValuesAsynchronously(forKeys: [key]) {
+                        let sec = avAsset.duration.seconds
                         DispatchQueue.main.async {
-                            durationText = formatDuration(dur)
+                            durationText = sec > 0 ? formatDuration(sec) : "—"
                         }
                     }
                 }
@@ -158,4 +181,3 @@ struct BottomSheetGallery: View {
         }
     }
 }
-
