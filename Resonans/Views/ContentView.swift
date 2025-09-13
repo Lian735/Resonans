@@ -2,19 +2,6 @@ import SwiftUI
 import AVFoundation
 import Photos
 
-struct RecentItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let duration: String
-}
-
-struct GalleryItem: Identifiable {
-    let id: String
-    var thumbnail: UIImage?
-    let duration: String
-    let creationDate: Date
-}
-
 struct ContentView: View {
     @State private var videoURL: URL?
     @State private var showPhotoPicker = false
@@ -178,6 +165,21 @@ struct ContentView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if showSourceOptions {
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    showSourceOptions = false
+                }
+            }
+        }
+        .onChange(of: selectedTab) { _ in
+            if showSourceOptions {
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    showSourceOptions = false
+                }
+            }
+        }
         // Removed unused .confirmationDialog
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
@@ -219,6 +221,14 @@ struct ContentView: View {
             let fullWidth = geo.size.width - 44 // horizontal padding
             let targetWidth = (fullWidth - 16) / 2
             ZStack {
+                if showSourceOptions {
+                    Color.black.opacity(0.001)
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = false
+                            }
+                        }
+                }
                 // Large rectangle (plus)
                 ZStack {
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
@@ -421,157 +431,5 @@ struct ContentView: View {
         }
     }
 }
-
-private struct RecentRow: View {
-    let item: RecentItem
-
-    var body: some View {
-        HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.14))
-                .frame(width: 56, height: 56)
-                .overlay(
-                    Image(systemName: "play.rectangle.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                )
-                .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 6)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(item.duration)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            Spacer()
-            Button(action: { /* TODO: share/download */ }) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(10)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white.opacity(0.16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-                )
-        )
-        .shadow(color: .black.opacity(0.55), radius: 18, x: 0, y: 10)
-        .shadow(color: .white.opacity(0.06), radius: 1, x: 0, y: 1)
-    }
-}
-
-private struct BottomSheetGallery: View {
-    let assets: [PHAsset]
-    let onLastItemAppear: () -> Void
-
-    private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
-
-    var body: some View {
-        // Group assets by day (date only, ignoring time)
-        let grouped = Dictionary(grouping: assets) { asset in
-            asset.creationDate.map { Calendar.current.startOfDay(for: $0) } ?? Date.distantPast
-        }
-        let sortedDates = grouped.keys.sorted(by: >)
-        LazyVStack(alignment: .leading, spacing: 18) {
-            ForEach(sortedDates, id: \.self) { date in
-                if let items = grouped[date] {
-                    Section(header:
-                        Text(dateFormatted(date))
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .padding(.leading, 6)
-                            .padding(.bottom, 4)
-                    ) {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(items.indices, id: \.self) { idx in
-                                let asset = items[idx]
-                                let globalIndex = assets.firstIndex(where: { $0.localIdentifier == asset.localIdentifier })
-                                Thumb(asset: asset)
-                                    .onAppear {
-                                        // Only call onLastItemAppear for the last asset in the entire assets list
-                                        if let gi = globalIndex, gi == assets.count - 1 {
-                                            onLastItemAppear()
-                                        }
-                                    }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func dateFormatted(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
-    }
-
-    private struct Thumb: View {
-        let asset: PHAsset
-        @State private var image: UIImage?
-
-        var body: some View {
-        ZStack {
-                if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 100, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                        .overlay(alignment: .bottomLeading) {
-                            Text(formatDuration(asset.duration))
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
-                                .padding(8)
-                                .foregroundStyle(.white)
-                                .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
-                        }
-                } else {
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                        )
-                        .onAppear {
-                            if image == nil {
-                                loadThumbnail()
-                            }
-                        }
-                }
-            }
-        }
-
-        private func loadThumbnail() {
-            let manager = PHCachingImageManager()
-            manager.requestImage(for: asset,
-                                 targetSize: CGSize(width: 200, height: 200),
-                                 contentMode: .aspectFill,
-                                 options: nil) { result, _ in
-                image = result
-            }
-        }
-
-        private func formatDuration(_ duration: Double) -> String {
-            let totalSeconds = Int(duration.rounded())
-            let minutes = totalSeconds / 60
-            let seconds = totalSeconds % 60
-            return String(format: "%02d:%02d", minutes, seconds)
-        }
-    }
-}
-
-// (No longer needed: OnAppearIfLastModifier)
 
 #Preview { ContentView() }
