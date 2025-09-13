@@ -13,7 +13,8 @@ struct BottomSheetGallery: View {
             asset.creationDate.map { Calendar.current.startOfDay(for: $0) } ?? Date.distantPast
         }
         let sortedDates = grouped.keys.sorted(by: >)
-        LazyVStack(alignment: .leading, spacing: 18) {
+        // Enable sticky date headers while scrolling through the gallery
+        LazyVStack(alignment: .leading, spacing: 18, pinnedViews: [.sectionHeaders]) {
             ForEach(sortedDates, id: \.self) { date in
                 if let items = grouped[date] {
                     Section(header:
