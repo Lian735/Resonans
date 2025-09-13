@@ -103,7 +103,7 @@ struct ContentView: View {
                             Button(action: {
                                 convert()
                             }) {
-                                Text("Extract audio")
+                                Text("Extract Audio")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 24)
@@ -111,7 +111,7 @@ struct ContentView: View {
                                     .background(Color.white)
                                     .clipShape(Capsule())
                             }
-                            .padding(.bottom, 60)
+                            .padding(.bottom, 0)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                         ZStack {
