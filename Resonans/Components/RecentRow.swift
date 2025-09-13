@@ -9,7 +9,7 @@ struct RecentRow: View {
                 .fill(Color.white.opacity(0.14))
                 .frame(width: 56, height: 56)
                 .overlay(
-                    Image(systemName: "play.rectangle.fill")
+                    Image(systemName: "waveform")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.9))
                 )
@@ -19,6 +19,8 @@ struct RecentRow: View {
                 Text(item.title)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Text(item.duration)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(.white.opacity(0.8))

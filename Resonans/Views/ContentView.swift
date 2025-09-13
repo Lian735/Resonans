@@ -13,12 +13,11 @@ struct ContentView: View {
     @State private var showToast = false
     @State private var toastColor: Color = .green
     @State private var showSourceOptions = false
+    @State private var showConversionSheet = false
 
-    // Recents mocked for the visual 1:1
-    @State private var recents: [RecentItem] = [
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18")
-    ]
+    // Recent extractions
+    @State private var recents: [RecentItem] = []
+    @State private var showAllRecents = false
 
     // Bottom gallery items (raw PHAssets)
     @State private var assets: [PHAsset] = []
@@ -52,13 +51,20 @@ struct ContentView: View {
                         .tag(0)
                         ScrollView {
                             LazyVStack {
-                                BottomSheetGallery(
-                                    assets: Array(assets.prefix(displayedItemCount)),
-                                    onLastItemAppear: loadMoreItems,
-                                    selectedAsset: $selectedAsset
-                                )
-                                .padding(.horizontal, 14)
-                                .padding(.top, 20)
+                                if assets.isEmpty {
+                                    Text("None yet")
+                                        .font(.system(size: 18, weight: .regular, design: .rounded))
+                                        .foregroundStyle(.white.opacity(0.6))
+                                        .padding(.top, 60)
+                                } else {
+                                    BottomSheetGallery(
+                                        assets: Array(assets.prefix(displayedItemCount)),
+                                        onLastItemAppear: loadMoreItems,
+                                        selectedAsset: $selectedAsset
+                                    )
+                                    .padding(.horizontal, 14)
+                                    .padding(.top, 20)
+                                }
                                 Spacer()
                             }
                         }
@@ -101,6 +107,7 @@ struct ContentView: View {
                         Spacer()
                         if selectedAsset != nil {
                             Button(action: {
+                                showConversionSheet = true
                                 convert()
                             }) {
                                 Text("Extract Audio")
@@ -212,14 +219,27 @@ struct ContentView: View {
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
                 videoURL = url
+                showConversionSheet = true
                 convert()
             }
         }
         .sheet(isPresented: $showFilePicker) {
             FilePicker { url in
                 videoURL = url
+                showConversionSheet = true
                 convert()
             }
+        }
+        .sheet(isPresented: $showConversionSheet) {
+            VStack {
+                Spacer()
+                Text("Conversion settings coming soon")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .background(Color.black)
         }
     }
 
@@ -378,17 +398,34 @@ struct ContentView: View {
                 .padding(.top, 16)
                 .padding(.horizontal, 20)
 
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: 12) {
-                    ForEach(recents) { item in
+            VStack(spacing: 12) {
+                if recents.isEmpty {
+                    Text("None yet")
+                        .font(.system(size: 18, weight: .regular, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
                         RecentRow(item: item)
                             .padding(.horizontal, 12)
                     }
+                    if recents.count > 3 {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                showAllRecents.toggle()
+                            }
+                        }) {
+                            Text(showAllRecents ? "Show less" : "Show more")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
+                        .padding(.top, 4)
+                    }
                 }
-                .padding(.top, 10)
-                .padding(.bottom, 14)
             }
-            .frame(height: 240)
+            .padding(.top, 10)
+            .padding(.bottom, 14)
+            .frame(height: showAllRecents ? nil : 300)
         }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
