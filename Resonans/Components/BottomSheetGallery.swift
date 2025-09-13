@@ -5,6 +5,7 @@ import UIKit
 struct BottomSheetGallery: View {
     let assets: [PHAsset]
     let onLastItemAppear: () -> Void
+    @Binding var selectedAsset: PHAsset?
 
     private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
 
@@ -27,12 +28,22 @@ struct BottomSheetGallery: View {
                             ForEach(items.indices, id: \.self) { idx in
                                 let asset = items[idx]
                                 let globalIndex = assets.firstIndex(where: { $0.localIdentifier == asset.localIdentifier })
-                                Thumb(asset: asset)
-                                    .onAppear {
-                                        if let gi = globalIndex, gi == assets.count - 1 {
-                                            onLastItemAppear()
+                                Thumb(
+                                    asset: asset,
+                                    isSelected: selectedAsset?.localIdentifier == asset.localIdentifier,
+                                    tapAction: {
+                                        if selectedAsset?.localIdentifier == asset.localIdentifier {
+                                            selectedAsset = nil
+                                        } else {
+                                            selectedAsset = asset
                                         }
                                     }
+                                )
+                                .onAppear {
+                                    if let gi = globalIndex, gi == assets.count - 1 {
+                                        onLastItemAppear()
+                                    }
+                                }
                             }
                         }
                     }
@@ -50,36 +61,57 @@ struct BottomSheetGallery: View {
 
     private struct Thumb: View {
         let asset: PHAsset
+        let isSelected: Bool
+        let tapAction: () -> Void
         @State private var image: UIImage?
+        @State private var borderWidth: CGFloat = 2
 
         var body: some View {
             ZStack {
-                if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 100, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                        .overlay(alignment: .bottomLeading) {
-                            Text(formatDuration(asset.duration))
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
-                                .padding(8)
-                                .foregroundStyle(.white)
-                                .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
-                        }
-                } else {
+                Group {
+                    if let image = image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .fill(Color.white.opacity(0.08))
+                    }
+                }
+                .frame(width: 100, height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .overlay(
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(Color.white.opacity(0.08))
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                        )
-                        .onAppear {
-                            if image == nil {
-                                loadThumbnail()
-                            }
-                        }
+                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                )
+                .overlay(alignment: .bottomLeading) {
+                    Text(formatDuration(asset.duration))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(8)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(Color.white, lineWidth: isSelected ? borderWidth : 0)
+                )
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        tapAction()
+                    }
+                }
+                .onAppear {
+                    if image == nil {
+                        loadThumbnail()
+                    }
+                    if isSelected { animateBorder() }
+                }
+                .onChange(of: isSelected) { newValue in
+                    if newValue {
+                        animateBorder()
+                    } else {
+                        borderWidth = 2
+                    }
                 }
             }
         }
@@ -91,6 +123,13 @@ struct BottomSheetGallery: View {
                                  contentMode: .aspectFill,
                                  options: nil) { result, _ in
                 image = result
+            }
+        }
+
+        private func animateBorder() {
+            borderWidth = 2
+            withAnimation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                borderWidth = 6
             }
         }
 

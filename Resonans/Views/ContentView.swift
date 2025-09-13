@@ -27,6 +27,7 @@ struct ContentView: View {
 
     @State private var selectedTab: Int = 0
     @State private var addCardPage: Int = 0
+    @State private var selectedAsset: PHAsset?
 
     var body: some View {
         ZStack {
@@ -53,12 +54,17 @@ struct ContentView: View {
                             LazyVStack {
                                 BottomSheetGallery(
                                     assets: Array(assets.prefix(displayedItemCount)),
-                                    onLastItemAppear: loadMoreItems
+                                    onLastItemAppear: loadMoreItems,
+                                    selectedAsset: $selectedAsset
                                 )
                                 .padding(.horizontal, 14)
                                 .padding(.top, 20)
                                 Spacer()
                             }
+                        }
+                        .refreshable {
+                            selectedAsset = nil
+                            loadGallery()
                         }
                         .onAppear {
                             if assets.isEmpty {
@@ -93,6 +99,17 @@ struct ContentView: View {
                     // Custom Tab Bar pinned at the bottom with gradient background
                     VStack {
                         Spacer()
+                        if selectedAsset != nil {
+                            Text("Extract audio")
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color.white)
+                                .clipShape(Capsule())
+                                .padding(.bottom, 90)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                         ZStack {
                             LinearGradient(
                                 gradient: Gradient(colors: [Color.black, Color.black.opacity(0.0)]),
@@ -173,11 +190,14 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: selectedTab) { _ in
+        .onChange(of: selectedTab) { newValue in
             if showSourceOptions {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
                 }
+            }
+            if newValue != 1 {
+                withAnimation { selectedAsset = nil }
             }
         }
         // Removed unused .confirmationDialog
