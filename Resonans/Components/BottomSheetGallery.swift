@@ -26,8 +26,7 @@ struct BottomSheetGallery: View {
                             .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: -1)
                     ) {
                         LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(items.indices, id: \.self) { idx in
-                                let asset = items[idx]
+                            ForEach(items, id: \.localIdentifier) { asset in
                                 let globalIndex = assets.firstIndex(where: { $0.localIdentifier == asset.localIdentifier })
                                 Thumb(
                                     asset: asset,
@@ -47,6 +46,7 @@ struct BottomSheetGallery: View {
                                 }
                             }
                         }
+                        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: assets.count)
                     }
                 }
             }
@@ -66,9 +66,10 @@ struct BottomSheetGallery: View {
         let tapAction: () -> Void
         @State private var image: UIImage?
         @State private var borderWidth: CGFloat = 2
+        @State private var hasAppeared = false
 
         var body: some View {
-            ZStack {
+            ZStack(alignment: .bottomLeading) {
                 Group {
                     if let image = image {
                         Image(uiImage: image)
@@ -79,40 +80,45 @@ struct BottomSheetGallery: View {
                             .fill(Color.white.opacity(0.08))
                     }
                 }
-                .frame(width: 100, height: 100)
-                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-                )
-                .overlay(alignment: .bottomLeading) {
-                    Text(formatDuration(asset.duration))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .padding(8)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                Text(formatDuration(asset.duration))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .padding(8)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+            }
+            .frame(width: 100, height: 100)
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(Color.white, lineWidth: isSelected ? borderWidth : 0)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .scaleEffect(hasAppeared ? 1 : 0.8)
+            .onTapGesture {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    tapAction()
                 }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(Color.white, lineWidth: isSelected ? borderWidth : 0)
-                )
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        tapAction()
+            }
+            .onAppear {
+                if image == nil {
+                    loadThumbnail()
+                }
+                if isSelected { animateBorder() }
+                if !hasAppeared {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
+                        hasAppeared = true
                     }
                 }
-                .onAppear {
-                    if image == nil {
-                        loadThumbnail()
-                    }
-                    if isSelected { animateBorder() }
-                }
-                .onChange(of: isSelected) { newValue in
-                    if newValue {
-                        animateBorder()
-                    } else {
-                        borderWidth = 2
-                    }
+            }
+            .onChange(of: isSelected) { newValue in
+                if newValue {
+                    animateBorder()
+                } else {
+                    borderWidth = 2
                 }
             }
         }
