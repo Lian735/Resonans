@@ -17,15 +17,7 @@ struct ContentView: View {
     
     // Recent extractions
     @State private var recents: [RecentItem] = [
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18"),
-        .init(title: "video1827-extracted", duration: "00:18")
+
     ]
     @State private var showAllRecents = false
 
