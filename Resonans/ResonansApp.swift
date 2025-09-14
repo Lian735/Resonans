@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct ResonansApp: App {
+    @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
+    private var appearance: Appearance { Appearance(rawValue: appearanceRaw) ?? .system }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(appearance.colorScheme)
         }
     }
 }
