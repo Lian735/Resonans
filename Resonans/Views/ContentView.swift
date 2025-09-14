@@ -36,13 +36,19 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { colorScheme == .dark ? .black : .white }
     private var primary: Color { colorScheme == .dark ? .white : .black }
+    /// Uses white shadows in light mode and black shadows in dark mode
+    private var shadowColor: Color { colorScheme == .light ? .white : .black }
 
     var body: some View {
         ZStack {
             background.ignoresSafeArea()
                 .overlay(
-                    LinearGradient(colors: [accent.gradient, .clear], startPoint: .topLeading, endPoint: .bottom)
-                        .ignoresSafeArea()
+                    LinearGradient(
+                        colors: [accent.gradient, .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
                 )
             VStack(spacing: 0) {
                 header
@@ -93,7 +99,7 @@ struct ContentView: View {
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .animation(.easeInOut(duration: 0.3), value: selectedTab)
                     .overlay(
-                    LinearGradient(
+                        LinearGradient(
                             gradient: Gradient(colors: [background, background.opacity(0.0)]),
                             startPoint: .bottom,
                             endPoint: .top
@@ -123,12 +129,12 @@ struct ContentView: View {
                         }
                         ZStack {
                         LinearGradient(
-                                gradient: Gradient(colors: [background, background.opacity(0.0)]),
-                                startPoint: .bottom,
-                                endPoint: .top
-                            )
-                            .frame(height: 80)
-                            .ignoresSafeArea(edges: .bottom)
+                            gradient: Gradient(colors: [background, background.opacity(0.0)]),
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                        .frame(height: 80)
+                        .ignoresSafeArea(edges: .bottom)
                             HStack {
                                 Spacer()
                                 Button(action: {
@@ -269,7 +275,7 @@ struct ContentView: View {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(primary)
-                    .shadow(color: .black.opacity(0.8), radius: 4, x: 0, y: 1)
+                    .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             }
             .buttonStyle(.plain)
             .padding(.trailing, 22)
@@ -309,7 +315,7 @@ struct ContentView: View {
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: fullWidth, height: 165)
-                        .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
                         .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
                             withAnimation(.easeInOut(duration: 0.35)) {
@@ -343,7 +349,7 @@ struct ContentView: View {
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
-                        .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
                         .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
                             showFilePicker = true
@@ -369,7 +375,7 @@ struct ContentView: View {
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
-                        .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
                         .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
                             selectedTab = 1
@@ -446,7 +452,7 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
+                .shadow(color: shadowColor.opacity(0.55), radius: 22, x: 0, y: 14)
                 .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
         .padding(.horizontal, 22)

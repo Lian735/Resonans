@@ -26,7 +26,7 @@ struct BottomSheetGallery: View {
                             .foregroundStyle(primary.opacity(0.85))
                             .padding(.leading, 6)
                             .padding(.bottom, 4)
-                            .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: -1)
+                            .shadow(color: (colorScheme == .light ? Color.white : Color.black).opacity(0.9), radius: 4, x: 0, y: -1)
                     ) {
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(items, id: \.localIdentifier) { asset in
@@ -106,7 +106,7 @@ struct BottomSheetGallery: View {
                     Text(durationText)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .padding(8)
-                        .foregroundStyle(primary)
+                        .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
                 }
             }
