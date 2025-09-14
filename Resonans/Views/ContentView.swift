@@ -198,12 +198,13 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.4), value: accent)
         .contentShape(Rectangle())
         .onTapGesture {
-            HapticsManager.shared.pulse()
             if showSourceOptions {
+                HapticsManager.shared.selection()
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
                 }
             } else if selectedAsset != nil {
+                HapticsManager.shared.pulse(.medium)
                 withAnimation {
                     selectedAsset = nil
                 }

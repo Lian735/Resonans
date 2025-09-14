@@ -142,7 +142,7 @@ struct SettingsView: View {
                     .foregroundStyle(primary.opacity(0.9))
             }
             .onChange(of: hapticsEnabled) { _ in
-                HapticsManager.shared.pulse()
+                HapticsManager.shared.selection()
             }
 
             Toggle(isOn: $soundsEnabled) {
@@ -150,7 +150,7 @@ struct SettingsView: View {
                     .foregroundStyle(primary.opacity(0.9))
             }
             .onChange(of: soundsEnabled) { _ in
-                HapticsManager.shared.pulse()
+                HapticsManager.shared.selection()
             }
 
             Toggle(isOn: $confirmationsEnabled) {
@@ -158,8 +158,25 @@ struct SettingsView: View {
                     .foregroundStyle(primary.opacity(0.9))
             }
             .onChange(of: confirmationsEnabled) { _ in
-                HapticsManager.shared.pulse()
+                HapticsManager.shared.selection()
             }
+
+            Divider()
+                .padding(.vertical, 8)
+
+            Button {
+                CacheManager.shared.clear()
+                HapticsManager.shared.notify(.success)
+            } label: {
+                Text("Clear Cache")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(accent.color.opacity(0.25))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .padding(.top, 4)
         }
     }
 
