@@ -30,11 +30,14 @@ struct ContentView: View {
     @State private var addCardPage: Int = 0
     @State private var selectedAsset: PHAsset?
 
+    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
                 .overlay(
-                    LinearGradient(colors: [Color.white.opacity(0.06), .clear], startPoint: .topLeading, endPoint: .bottom)
+                    LinearGradient(colors: [accent.gradient, .clear], startPoint: .topLeading, endPoint: .bottom)
                         .ignoresSafeArea()
                 )
             VStack(spacing: 0) {
@@ -80,17 +83,8 @@ struct ContentView: View {
                             }
                         }
                         .tag(1)
-                        ScrollView {
-                            VStack {
-                                Spacer(minLength: 60)
-                                Text("Settings")
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .padding()
-                                Spacer()
-                            }
-                        }
-                        .tag(2)
+                        SettingsView()
+                            .tag(2)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .animation(.easeInOut(duration: 0.3), value: selectedTab)
@@ -138,7 +132,7 @@ struct ContentView: View {
                                 }) {
                                     Image(systemName: "house.fill")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(.white.opacity(selectedTab == 0 ? 0.9 : 0.5))
+                                        .foregroundStyle(selectedTab == 0 ? accent.color : Color.white.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
                                 }
                                 Spacer()
@@ -147,7 +141,7 @@ struct ContentView: View {
                                 }) {
                                     Image(systemName: "photo.on.rectangle.angled")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(.white.opacity(selectedTab == 1 ? 0.9 : 0.5))
+                                        .foregroundStyle(selectedTab == 1 ? accent.color : Color.white.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
                                 }
                                 Spacer()
@@ -156,7 +150,7 @@ struct ContentView: View {
                                 }) {
                                     Image(systemName: "gearshape.fill")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(.white.opacity(selectedTab == 2 ? 0.9 : 0.5))
+                                        .foregroundStyle(selectedTab == 2 ? accent.color : Color.white.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
                                 }
                                 Spacer()
@@ -195,6 +189,7 @@ struct ContentView: View {
                 }
             }
         }
+        .tint(accent.color)
         .contentShape(Rectangle())
         .onTapGesture {
             if showSourceOptions {
@@ -247,9 +242,18 @@ struct ContentView: View {
 
     // MARK: - Subviews
 
+    private var headerTitle: String {
+        switch selectedTab {
+        case 0: return "Resonans"
+        case 1: return "Library"
+        case 2: return "Settings"
+        default: return ""
+        }
+    }
+
     private var header: some View {
         HStack(alignment: .center) {
-            Text("Resonans")
+            Text(headerTitle)
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
                 .foregroundStyle(.white)
