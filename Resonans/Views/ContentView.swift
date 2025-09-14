@@ -14,9 +14,19 @@ struct ContentView: View {
     @State private var toastColor: Color = .green
     @State private var showSourceOptions = false
     @State private var showConversionSheet = false
-
+    
     // Recent extractions
-    @State private var recents: [RecentItem] = []
+    @State private var recents: [RecentItem] = [
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18"),
+        .init(title: "video1827-extracted", duration: "00:18")
+    ]
     @State private var showAllRecents = false
 
     // Bottom gallery items (raw PHAssets)
@@ -251,7 +261,7 @@ struct ContentView: View {
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
                 .foregroundStyle(.white)
-                .padding(.leading, 12)
+                .padding(.leading, 22)
             Spacer()
             Button(action: { /* TODO: show help */ }) {
                 Image(systemName: "questionmark.circle")
@@ -260,7 +270,7 @@ struct ContentView: View {
                     .shadow(color: .black.opacity(0.8), radius: 4, x: 0, y: 1)
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 8)
+            .padding(.trailing, 22)
         }
     }
 
@@ -425,7 +435,7 @@ struct ContentView: View {
             }
             .padding(.top, 10)
             .padding(.bottom, 14)
-            .frame(height: showAllRecents ? nil : 300)
+            .frame(height: showAllRecents ? nil : 323)
         }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -438,6 +448,7 @@ struct ContentView: View {
                 .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
         .padding(.horizontal, 22)
+        .padding(.bottom, 90)
     }
 
     // statusMessage is no longer needed; replaced by toast overlay
