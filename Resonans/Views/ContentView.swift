@@ -62,7 +62,7 @@ struct ContentView: View {
                     TabView(selection: $selectedTab) {
                         ScrollViewReader { proxy in
                             ScrollView(.vertical, showsIndicators: false) {
-                                VStack(spacing: DesignConstants.sectionSpacing) {
+                                VStack(spacing: 24) {
                                     Color.clear.frame(height: 0).id("top")
                                     Spacer(minLength: 0)
                                     addCard
@@ -83,7 +83,6 @@ struct ContentView: View {
                                     Spacer(minLength: 40)
                                     // statusMessage removed
                                 }
-                                .padding(.vertical, DesignConstants.verticalPadding)
                             }
                             .coordinateSpace(name: "homeScroll")
                             .overlay(alignment: .top) {
@@ -115,8 +114,8 @@ struct ContentView: View {
                                             onLastItemAppear: loadMoreItems,
                                             selectedAsset: $selectedAsset
                                         )
-                                        .padding(.horizontal, DesignConstants.horizontalPadding)
-                                        .padding(.top, DesignConstants.verticalPadding)
+                                        .padding(.horizontal, 14)
+                                        .padding(.top, 20)
                                     }
                                     Spacer()
                                 }
@@ -379,7 +378,7 @@ struct ContentView: View {
 
     private var addCard: some View {
         GeometryReader { geo in
-            let fullWidth = geo.size.width - (DesignConstants.horizontalPadding * 2)
+            let fullWidth = geo.size.width - 44 // horizontal padding
             let targetWidth = (fullWidth - 16) / 2
             ZStack {
                 if showSourceOptions {
@@ -393,7 +392,7 @@ struct ContentView: View {
                 }
                 // Large rectangle (plus)
                 ZStack {
-                    RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
                         .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 14) {
@@ -407,7 +406,7 @@ struct ContentView: View {
                             }
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: fullWidth, height: 165)
@@ -429,7 +428,7 @@ struct ContentView: View {
                 // Two small rectangles (Files and Gallery)
                 HStack(spacing: 16) {
                     // Files rectangle
-                    RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
                         .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
@@ -442,7 +441,7 @@ struct ContentView: View {
                             }
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
@@ -456,7 +455,7 @@ struct ContentView: View {
                             }
                         }
                     // Gallery rectangle
-                    RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
                         .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
@@ -469,7 +468,7 @@ struct ContentView: View {
                             }
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
@@ -490,7 +489,7 @@ struct ContentView: View {
                 .allowsHitTesting(showSourceOptions)
                 .zIndex(showSourceOptions ? 1 : 0)
             }
-            .padding(.horizontal, DesignConstants.horizontalPadding)
+            .padding(.horizontal, 22)
             .frame(height: 165)
             .gesture(
                 DragGesture(minimumDistance: 24, coordinateSpace: .local)
@@ -546,16 +545,16 @@ struct ContentView: View {
             .frame(height: showAllRecents ? nil : 323)
         }
         .background(
-            RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(primary.opacity(0.07))
                 .overlay(
-                    RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                 )
                 .shadow(color: shadowColor.opacity(0.55), radius: 22, x: 0, y: 14)
                 .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
-        .padding(.horizontal, DesignConstants.horizontalPadding)
+        .padding(.horizontal, 22)
         .padding(.bottom, 120)
     }
 
