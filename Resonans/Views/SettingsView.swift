@@ -32,11 +32,11 @@ struct SettingsView: View {
                     aboutSection
                     Spacer(minLength: 120)
                 }
-                .padding(.vertical, 30)
+                .padding(.vertical, AppStyle.innerPadding)
                 .background(
                     GeometryReader { geo -> Color in
                         DispatchQueue.main.async {
-                            let show = geo.frame(in: .named("settingsScroll")).minY < -30
+                            let show = geo.frame(in: .named("settingsScroll")).minY < -AppStyle.innerPadding
                             if showTopBorder != show {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     showTopBorder = show
