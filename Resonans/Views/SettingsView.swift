@@ -1,12 +1,14 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Binding var scrollToTopTrigger: Bool
     @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @AppStorage("soundsEnabled") private var soundsEnabled = true
     @AppStorage("confirmationsEnabled") private var confirmationsEnabled = true
+    @State private var showTopBorder = false
 
     private var appearance: Appearance {
         Appearance(rawValue: appearanceRaw) ?? .system
@@ -21,13 +23,42 @@ struct SettingsView: View {
     private var primary: Color { colorScheme == .dark ? .white : .black }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                appearanceSection
-                interactionsSection
-                aboutSection
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 24) {
+                    Color.clear.frame(height: 0).id("top")
+                    appearanceSection
+                    interactionsSection
+                    aboutSection
+                }
+                .padding(.vertical, 30)
+                .background(
+                    GeometryReader { geo -> Color in
+                        DispatchQueue.main.async {
+                            let show = geo.frame(in: .named("settingsScroll")).minY < 0
+                            if showTopBorder != show {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showTopBorder = show
+                                }
+                            }
+                        }
+                        return Color.clear
+                    }
+                )
             }
-            .padding(.vertical, 30)
+            .coordinateSpace(name: "settingsScroll")
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.5))
+                    .frame(height: 1)
+                    .opacity(showTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
+            }
+            .onChange(of: scrollToTopTrigger) { _ in
+                withAnimation {
+                    proxy.scrollTo("top", anchor: .top)
+                }
+            }
         }
     }
 
@@ -194,7 +225,7 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(scrollToTopTrigger: .constant(false))
         .background(Color.black)
         .preferredColorScheme(.dark)
 }
