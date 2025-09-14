@@ -40,18 +40,21 @@ struct SettingsView: View {
             HStack(spacing: 12) {
                 ForEach(Appearance.allCases) { mode in
                     VStack(spacing: 6) {
-                        themePreview(for: mode)
-                            .frame(width: 100, height: 70)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(mode == appearance ? accent.color : .clear, lineWidth: 3)
-                            )
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    appearanceRaw = mode.rawValue
-                                }
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .inset(by: -4)
+                                .stroke(mode == appearance ? accent.color : .clear, lineWidth: 3)
+                                .scaleEffect(mode == appearance ? 1 : 0.9)
+                                .animation(.easeInOut(duration: 0.2), value: appearance)
+                            themePreview(for: mode)
+                                .transition(.opacity)
+                                .animation(.easeInOut(duration: 0.3), value: appearance)
+                        }
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                appearanceRaw = mode.rawValue
                             }
-
+                        }
                         Text(mode.label)
                             .font(.system(size: 16, weight: .regular, design: .rounded))
                             .foregroundStyle(.white.opacity(0.8))
@@ -68,16 +71,20 @@ struct SettingsView: View {
 
             HStack(spacing: 16) {
                 ForEach(AccentColorOption.allCases) { option in
-                    Circle()
-                        .fill(option.color)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white, lineWidth: option == accent ? 3 : 0)
-                        )
-                        .onTapGesture {
-                            accentRaw = option.rawValue
-                        }
+                    ZStack {
+                        Circle()
+                            .stroke(Color.white, lineWidth: option == accent ? 3 : 0)
+                            .frame(width: 28, height: 28)
+                            .scaleEffect(option == accent ? 1.3 : 1.0)
+                            .animation(.easeInOut(duration: 0.25), value: accent)
+                        Circle()
+                            .fill(option.color)
+                            .frame(width: 28, height: 28)
+                    }
+                    .animation(.easeInOut(duration: 0.25), value: accent)
+                    .onTapGesture {
+                        accentRaw = option.rawValue
+                    }
                 }
             }
         }
@@ -142,16 +149,23 @@ struct SettingsView: View {
     private func themePreview(for mode: Appearance) -> some View {
         switch mode {
         case .light:
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white)
+            Image("white")
+                .resizable()
+                .scaledToFit()
+                .cornerRadius(12)
+                .transition(.opacity)
         case .dark:
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.black)
+            Image("dark")
+                .resizable()
+                .scaledToFit()
+                .cornerRadius(12)
+                .transition(.opacity)
         case .system:
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(colors: [.black, .white], startPoint: .leading, endPoint: .trailing)
-                )
+            Image("darkandwhite")
+                .resizable()
+                .scaledToFit()
+                .cornerRadius(12)
+                .transition(.opacity)
         }
     }
 
@@ -180,4 +194,3 @@ struct SettingsView: View {
         .background(Color.black)
         .preferredColorScheme(.dark)
 }
-
