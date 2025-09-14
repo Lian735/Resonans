@@ -31,10 +31,10 @@ struct ContentView: View {
     @State private var selectedAsset: PHAsset?
 
     @State private var homeScrollTrigger = false
-    @State private var libraryScrollTrigger = false
+    @State private var galleryScrollTrigger = false
     @State private var settingsScrollTrigger = false
     @State private var showHomeTopBorder = false
-    @State private var showLibraryTopBorder = false
+    @State private var showGalleryTopBorder = false
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -61,7 +61,7 @@ struct ContentView: View {
                 ZStack {
                     TabView(selection: $selectedTab) {
                         homeTab.tag(0)
-                        libraryTab.tag(1)
+                        galleryTab.tag(1)
                         SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
                             .tag(2)
                     }
@@ -127,11 +127,11 @@ struct ContentView: View {
                                 Button(action: {
                                     HapticsManager.shared.pulse()
                                     if selectedTab == 1 {
-                                        libraryScrollTrigger.toggle()
+                                        galleryScrollTrigger.toggle()
                                     } else {
                                         selectedTab = 1
                                         DispatchQueue.main.async {
-                                            libraryScrollTrigger.toggle()
+                                            galleryScrollTrigger.toggle()
                                         }
                                     }
                                 }) {
@@ -292,7 +292,7 @@ struct ContentView: View {
         }
     }
 
-    private var libraryTab: some View {
+    private var galleryTab: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack {
@@ -318,10 +318,10 @@ struct ContentView: View {
                     GeometryReader { geo -> Color in
                         DispatchQueue.main.async {
                             let topPadding: CGFloat = assets.isEmpty ? 60 : 20
-                            let show = geo.frame(in: .named("libraryScroll")).minY < -topPadding
-                            if showLibraryTopBorder != show {
+                            let show = geo.frame(in: .named("galleryScroll")).minY < -topPadding
+                            if showGalleryTopBorder != show {
                                 withAnimation(.easeInOut(duration: 0.2)) {
-                                    showLibraryTopBorder = show
+                                    showGalleryTopBorder = show
                                 }
                             }
                         }
@@ -329,15 +329,15 @@ struct ContentView: View {
                     }
                 )
             }
-            .coordinateSpace(name: "libraryScroll")
+            .coordinateSpace(name: "galleryScroll")
             .overlay(alignment: .top) {
                 Rectangle()
                     .fill(Color.gray.opacity(0.5))
                     .frame(height: 1)
-                    .opacity(showLibraryTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showLibraryTopBorder)
+                    .opacity(showGalleryTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showGalleryTopBorder)
             }
-            .onChange(of: libraryScrollTrigger) { _ in
+            .onChange(of: galleryScrollTrigger) { _ in
                 withAnimation {
                     proxy.scrollTo("top", anchor: .top)
                 }
