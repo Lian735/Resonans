@@ -30,6 +30,12 @@ struct ContentView: View {
     @State private var addCardPage: Int = 0
     @State private var selectedAsset: PHAsset?
 
+    @State private var homeScrollTrigger = false
+    @State private var libraryScrollTrigger = false
+    @State private var settingsScrollTrigger = false
+    @State private var showHomeTopBorder = false
+    @State private var showLibraryTopBorder = false
+
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
@@ -54,46 +60,104 @@ struct ContentView: View {
                 header
                 ZStack {
                     TabView(selection: $selectedTab) {
-                        ScrollView(.vertical, showsIndicators: false) {
-                            VStack(spacing: 24) {
-                                Spacer(minLength: 0)
-                                addCard
-                                recentSection
-                                Spacer(minLength: 40)
-                                // statusMessage removed
+                        ScrollViewReader { proxy in
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 24) {
+                                    Color.clear.frame(height: 0).id("top")
+                                    Spacer(minLength: 0)
+                                    addCard
+                                    recentSection
+                                    Spacer(minLength: 40)
+                                    // statusMessage removed
+                                }
+                                .background(
+                                    GeometryReader { geo -> Color in
+                                        DispatchQueue.main.async {
+                                            let show = geo.frame(in: .named("homeScroll")).minY < 0
+                                            if showHomeTopBorder != show {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    showHomeTopBorder = show
+                                                }
+                                            }
+                                        }
+                                        return Color.clear
+                                    }
+                                )
+                            }
+                            .coordinateSpace(name: "homeScroll")
+                            .overlay(alignment: .top) {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.5))
+                                    .frame(height: 1)
+                                    .opacity(showHomeTopBorder ? 1 : 0)
+                                    .animation(.easeInOut(duration: 0.2), value: showHomeTopBorder)
+                            }
+                            .onChange(of: homeScrollTrigger) { _ in
+                                withAnimation {
+                                    proxy.scrollTo("top", anchor: .top)
+                                }
                             }
                         }
                         .tag(0)
-                        ScrollView {
-                            LazyVStack {
-                                if assets.isEmpty {
-                                    Text("None yet")
-                                        .font(.system(size: 18, weight: .regular, design: .rounded))
-                                        .foregroundStyle(primary.opacity(0.6))
-                                        .padding(.top, 60)
-                                } else {
-                                    BottomSheetGallery(
-                                        assets: Array(assets.prefix(displayedItemCount)),
-                                        onLastItemAppear: loadMoreItems,
-                                        selectedAsset: $selectedAsset
-                                    )
-                                    .padding(.horizontal, 14)
-                                    .padding(.top, 20)
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                LazyVStack {
+                                    Color.clear.frame(height: 0).id("top")
+                                    if assets.isEmpty {
+                                        Text("None yet")
+                                            .font(.system(size: 18, weight: .regular, design: .rounded))
+                                            .foregroundStyle(primary.opacity(0.6))
+                                            .padding(.top, 60)
+                                    } else {
+                                        BottomSheetGallery(
+                                            assets: Array(assets.prefix(displayedItemCount)),
+                                            onLastItemAppear: loadMoreItems,
+                                            selectedAsset: $selectedAsset
+                                        )
+                                        .padding(.horizontal, 14)
+                                        .padding(.top, 20)
+                                    }
+                                    Spacer()
                                 }
-                                Spacer()
+                                .background(
+                                    GeometryReader { geo -> Color in
+                                        DispatchQueue.main.async {
+                                            let show = geo.frame(in: .named("libraryScroll")).minY < 0
+                                            if showLibraryTopBorder != show {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    showLibraryTopBorder = show
+                                                }
+                                            }
+                                        }
+                                        return Color.clear
+                                    }
+                                )
                             }
-                        }
-                        .refreshable {
-                            selectedAsset = nil
-                            loadGallery()
-                        }
-                        .onAppear {
-                            if assets.isEmpty {
+                            .coordinateSpace(name: "libraryScroll")
+                            .overlay(alignment: .top) {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.5))
+                                    .frame(height: 1)
+                                    .opacity(showLibraryTopBorder ? 1 : 0)
+                                    .animation(.easeInOut(duration: 0.2), value: showLibraryTopBorder)
+                            }
+                            .onChange(of: libraryScrollTrigger) { _ in
+                                withAnimation {
+                                    proxy.scrollTo("top", anchor: .top)
+                                }
+                            }
+                            .refreshable {
+                                selectedAsset = nil
                                 loadGallery()
+                            }
+                            .onAppear {
+                                if assets.isEmpty {
+                                    loadGallery()
+                                }
                             }
                         }
                         .tag(1)
-                        SettingsView()
+                        SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
                             .tag(2)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
@@ -138,7 +202,14 @@ struct ContentView: View {
                             HStack {
                                 Spacer()
                                 Button(action: {
-                                    selectedTab = 0
+                                    if selectedTab == 0 {
+                                        homeScrollTrigger.toggle()
+                                    } else {
+                                        selectedTab = 0
+                                        DispatchQueue.main.async {
+                                            homeScrollTrigger.toggle()
+                                        }
+                                    }
                                 }) {
                                     Image(systemName: "house.fill")
                                         .font(.system(size: 24, weight: .semibold))
@@ -147,7 +218,14 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button(action: {
-                                    selectedTab = 1
+                                    if selectedTab == 1 {
+                                        libraryScrollTrigger.toggle()
+                                    } else {
+                                        selectedTab = 1
+                                        DispatchQueue.main.async {
+                                            libraryScrollTrigger.toggle()
+                                        }
+                                    }
                                 }) {
                                     Image(systemName: "photo.on.rectangle.angled")
                                         .font(.system(size: 24, weight: .semibold))
@@ -156,7 +234,14 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button(action: {
-                                    selectedTab = 2
+                                    if selectedTab == 2 {
+                                        settingsScrollTrigger.toggle()
+                                    } else {
+                                        selectedTab = 2
+                                        DispatchQueue.main.async {
+                                            settingsScrollTrigger.toggle()
+                                        }
+                                    }
                                 }) {
                                     Image(systemName: "gearshape.fill")
                                         .font(.system(size: 24, weight: .semibold))
@@ -254,22 +339,18 @@ struct ContentView: View {
 
     // MARK: - Subviews
 
-    private var headerTitle: String {
-        switch selectedTab {
-        case 0: return "Resonans"
-        case 1: return "Library"
-        case 2: return "Settings"
-        default: return ""
-        }
-    }
-
     private var header: some View {
         HStack(alignment: .center) {
-            Text(headerTitle)
-                .font(.system(size: 46, weight: .heavy, design: .rounded))
-                .tracking(0.5)
-                .foregroundStyle(primary)
-                .padding(.leading, 22)
+            ZStack {
+                Text("Resonans").opacity(selectedTab == 0 ? 1 : 0)
+                Text("Library").opacity(selectedTab == 1 ? 1 : 0)
+                Text("Settings").opacity(selectedTab == 2 ? 1 : 0)
+            }
+            .font(.system(size: 46, weight: .heavy, design: .rounded))
+            .tracking(0.5)
+            .foregroundStyle(primary)
+            .padding(.leading, 22)
+            .animation(.easeInOut(duration: 0.25), value: selectedTab)
             Spacer()
             Button(action: { /* TODO: show help */ }) {
                 Image(systemName: "questionmark.circle")
