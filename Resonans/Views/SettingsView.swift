@@ -15,8 +15,10 @@ struct SettingsView: View {
     private var accent: AccentColorOption {
         AccentColorOption(rawValue: accentRaw) ?? .purple
     }
-
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var primary: Color { colorScheme == .dark ? .white : .black }
 
     var body: some View {
         ScrollView {
@@ -35,7 +37,7 @@ struct SettingsView: View {
         settingsBox {
             Text("Appearance")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(primary)
 
             HStack(spacing: 12) {
                 ForEach(Appearance.allCases) { mode in
@@ -57,7 +59,7 @@ struct SettingsView: View {
                         }
                         Text(mode.label)
                             .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(primary.opacity(0.8))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -66,14 +68,14 @@ struct SettingsView: View {
 
             Text("Accent color")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(primary)
                 .padding(.top, 20)
 
             HStack(spacing: 16) {
                 ForEach(AccentColorOption.allCases) { option in
                     ZStack {
                         Circle()
-                            .stroke(Color.white, lineWidth: option == accent ? 3 : 0)
+                            .stroke(primary, lineWidth: option == accent ? 3 : 0)
                             .frame(width: 28, height: 28)
                             .scaleEffect(option == accent ? 1.3 : 1.0)
                             .animation(.easeInOut(duration: 0.25), value: accent)
@@ -83,7 +85,9 @@ struct SettingsView: View {
                     }
                     .animation(.easeInOut(duration: 0.25), value: accent)
                     .onTapGesture {
-                        accentRaw = option.rawValue
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            accentRaw = option.rawValue
+                        }
                     }
                 }
             }
@@ -94,21 +98,21 @@ struct SettingsView: View {
         settingsBox {
             Text("Interactions")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(primary)
 
             Toggle(isOn: $hapticsEnabled) {
                 Text("Vibration")
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(primary.opacity(0.9))
             }
 
             Toggle(isOn: $soundsEnabled) {
                 Text("Sounds")
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(primary.opacity(0.9))
             }
 
             Toggle(isOn: $confirmationsEnabled) {
                 Text("Confirmations")
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(primary.opacity(0.9))
             }
         }
     }
@@ -117,14 +121,14 @@ struct SettingsView: View {
         settingsBox {
             Text("About")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(primary)
 
             HStack {
                 Text("Version")
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
             }
-            .foregroundStyle(.white.opacity(0.8))
+            .foregroundStyle(primary.opacity(0.8))
 
             Button {
                 if let url = URL(string: "mailto:support@example.com") {
@@ -133,7 +137,7 @@ struct SettingsView: View {
             } label: {
                 Text("Send Feedback")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(primary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
@@ -177,13 +181,13 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.07))
+                .fill(primary.opacity(0.07))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
-                .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.3), radius: 1, x: 0, y: 1)
         )
         .padding(.horizontal, 22)
     }

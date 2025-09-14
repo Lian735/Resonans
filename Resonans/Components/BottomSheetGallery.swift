@@ -9,6 +9,8 @@ struct BottomSheetGallery: View {
     @Binding var selectedAsset: PHAsset?
 
     private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
+    @Environment(\.colorScheme) private var colorScheme
+    private var primary: Color { colorScheme == .dark ? .white : .black }
 
     var body: some View {
         let grouped = Dictionary(grouping: assets) { asset in
@@ -21,7 +23,7 @@ struct BottomSheetGallery: View {
                     Section(header:
                         Text(dateFormatted(date))
                             .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(primary.opacity(0.85))
                             .padding(.leading, 6)
                             .padding(.bottom, 4)
                             .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: -1)
@@ -68,6 +70,8 @@ struct BottomSheetGallery: View {
         @State private var image: UIImage?
         @State private var durationText: String = ""
         @State private var hasAppeared = false
+        @Environment(\.colorScheme) private var colorScheme
+        private var primary: Color { colorScheme == .dark ? .white : .black }
 
         var body: some View {
             // Image or placeholder
@@ -79,7 +83,7 @@ struct BottomSheetGallery: View {
                             .scaledToFill()
                     } else {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
-                            .fill(Color.white.opacity(0.08))
+                            .fill(primary.opacity(0.08))
                     }
                 }
             }
@@ -88,12 +92,12 @@ struct BottomSheetGallery: View {
             // Border
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(primary.opacity(0.15), lineWidth: 1)
             )
             // Selection highlight
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white, lineWidth: isSelected ? 4 : 0)
+                    .stroke(primary, lineWidth: isSelected ? 4 : 0)
                     .animation(.easeInOut(duration: 0.25), value: isSelected)
             )
             // Duration label anchored to the *frame*, independent of the cropped image.
@@ -102,7 +106,7 @@ struct BottomSheetGallery: View {
                     Text(durationText)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .padding(8)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primary)
                         .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
                 }
             }
