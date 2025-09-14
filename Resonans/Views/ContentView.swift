@@ -33,9 +33,13 @@ struct ContentView: View {
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
+    @Environment(\.colorScheme) private var colorScheme
+    private var background: Color { colorScheme == .dark ? .black : .white }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
+
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            background.ignoresSafeArea()
                 .overlay(
                     LinearGradient(colors: [accent.gradient, .clear], startPoint: .topLeading, endPoint: .bottom)
                         .ignoresSafeArea()
@@ -59,7 +63,7 @@ struct ContentView: View {
                                 if assets.isEmpty {
                                     Text("None yet")
                                         .font(.system(size: 18, weight: .regular, design: .rounded))
-                                        .foregroundStyle(.white.opacity(0.6))
+                                        .foregroundStyle(primary.opacity(0.6))
                                         .padding(.top, 60)
                                 } else {
                                     BottomSheetGallery(
@@ -89,8 +93,8 @@ struct ContentView: View {
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .animation(.easeInOut(duration: 0.3), value: selectedTab)
                     .overlay(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.black, Color.black.opacity(0.0)]),
+                    LinearGradient(
+                            gradient: Gradient(colors: [background, background.opacity(0.0)]),
                             startPoint: .bottom,
                             endPoint: .top
                         )
@@ -108,18 +112,18 @@ struct ContentView: View {
                             }) {
                                 Text("Extract Audio")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.black)
+                                    .foregroundColor(background)
                                     .padding(.horizontal, 24)
                                     .padding(.vertical, 12)
-                                    .background(Color.white)
+                                    .background(primary)
                                     .clipShape(Capsule())
                             }
                             .padding(.bottom, 0)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                         ZStack {
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.black, Color.black.opacity(0.0)]),
+                        LinearGradient(
+                                gradient: Gradient(colors: [background, background.opacity(0.0)]),
                                 startPoint: .bottom,
                                 endPoint: .top
                             )
@@ -132,7 +136,7 @@ struct ContentView: View {
                                 }) {
                                     Image(systemName: "house.fill")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(selectedTab == 0 ? accent.color : Color.white.opacity(0.5))
+                                        .foregroundStyle(selectedTab == 0 ? accent.color : primary.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
                                 }
                                 Spacer()
@@ -141,7 +145,7 @@ struct ContentView: View {
                                 }) {
                                     Image(systemName: "photo.on.rectangle.angled")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(selectedTab == 1 ? accent.color : Color.white.opacity(0.5))
+                                        .foregroundStyle(selectedTab == 1 ? accent.color : primary.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
                                 }
                                 Spacer()
@@ -150,7 +154,7 @@ struct ContentView: View {
                                 }) {
                                     Image(systemName: "gearshape.fill")
                                         .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(selectedTab == 2 ? accent.color : Color.white.opacity(0.5))
+                                        .foregroundStyle(selectedTab == 2 ? accent.color : primary.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
                                 }
                                 Spacer()
@@ -169,7 +173,7 @@ struct ContentView: View {
                         Spacer()
                         Text(msg)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(primary)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .background(toastColor.opacity(0.85))
@@ -190,6 +194,8 @@ struct ContentView: View {
             }
         }
         .tint(accent.color)
+        .animation(.easeInOut(duration: 0.4), value: colorScheme)
+        .animation(.easeInOut(duration: 0.4), value: accent)
         .contentShape(Rectangle())
         .onTapGesture {
             if showSourceOptions {
@@ -232,11 +238,11 @@ struct ContentView: View {
                 Spacer()
                 Text("Conversion settings coming soon")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(primary)
                 Spacer()
             }
             .frame(maxWidth: .infinity)
-            .background(Color.black)
+                    .background(background)
         }
     }
 
@@ -256,13 +262,13 @@ struct ContentView: View {
             Text(headerTitle)
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
-                .foregroundStyle(.white)
+                .foregroundStyle(primary)
                 .padding(.leading, 22)
             Spacer()
             Button(action: { /* TODO: show help */ }) {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(primary)
                     .shadow(color: .black.opacity(0.8), radius: 4, x: 0, y: 1)
             }
             .buttonStyle(.plain)
@@ -276,7 +282,7 @@ struct ContentView: View {
             let targetWidth = (fullWidth - 16) / 2
             ZStack {
                 if showSourceOptions {
-                    Color.black.opacity(0.001)
+                    background.opacity(0.001)
                         .onTapGesture {
                             withAnimation(.easeInOut(duration: 0.35)) {
                                 showSourceOptions = false
@@ -286,21 +292,21 @@ struct ContentView: View {
                 // Large rectangle (plus)
                 ZStack {
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(Color.white.opacity(0.09))
+                        .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 14) {
                                 Image(systemName: "plus")
                                     .font(.system(size: 56, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                                 Text("Click to Extract Audio")
                                     .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                                 
                             }
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: fullWidth, height: 165)
                         .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
@@ -321,20 +327,20 @@ struct ContentView: View {
                 HStack(spacing: 16) {
                     // Files rectangle
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(Color.white.opacity(0.09))
+                        .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
                                 Image(systemName: "doc.fill")
                                     .font(.system(size: 36, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                                 Text("Files")
                                     .font(.system(size: 20, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                             }
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
                         .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
@@ -347,20 +353,20 @@ struct ContentView: View {
                         }
                     // Gallery rectangle
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(Color.white.opacity(0.09))
+                        .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
                                 Image(systemName: "photo.on.rectangle.angled")
                                     .font(.system(size: 36, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                                 Text("Gallery")
                                     .font(.system(size: 20, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                             }
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
                         .shadow(color: .black.opacity(0.65), radius: 26, x: 0, y: 20)
@@ -400,7 +406,7 @@ struct ContentView: View {
             // Title inside the box
             Text("Recent extractions")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(primary)
                 .padding(.top, 16)
                 .padding(.horizontal, 20)
 
@@ -408,7 +414,7 @@ struct ContentView: View {
                 if recents.isEmpty {
                     Text("None yet")
                         .font(.system(size: 18, weight: .regular, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(primary.opacity(0.6))
                         .frame(maxWidth: .infinity, alignment: .center)
                 } else {
                     ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
@@ -423,7 +429,7 @@ struct ContentView: View {
                         }) {
                             Text(showAllRecents ? "Show less" : "Show more")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.8))
+                                .foregroundStyle(primary.opacity(0.8))
                         }
                         .padding(.top, 4)
                     }
@@ -435,10 +441,10 @@ struct ContentView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.07))
+                .fill(primary.opacity(0.07))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
                 .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)

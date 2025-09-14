@@ -16,6 +16,7 @@ struct ResonansApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(appearance.colorScheme)
+                .animation(.easeInOut(duration: 0.4), value: appearanceRaw)
         }
     }
 }
