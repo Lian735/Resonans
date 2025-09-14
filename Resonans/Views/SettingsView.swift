@@ -47,6 +47,7 @@ struct SettingsView: View {
                     }
                 )
             }
+            .scrollBounceBehavior(.never)
             .coordinateSpace(name: "settingsScroll")
             .overlay(alignment: .top) {
                 Rectangle()
