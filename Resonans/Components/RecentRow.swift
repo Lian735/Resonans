@@ -29,7 +29,10 @@ struct RecentRow: View {
                     .foregroundStyle(primary.opacity(0.8))
             }
             Spacer()
-            Button(action: { /* TODO: share/download */ }) {
+            Button(action: {
+                HapticsManager.shared.pulse()
+                /* TODO: share/download */
+            }) {
                 Image(systemName: "square.and.arrow.down")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(primary)

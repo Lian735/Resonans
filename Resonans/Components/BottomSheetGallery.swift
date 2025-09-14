@@ -113,6 +113,7 @@ struct BottomSheetGallery: View {
             .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .scaleEffect(hasAppeared ? 1 : 0.8)
             .onTapGesture {
+                HapticsManager.shared.pulse()
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                     tapAction()
                 }

@@ -66,23 +66,23 @@ struct ContentView: View {
                                     Color.clear.frame(height: 0).id("top")
                                     Spacer(minLength: 0)
                                     addCard
+                                        .background(
+                                            GeometryReader { geo -> Color in
+                                                DispatchQueue.main.async {
+                                                    let show = geo.frame(in: .named("homeScroll")).minY < 0
+                                                    if showHomeTopBorder != show {
+                                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                                            showHomeTopBorder = show
+                                                        }
+                                                    }
+                                                }
+                                                return Color.clear
+                                            }
+                                        )
                                     recentSection
                                     Spacer(minLength: 40)
                                     // statusMessage removed
                                 }
-                                .background(
-                                    GeometryReader { geo -> Color in
-                                        DispatchQueue.main.async {
-                                            let show = geo.frame(in: .named("homeScroll")).minY < 0
-                                            if showHomeTopBorder != show {
-                                                withAnimation(.easeInOut(duration: 0.2)) {
-                                                    showHomeTopBorder = show
-                                                }
-                                            }
-                                        }
-                                        return Color.clear
-                                    }
-                                )
                             }
                             .coordinateSpace(name: "homeScroll")
                             .overlay(alignment: .top) {
@@ -122,7 +122,8 @@ struct ContentView: View {
                                 .background(
                                     GeometryReader { geo -> Color in
                                         DispatchQueue.main.async {
-                                            let show = geo.frame(in: .named("libraryScroll")).minY < 0
+                                            let topPadding: CGFloat = assets.isEmpty ? 60 : 20
+                                            let show = geo.frame(in: .named("libraryScroll")).minY < -topPadding
                                             if showLibraryTopBorder != show {
                                                 withAnimation(.easeInOut(duration: 0.2)) {
                                                     showLibraryTopBorder = show
@@ -177,6 +178,7 @@ struct ContentView: View {
                         Spacer()
                         if selectedAsset != nil {
                             Button(action: {
+                                HapticsManager.shared.pulse()
                                 showConversionSheet = true
                                 convert()
                             }) {
@@ -202,6 +204,7 @@ struct ContentView: View {
                             HStack {
                                 Spacer()
                                 Button(action: {
+                                    HapticsManager.shared.pulse()
                                     if selectedTab == 0 {
                                         homeScrollTrigger.toggle()
                                     } else {
@@ -218,6 +221,7 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button(action: {
+                                    HapticsManager.shared.pulse()
                                     if selectedTab == 1 {
                                         libraryScrollTrigger.toggle()
                                     } else {
@@ -234,6 +238,7 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button(action: {
+                                    HapticsManager.shared.pulse()
                                     if selectedTab == 2 {
                                         settingsScrollTrigger.toggle()
                                     } else {
@@ -289,6 +294,7 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.4), value: accent)
         .contentShape(Rectangle())
         .onTapGesture {
+            HapticsManager.shared.pulse()
             if showSourceOptions {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
@@ -356,7 +362,10 @@ struct ContentView: View {
             .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             .animation(.easeInOut(duration: 0.25), value: selectedTab)
             Spacer()
-            Button(action: { /* TODO: show help */ }) {
+            Button(action: {
+                HapticsManager.shared.pulse()
+                /* TODO: show help */
+            }) {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(primary)
@@ -375,6 +384,7 @@ struct ContentView: View {
                 if showSourceOptions {
                     background.opacity(0.001)
                         .onTapGesture {
+                            HapticsManager.shared.pulse()
                             withAnimation(.easeInOut(duration: 0.35)) {
                                 showSourceOptions = false
                             }
@@ -403,6 +413,7 @@ struct ContentView: View {
                         .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
                         .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
+                            HapticsManager.shared.pulse()
                             withAnimation(.easeInOut(duration: 0.35)) {
                                 showSourceOptions = true
                             }
@@ -437,6 +448,7 @@ struct ContentView: View {
                         .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
                         .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
+                            HapticsManager.shared.pulse()
                             showFilePicker = true
                             withAnimation(.easeInOut(duration: 0.35)) {
                                 showSourceOptions = false
@@ -463,6 +475,7 @@ struct ContentView: View {
                         .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
                         .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
+                            HapticsManager.shared.pulse()
                             selectedTab = 1
                             withAnimation(.easeInOut(duration: 0.35)) {
                                 showSourceOptions = false
@@ -514,6 +527,7 @@ struct ContentView: View {
                     }
                     if recents.count > 3 {
                         Button(action: {
+                            HapticsManager.shared.pulse()
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 showAllRecents.toggle()
                             }
