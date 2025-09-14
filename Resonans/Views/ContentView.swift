@@ -361,7 +361,7 @@ struct ContentView: View {
             ZStack(alignment: .leading) {
                 Text("Resonans")
                     .opacity(selectedTab == 0 ? 1 : 0)
-                Text("Library")
+                Text("Gallery")
                     .opacity(selectedTab == 1 ? 1 : 0)
                 Text("Settings")
                     .opacity(selectedTab == 2 ? 1 : 0)

@@ -7,7 +7,7 @@ struct SettingsView: View {
 
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @AppStorage("soundsEnabled") private var soundsEnabled = true
-    @AppStorage("confirmationsEnabled") private var confirmationsEnabled = true
+    @AppStorage("experimentalEnabled") private var experimentalEnabled = false
     @State private var showTopBorder = false
 
     private var appearance: Appearance {
@@ -31,7 +31,7 @@ struct SettingsView: View {
                         .padding(.bottom, -24)
                         .id("top")
                     appearanceSection
-                    interactionsSection
+                    otherSection
                     aboutSection
                     Spacer(minLength: 120)
                 }
@@ -131,9 +131,9 @@ struct SettingsView: View {
         }
     }
 
-    private var interactionsSection: some View {
+    private var otherSection: some View {
         settingsBox {
-            Text("Interactions")
+            Text("Other")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(primary)
 
@@ -153,16 +153,16 @@ struct SettingsView: View {
                 HapticsManager.shared.selection()
             }
 
-            Toggle(isOn: $confirmationsEnabled) {
-                Text("Confirmations")
+            Toggle(isOn: $experimentalEnabled) {
+                Text("Experimental Features")
                     .foregroundStyle(primary.opacity(0.9))
             }
-            .onChange(of: confirmationsEnabled) { _ in
+            .onChange(of: experimentalEnabled) { _ in
                 HapticsManager.shared.selection()
             }
 
             Divider()
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
 
             Button {
                 CacheManager.shared.clear()
@@ -195,7 +195,7 @@ struct SettingsView: View {
 
             Button {
                 HapticsManager.shared.pulse()
-                if let url = URL(string: "mailto:support@example.com") {
+                if let url = URL(string: "mailto:feedback.lian@gmail.com") {
                     openURL(url)
                 }
             } label: {
