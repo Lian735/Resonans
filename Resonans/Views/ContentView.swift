@@ -253,7 +253,10 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 24) {
-                    Color.clear.frame(height: 0).id("top")
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .padding(.bottom, -24)
+                        .id("top")
                     addCard
                         .background(
                             GeometryReader { geo -> Color in
@@ -271,7 +274,6 @@ struct ContentView: View {
                     recentSection
                     Spacer(minLength: 40)
                 }
-                .padding(.top, AppStyle.innerPadding)
             }
             .coordinateSpace(name: "homeScroll")
             .overlay(alignment: .top) {
@@ -293,12 +295,14 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack {
-                    Color.clear.frame(height: 0).id("top")
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .id("top")
                     if assets.isEmpty {
                         Text("None yet")
                             .font(.system(size: 18, weight: .regular, design: .rounded))
                             .foregroundStyle(primary.opacity(0.6))
-                            .padding(.top, 60)
+                            .padding(.top, 40)
                     } else {
                         BottomSheetGallery(
                             assets: Array(assets.prefix(displayedItemCount)),
@@ -306,7 +310,6 @@ struct ContentView: View {
                             selectedAsset: $selectedAsset
                         )
                         .padding(.horizontal, AppStyle.horizontalPadding)
-                        .padding(.top, AppStyle.innerPadding)
                     }
                     Spacer()
                 }
