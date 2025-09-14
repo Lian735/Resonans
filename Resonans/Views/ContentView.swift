@@ -341,15 +341,19 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            ZStack {
-                Text("Resonans").opacity(selectedTab == 0 ? 1 : 0)
-                Text("Library").opacity(selectedTab == 1 ? 1 : 0)
-                Text("Settings").opacity(selectedTab == 2 ? 1 : 0)
+            ZStack(alignment: .leading) {
+                Text("Resonans")
+                    .opacity(selectedTab == 0 ? 1 : 0)
+                Text("Library")
+                    .opacity(selectedTab == 1 ? 1 : 0)
+                Text("Settings")
+                    .opacity(selectedTab == 2 ? 1 : 0)
             }
             .font(.system(size: 46, weight: .heavy, design: .rounded))
             .tracking(0.5)
             .foregroundStyle(primary)
             .padding(.leading, 22)
+            .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             .animation(.easeInOut(duration: 0.25), value: selectedTab)
             Spacer()
             Button(action: { /* TODO: show help */ }) {
@@ -537,7 +541,7 @@ struct ContentView: View {
                 .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
         .padding(.horizontal, 22)
-        .padding(.bottom, 90)
+        .padding(.bottom, 120)
     }
 
     // statusMessage is no longer needed; replaced by toast overlay

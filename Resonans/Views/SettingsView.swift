@@ -30,6 +30,7 @@ struct SettingsView: View {
                     appearanceSection
                     interactionsSection
                     aboutSection
+                    Spacer(minLength: 120)
                 }
                 .padding(.vertical, 30)
                 .background(
