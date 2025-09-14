@@ -114,8 +114,8 @@ struct ContentView: View {
                                             onLastItemAppear: loadMoreItems,
                                             selectedAsset: $selectedAsset
                                         )
-                                        .padding(.horizontal, 14)
-                                        .padding(.top, 20)
+                                        .padding(.horizontal, AppStyle.horizontalPadding)
+                                        .padding(.top, AppStyle.innerPadding)
                                     }
                                     Spacer()
                                 }
@@ -378,7 +378,7 @@ struct ContentView: View {
 
     private var addCard: some View {
         GeometryReader { geo in
-            let fullWidth = geo.size.width - 44 // horizontal padding
+            let fullWidth = geo.size.width - (AppStyle.horizontalPadding * 2) // horizontal padding
             let targetWidth = (fullWidth - 16) / 2
             ZStack {
                 if showSourceOptions {
@@ -392,7 +392,7 @@ struct ContentView: View {
                 }
                 // Large rectangle (plus)
                 ZStack {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                         .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 14) {
@@ -406,7 +406,7 @@ struct ContentView: View {
                             }
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: fullWidth, height: 165)
@@ -428,7 +428,7 @@ struct ContentView: View {
                 // Two small rectangles (Files and Gallery)
                 HStack(spacing: 16) {
                     // Files rectangle
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                         .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
@@ -441,7 +441,7 @@ struct ContentView: View {
                             }
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
@@ -455,7 +455,7 @@ struct ContentView: View {
                             }
                         }
                     // Gallery rectangle
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                         .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
@@ -468,7 +468,7 @@ struct ContentView: View {
                             }
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                                 .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
@@ -489,7 +489,7 @@ struct ContentView: View {
                 .allowsHitTesting(showSourceOptions)
                 .zIndex(showSourceOptions ? 1 : 0)
             }
-            .padding(.horizontal, 22)
+            .padding(.horizontal, AppStyle.horizontalPadding)
             .frame(height: 165)
             .gesture(
                 DragGesture(minimumDistance: 24, coordinateSpace: .local)
@@ -512,7 +512,7 @@ struct ContentView: View {
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(primary)
                 .padding(.top, 16)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, AppStyle.innerPadding)
 
             VStack(spacing: 12) {
                 if recents.isEmpty {
@@ -545,16 +545,16 @@ struct ContentView: View {
             .frame(height: showAllRecents ? nil : 323)
         }
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .fill(primary.opacity(0.07))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                         .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                 )
                 .shadow(color: shadowColor.opacity(0.55), radius: 22, x: 0, y: 14)
                 .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
-        .padding(.horizontal, 22)
+        .padding(.horizontal, AppStyle.horizontalPadding)
         .padding(.bottom, 120)
     }
 
