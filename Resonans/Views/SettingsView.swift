@@ -36,7 +36,7 @@ struct SettingsView: View {
                 .background(
                     GeometryReader { geo -> Color in
                         DispatchQueue.main.async {
-                            let show = geo.frame(in: .named("settingsScroll")).minY < 0
+                            let show = geo.frame(in: .named("settingsScroll")).minY < -30
                             if showTopBorder != show {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     showTopBorder = show
@@ -85,6 +85,7 @@ struct SettingsView: View {
                                 .animation(.easeInOut(duration: 0.3), value: appearance)
                         }
                         .onTapGesture {
+                            HapticsManager.shared.pulse()
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 appearanceRaw = mode.rawValue
                             }
@@ -117,6 +118,7 @@ struct SettingsView: View {
                     }
                     .animation(.easeInOut(duration: 0.25), value: accent)
                     .onTapGesture {
+                        HapticsManager.shared.pulse()
                         withAnimation(.easeInOut(duration: 0.3)) {
                             accentRaw = option.rawValue
                         }
@@ -136,15 +138,24 @@ struct SettingsView: View {
                 Text("Vibration")
                     .foregroundStyle(primary.opacity(0.9))
             }
+            .onChange(of: hapticsEnabled) { _ in
+                HapticsManager.shared.pulse()
+            }
 
             Toggle(isOn: $soundsEnabled) {
                 Text("Sounds")
                     .foregroundStyle(primary.opacity(0.9))
             }
+            .onChange(of: soundsEnabled) { _ in
+                HapticsManager.shared.pulse()
+            }
 
             Toggle(isOn: $confirmationsEnabled) {
                 Text("Confirmations")
                     .foregroundStyle(primary.opacity(0.9))
+            }
+            .onChange(of: confirmationsEnabled) { _ in
+                HapticsManager.shared.pulse()
             }
         }
     }
@@ -163,6 +174,7 @@ struct SettingsView: View {
             .foregroundStyle(primary.opacity(0.8))
 
             Button {
+                HapticsManager.shared.pulse()
                 if let url = URL(string: "mailto:support@example.com") {
                     openURL(url)
                 }
