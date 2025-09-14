@@ -60,104 +60,8 @@ struct ContentView: View {
                 header
                 ZStack {
                     TabView(selection: $selectedTab) {
-                        ScrollViewReader { proxy in
-                            ScrollView(.vertical, showsIndicators: false) {
-                                VStack(spacing: 24) {
-                                    Color.clear.frame(height: 0).id("top")
-                                    Spacer(minLength: 0)
-                                    addCard
-                                        .background(
-                                            GeometryReader { geo -> Color in
-                                                DispatchQueue.main.async {
-                                                    let show = geo.frame(in: .named("homeScroll")).minY < 0
-                                                    if showHomeTopBorder != show {
-                                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                                            showHomeTopBorder = show
-                                                        }
-                                                    }
-                                                }
-                                                return Color.clear
-                                            }
-                                        )
-                                    recentSection
-                                    Spacer(minLength: 40)
-                                    // statusMessage removed
-                                }
-                            }
-                            .coordinateSpace(name: "homeScroll")
-                            .overlay(alignment: .top) {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.5))
-                                    .frame(height: 1)
-                                    .opacity(showHomeTopBorder ? 1 : 0)
-                                    .animation(.easeInOut(duration: 0.2), value: showHomeTopBorder)
-                            }
-                            .onChange(of: homeScrollTrigger) { _ in
-                                withAnimation {
-                                    proxy.scrollTo("top", anchor: .top)
-                                }
-                            }
-                        }
-                        .tag(0)
-                        ScrollViewReader { proxy in
-                            ScrollView {
-                                LazyVStack {
-                                    Color.clear.frame(height: 0).id("top")
-                                    if assets.isEmpty {
-                                        Text("None yet")
-                                            .font(.system(size: 18, weight: .regular, design: .rounded))
-                                            .foregroundStyle(primary.opacity(0.6))
-                                            .padding(.top, 60)
-                                    } else {
-                                        BottomSheetGallery(
-                                            assets: Array(assets.prefix(displayedItemCount)),
-                                            onLastItemAppear: loadMoreItems,
-                                            selectedAsset: $selectedAsset
-                                        )
-                                        .padding(.horizontal, AppStyle.horizontalPadding)
-                                        .padding(.top, AppStyle.innerPadding)
-                                    }
-                                    Spacer()
-                                }
-                                .background(
-                                    GeometryReader { geo -> Color in
-                                        DispatchQueue.main.async {
-                                            let topPadding: CGFloat = assets.isEmpty ? 60 : 20
-                                            let show = geo.frame(in: .named("libraryScroll")).minY < -topPadding
-                                            if showLibraryTopBorder != show {
-                                                withAnimation(.easeInOut(duration: 0.2)) {
-                                                    showLibraryTopBorder = show
-                                                }
-                                            }
-                                        }
-                                        return Color.clear
-                                    }
-                                )
-                            }
-                            .coordinateSpace(name: "libraryScroll")
-                            .overlay(alignment: .top) {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.5))
-                                    .frame(height: 1)
-                                    .opacity(showLibraryTopBorder ? 1 : 0)
-                                    .animation(.easeInOut(duration: 0.2), value: showLibraryTopBorder)
-                            }
-                            .onChange(of: libraryScrollTrigger) { _ in
-                                withAnimation {
-                                    proxy.scrollTo("top", anchor: .top)
-                                }
-                            }
-                            .refreshable {
-                                selectedAsset = nil
-                                loadGallery()
-                            }
-                            .onAppear {
-                                if assets.isEmpty {
-                                    loadGallery()
-                                }
-                            }
-                        }
-                        .tag(1)
+                        homeTab.tag(0)
+                        libraryTab.tag(1)
                         SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
                             .tag(2)
                     }
@@ -340,6 +244,109 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity)
                     .background(background)
+        }
+    }
+
+    // MARK: - Tabs
+
+    private var homeTab: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
+                    Color.clear.frame(height: 0).id("top")
+                    addCard
+                        .background(
+                            GeometryReader { geo -> Color in
+                                DispatchQueue.main.async {
+                                    let show = geo.frame(in: .named("homeScroll")).minY < 0
+                                    if showHomeTopBorder != show {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            showHomeTopBorder = show
+                                        }
+                                    }
+                                }
+                                return Color.clear
+                            }
+                        )
+                    recentSection
+                    Spacer(minLength: 40)
+                }
+                .padding(.top, AppStyle.innerPadding)
+            }
+            .coordinateSpace(name: "homeScroll")
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.5))
+                    .frame(height: 1)
+                    .opacity(showHomeTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showHomeTopBorder)
+            }
+            .onChange(of: homeScrollTrigger) { _ in
+                withAnimation {
+                    proxy.scrollTo("top", anchor: .top)
+                }
+            }
+        }
+    }
+
+    private var libraryTab: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack {
+                    Color.clear.frame(height: 0).id("top")
+                    if assets.isEmpty {
+                        Text("None yet")
+                            .font(.system(size: 18, weight: .regular, design: .rounded))
+                            .foregroundStyle(primary.opacity(0.6))
+                            .padding(.top, 60)
+                    } else {
+                        BottomSheetGallery(
+                            assets: Array(assets.prefix(displayedItemCount)),
+                            onLastItemAppear: loadMoreItems,
+                            selectedAsset: $selectedAsset
+                        )
+                        .padding(.horizontal, AppStyle.horizontalPadding)
+                        .padding(.top, AppStyle.innerPadding)
+                    }
+                    Spacer()
+                }
+                .background(
+                    GeometryReader { geo -> Color in
+                        DispatchQueue.main.async {
+                            let topPadding: CGFloat = assets.isEmpty ? 60 : 20
+                            let show = geo.frame(in: .named("libraryScroll")).minY < -topPadding
+                            if showLibraryTopBorder != show {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showLibraryTopBorder = show
+                                }
+                            }
+                        }
+                        return Color.clear
+                    }
+                )
+            }
+            .coordinateSpace(name: "libraryScroll")
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.5))
+                    .frame(height: 1)
+                    .opacity(showLibraryTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showLibraryTopBorder)
+            }
+            .onChange(of: libraryScrollTrigger) { _ in
+                withAnimation {
+                    proxy.scrollTo("top", anchor: .top)
+                }
+            }
+            .refreshable {
+                selectedAsset = nil
+                loadGallery()
+            }
+            .onAppear {
+                if assets.isEmpty {
+                    loadGallery()
+                }
+            }
         }
     }
 
