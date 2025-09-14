@@ -273,7 +273,6 @@ struct ContentView: View {
                 }
                 .padding(.top, AppStyle.innerPadding)
             }
-            .scrollBounceBehavior(.never)
             .coordinateSpace(name: "homeScroll")
             .overlay(alignment: .top) {
                 Rectangle()
@@ -326,7 +325,6 @@ struct ContentView: View {
                     }
                 )
             }
-            .scrollBounceBehavior(.never)
             .coordinateSpace(name: "libraryScroll")
             .overlay(alignment: .top) {
                 Rectangle()
