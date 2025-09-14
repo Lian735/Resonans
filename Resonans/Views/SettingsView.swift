@@ -26,13 +26,15 @@ struct SettingsView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 24) {
-                    Color.clear.frame(height: 0).id("top")
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .id("top")
                     appearanceSection
                     interactionsSection
                     aboutSection
                     Spacer(minLength: 120)
                 }
-                .padding(.vertical, AppStyle.innerPadding)
+                .padding(.bottom, AppStyle.innerPadding)
                 .background(
                     GeometryReader { geo -> Color in
                         DispatchQueue.main.async {
