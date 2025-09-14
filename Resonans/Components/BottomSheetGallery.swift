@@ -82,21 +82,21 @@ struct BottomSheetGallery: View {
                             .resizable()
                             .scaledToFill()
                     } else {
-                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
                             .fill(primary.opacity(0.08))
                     }
                 }
             }
             .frame(width: 100, height: 100)
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous))
             // Border
             .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
                     .strokeBorder(primary.opacity(0.15), lineWidth: 1)
             )
             // Selection highlight
             .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
                     .stroke(primary, lineWidth: isSelected ? 4 : 0)
                     .animation(.easeInOut(duration: 0.25), value: isSelected)
             )
@@ -110,7 +110,7 @@ struct BottomSheetGallery: View {
                         .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
                 }
             }
-            .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous))
             .scaleEffect(hasAppeared ? 1 : 0.8)
             .onTapGesture {
                 HapticsManager.shared.pulse()

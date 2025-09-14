@@ -224,16 +224,16 @@ struct SettingsView: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
                 .fill(primary.opacity(0.07))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: DesignConstants.cornerRadius, style: .continuous)
                         .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
                 .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.3), radius: 1, x: 0, y: 1)
         )
-        .padding(.horizontal, 22)
+        .padding(.horizontal, DesignConstants.horizontalPadding)
     }
 }
 
