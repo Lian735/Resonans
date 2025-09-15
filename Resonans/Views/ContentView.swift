@@ -1,6 +1,5 @@
 import SwiftUI
 import AVFoundation
-import AVKit
 import Photos
 
 struct ContentView: View {
@@ -37,9 +36,6 @@ struct ContentView: View {
     @State private var showHomeTopBorder = false
     @State private var showGalleryTopBorder = false
 
-    @State private var previewPlayer: AVPlayer?
-    @State private var isPreviewPlaying = false
-    @State private var showPreviewControls = false
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -89,8 +85,6 @@ struct ContentView: View {
                             Button(action: {
                                 HapticsManager.shared.pulse()
                                 showConversionSheet = true
-                                stopPreview()
-                                showPreviewControls = false
                                 withAnimation { selectedAsset = nil }
                             }) {
                                 Text("Extract Audio")
@@ -173,31 +167,6 @@ struct ContentView: View {
                     }
                 }
             }
-            if showPreviewControls, let player = previewPlayer {
-                VStack(alignment: .leading, spacing: 8) {
-                    if isPreviewPlaying {
-                        VideoPlayer(player: player)
-                            .frame(width: 200, height: 150)
-                            .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-                    }
-                    Button(action: {
-                        if isPreviewPlaying {
-                            player.pause()
-                        } else {
-                            player.play()
-                        }
-                        isPreviewPlaying.toggle()
-                    }) {
-                        Image(systemName: isPreviewPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(background)
-                            .padding(10)
-                            .background(primary.opacity(0.8))
-                            .clipShape(Circle())
-                    }
-                }
-                .padding()
-            }
             // Toast overlay at the very top
             if showToast, let msg = message {
                 VStack {
@@ -259,38 +228,24 @@ struct ContentView: View {
                 PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
                     if let urlAsset = avAsset as? AVURLAsset {
                         DispatchQueue.main.async {
-                            stopPreview()
                             videoURL = urlAsset.url
-                            previewPlayer = AVPlayer(url: urlAsset.url)
-                            showPreviewControls = true
-                            isPreviewPlaying = false
                         }
                     }
                 }
             } else {
-                stopPreview()
-                previewPlayer = nil
-                showPreviewControls = false
+                videoURL = nil
             }
         }
         // Removed unused .confirmationDialog
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
-                stopPreview()
                 videoURL = url
-                previewPlayer = AVPlayer(url: url)
-                showPreviewControls = true
-                isPreviewPlaying = false
                 showConversionSheet = true
             }
         }
         .sheet(isPresented: $showFilePicker) {
             FilePicker { url in
-                stopPreview()
                 videoURL = url
-                previewPlayer = AVPlayer(url: url)
-                showPreviewControls = true
-                isPreviewPlaying = false
                 showConversionSheet = true
             }
         }
@@ -679,11 +634,6 @@ struct ContentView: View {
                 }
             }
         }
-    }
-
-    private func stopPreview() {
-        previewPlayer?.pause()
-        isPreviewPlaying = false
     }
 
     private func loadMoreItems() {
