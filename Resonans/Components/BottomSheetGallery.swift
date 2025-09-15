@@ -70,20 +70,30 @@ struct BottomSheetGallery: View {
         @State private var image: UIImage?
         @State private var durationText: String = ""
         @State private var hasAppeared = false
+        @State private var player: AVPlayer?
+        @State private var isPlaying = false
+        @State private var currentTime: Double = 0
+        @State private var timeObserver: Any?
         @Environment(\.colorScheme) private var colorScheme
         private var primary: Color { colorScheme == .dark ? .white : .black }
 
         var body: some View {
             // Image or placeholder
             ZStack {
-                Group {
-                    if let image = image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .fill(primary.opacity(0.08))
+                if isSelected, let player = player {
+                    PlayerView(player: player)
+                        .scaledToFill()
+                        .clipped()
+                } else {
+                    Group {
+                        if let image = image {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .fill(primary.opacity(0.08))
+                        }
                     }
                 }
             }
@@ -100,14 +110,41 @@ struct BottomSheetGallery: View {
                     .stroke(primary, lineWidth: isSelected ? 4 : 0)
                     .animation(.easeInOut(duration: 0.25), value: isSelected)
             )
-            // Duration label anchored to the *frame*, independent of the cropped image.
+            // Progress or original duration label
             .overlay(alignment: .bottomLeading) {
-                if !durationText.isEmpty {
+                if isSelected {
+                    Text(formatDuration(currentTime))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(8)
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                } else if !durationText.isEmpty {
                     Text(durationText)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .padding(8)
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                }
+            }
+            // Play / Pause button
+            .overlay(alignment: .topTrailing) {
+                if isSelected, player != nil {
+                    Button(action: {
+                        if isPlaying {
+                            player?.pause()
+                        } else {
+                            player?.play()
+                        }
+                        isPlaying.toggle()
+                    }) {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .padding(4)
+                    }
                 }
             }
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
@@ -129,8 +166,18 @@ struct BottomSheetGallery: View {
                     }
                 }
             }
+            .onChange(of: isSelected) { newValue in
+                if newValue {
+                    startPreview()
+                } else {
+                    stopPreview()
+                }
+            }
             .onChange(of: asset.localIdentifier) { _ in
                 loadDuration()
+            }
+            .onDisappear {
+                stopPreview()
             }
         }
 
@@ -184,5 +231,63 @@ struct BottomSheetGallery: View {
             let seconds = totalSeconds % 60
             return String(format: "%02d:%02d", minutes, seconds)
         }
+
+        private func startPreview() {
+            let options = PHVideoRequestOptions()
+            options.isNetworkAccessAllowed = true
+            PHImageManager.default().requestPlayerItem(forVideo: asset, options: options) { item, _ in
+                DispatchQueue.main.async {
+                    guard isSelected, let item = item else { return }
+                    let player = AVPlayer(playerItem: item)
+                    self.player = player
+                    self.isPlaying = true
+                    addTimeObserver()
+                    player.play()
+                }
+            }
+        }
+
+        private func stopPreview() {
+            if let player = player {
+                player.pause()
+                if let timeObserver = timeObserver {
+                    player.removeTimeObserver(timeObserver)
+                    self.timeObserver = nil
+                }
+            }
+            currentTime = 0
+            isPlaying = false
+            player = nil
+        }
+
+        private func addTimeObserver() {
+            guard let player = player else { return }
+            let interval = CMTime(seconds: 1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+                currentTime = time.seconds
+            }
+        }
+    }
+}
+
+private struct PlayerView: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> UIView {
+        let view = PlayerContainerView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspectFill
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        if let view = uiView as? PlayerContainerView {
+            view.playerLayer.player = player
+        }
+    }
+
+    private final class PlayerContainerView: UIView {
+        override static var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
     }
 }
