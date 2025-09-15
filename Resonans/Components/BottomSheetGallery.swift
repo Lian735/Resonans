@@ -128,7 +128,7 @@ struct BottomSheetGallery: View {
                 }
             }
             // Play / Pause button
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .topLeading) {
                 if isSelected {
                     Button(action: {
                         if isPlaying {
@@ -146,10 +146,10 @@ struct BottomSheetGallery: View {
                         }
                     }) {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(6)
-                            .background(Color.black.opacity(0.6))
+                            .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+                            .padding(9)
                             .clipShape(Circle())
                             .padding(4)
                     }
