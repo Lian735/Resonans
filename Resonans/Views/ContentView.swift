@@ -6,8 +6,6 @@ struct ContentView: View {
     @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
-    @State private var selectedFormat: AudioFormat = .m4a
-    @State private var isConverting = false
     @State private var message: String?
     @State private var showSourceSheet = false
     @State private var showToast = false
@@ -250,15 +248,9 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showConversionSheet) {
-            VStack {
-                Spacer()
-                Text("Conversion settings coming soon")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Spacer()
+            if let url = videoURL {
+                ConversionSettingsView(videoURL: url)
             }
-            .frame(maxWidth: .infinity)
-                    .background(background)
         }
     }
 
@@ -610,30 +602,6 @@ struct ContentView: View {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    private func convert() {
-        guard let videoURL else { return }
-        isConverting = true
-        message = nil
-        VideoToAudioConverter.convert(videoURL: videoURL, format: selectedFormat) { result in
-            DispatchQueue.main.async {
-                isConverting = false
-                switch result {
-                case .success(let url):
-                    let item = RecentItem(title: url.deletingPathExtension().lastPathComponent, duration: "00:18")
-                    recents.insert(item, at: 0)
-                    message = "Gespeichert: \(url.lastPathComponent)"
-                    toastColor = .green
-                case .failure(let error):
-                    message = "Fehler: \(error.localizedDescription)"
-                    toastColor = .red
-                }
-                withAnimation {
-                    showToast = true
-                }
-            }
-        }
     }
 
     private func loadMoreItems() {
