@@ -19,11 +19,12 @@ struct ConversionSettingsView: View {
     @State private var exportURL: URL?
     @State private var showExporter = false
 
-    private let previewSize: CGFloat = 200
+    private let idealPreviewSize: CGFloat = 140
+    @State private var resolvedPreviewSize: CGFloat = 140
 
     private var originalFormatLabel: String {
         let ext = videoURL.pathExtension.uppercased()
-        return ext.isEmpty ? "UNBEKANNT" : ext
+        return ext.isEmpty ? "UNKNOWN" : ext
     }
 
     private var clampedProgress: Double {
@@ -33,7 +34,7 @@ struct ConversionSettingsView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Audio exportieren")
+                Text("Export Audio")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,44 +64,52 @@ struct ConversionSettingsView: View {
     }
 
     private var previewSection: some View {
-        ViewThatFits {
-            HStack(alignment: .top, spacing: 24) {
-                videoColumn
-                arrow(isHorizontal: true)
-                audioColumn
+        GeometryReader { geometry in
+            let spacing: CGFloat = 20
+            let arrowWidth: CGFloat = 24
+            let availableWidth = geometry.size.width
+            let availableForCards = max(availableWidth - spacing - arrowWidth, 0)
+            let cardSize = max(min(availableForCards / 2, idealPreviewSize), 0)
+
+            if cardSize > 0, abs(resolvedPreviewSize - cardSize) > 0.5 {
+                DispatchQueue.main.async {
+                    resolvedPreviewSize = cardSize
+                }
             }
-            VStack(alignment: .leading, spacing: 24) {
-                videoColumn
-                arrow(isHorizontal: false)
-                audioColumn
+
+            HStack(alignment: .top, spacing: spacing) {
+                videoColumn(size: cardSize)
+                arrow(height: cardSize, width: arrowWidth)
+                audioColumn(size: cardSize)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(height: max(resolvedPreviewSize, 0))
     }
 
-    private var videoColumn: some View {
+    private func videoColumn(size: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             VideoPreviewCard(
                 url: videoURL,
-                size: previewSize,
-                primaryColor: primary,
-                accentColor: accent.color
+                size: size,
+                primaryColor: primary
             )
-            Text("Dateiformat: \(originalFormatLabel)")
+            Text("File format: \(originalFormatLabel)")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(primary.opacity(0.65))
         }
     }
 
-    private var audioColumn: some View {
+    private func audioColumn(size: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             AudioPreviewCard(
-                size: previewSize,
+                size: size,
                 primaryColor: primary,
                 accentColor: accent.color,
                 audioURL: $exportURL
             )
             VStack(alignment: .leading, spacing: 6) {
-                Text("Exportformat")
+                Text("Export format")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(primary.opacity(0.8))
 
@@ -121,7 +130,7 @@ struct ConversionSettingsView: View {
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .frame(width: previewSize)
+                    .frame(width: size)
                     .background(
                         RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                             .fill(primary.opacity(0.07))
@@ -136,34 +145,22 @@ struct ConversionSettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private func arrow(isHorizontal: Bool) -> some View {
-        if isHorizontal {
-            VStack {
-                Spacer()
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.55))
-                Spacer()
-            }
-            .frame(width: 28, height: previewSize)
-        } else {
-            HStack {
-                Spacer()
-                Image(systemName: "arrow.down")
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.55))
-                Spacer()
-            }
-            .frame(height: 28)
+    private func arrow(height: CGFloat, width: CGFloat) -> some View {
+        VStack {
+            Spacer(minLength: 0)
+            Image(systemName: "arrow.right")
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary.opacity(0.55))
+            Spacer(minLength: 0)
         }
+        .frame(width: width, height: height)
     }
 
     private var exportButton: some View {
         Button(action: convert) {
             HStack {
                 Spacer()
-                Text(isProcessing ? "Export läuft…" : "Exportieren")
+                Text(isProcessing ? "Exporting…" : "Export")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundColor(background)
                 Spacer()
@@ -181,11 +178,11 @@ struct ConversionSettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             ProgressView(value: clampedProgress, total: 1)
                 .tint(accent.color)
-            Text("\(Int(clampedProgress * 100))% abgeschlossen")
+            Text("\(Int(clampedProgress * 100))% complete")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(primary.opacity(0.7))
         }
-        .frame(maxWidth: previewSize)
+        .frame(maxWidth: resolvedPreviewSize)
     }
 
     private func convert() {
@@ -222,7 +219,6 @@ private struct VideoPreviewCard: View {
     let url: URL
     let size: CGFloat
     let primaryColor: Color
-    let accentColor: Color
 
     @State private var thumbnail: UIImage?
     @State private var player: AVPlayer?
@@ -237,6 +233,7 @@ private struct VideoPreviewCard: View {
         ZStack {
             if let player = player, isPlaying {
                 PlayerRepresentable(player: player)
+                    .scaledToFill()
                     .clipped()
             } else if let thumbnail = thumbnail {
                 Image(uiImage: thumbnail)
@@ -253,6 +250,10 @@ private struct VideoPreviewCard: View {
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .stroke(primaryColor.opacity(0.15), lineWidth: 1)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .stroke(primaryColor, lineWidth: 4)
+        )
         .overlay(alignment: .bottomLeading) {
             if duration > 0 {
                 Text(formatTime(isPlaying ? currentTime : duration))
@@ -267,12 +268,12 @@ private struct VideoPreviewCard: View {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
                     .padding(9)
-                    .background(Circle().fill(accentColor.opacity(0.95)))
-                    .shadow(color: .black.opacity(0.45), radius: 6, x: 0, y: 2)
+                    .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .padding(10)
+            .padding(4)
         }
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
         .onTapGesture {
@@ -358,11 +359,11 @@ private struct VideoPreviewCard: View {
     }
 
     private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite else { return "0:00" }
+        guard seconds.isFinite else { return "00:00" }
         let totalSeconds = max(Int(seconds.rounded()), 0)
         let minutes = totalSeconds / 60
         let secs = totalSeconds % 60
-        return String(format: "%d:%02d", minutes, secs)
+        return String(format: "%02d:%02d", minutes, secs)
     }
 }
 
@@ -381,13 +382,13 @@ private struct AudioPreviewCard: View {
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .fill(primaryColor.opacity(0.07))
             Image(systemName: "waveform")
-                .font(.system(size: size * 0.35, weight: .regular))
-                .foregroundStyle(accentColor.opacity(0.4))
+                .font(.system(size: size * 0.4, weight: .regular))
+                .foregroundStyle(accentColor.opacity(0.45))
             Button(action: togglePlayback) {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(24)
+                    .padding(28)
                     .background(Circle().fill(accentColor))
                     .shadow(color: accentColor.opacity(0.35), radius: 10, x: 0, y: 6)
             }
@@ -400,6 +401,10 @@ private struct AudioPreviewCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .stroke(primaryColor.opacity(0.15), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .stroke(primaryColor, lineWidth: audioURL == nil ? 0 : 4)
         )
         .onChange(of: audioURL) { _ in
             resetPlayback()
