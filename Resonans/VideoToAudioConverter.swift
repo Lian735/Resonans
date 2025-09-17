@@ -3,60 +3,106 @@ import Foundation
 import LAME
 
 enum AudioFormat: String, CaseIterable {
-    case wav = "WAV"
     case m4a = "M4A"
+    case wav = "WAV"
     case mp3 = "MP3"
+
+    var fileExtension: String {
+        switch self {
+        case .m4a: return "m4a"
+        case .wav: return "wav"
+        case .mp3: return "mp3"
+        }
+    }
 }
 
 final class VideoToAudioConverter {
-    static func convert(videoURL: URL, format: AudioFormat, completion: @escaping (Result<URL, Error>) -> Void) {
+    static func convert(
+        videoURL: URL,
+        format: AudioFormat,
+        progress: @escaping (Double) -> Void,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
         let asset = AVURLAsset(url: videoURL)
         let baseName = videoURL.deletingPathExtension().lastPathComponent + "_out"
         let tmp = FileManager.default.temporaryDirectory
+        progress(0)
         switch format {
-        case .wav:
-            let out = tmp.appendingPathComponent(baseName).appendingPathExtension("wav")
-            export(asset: asset, outputURL: out, fileType: .wav, completion: completion)
         case .m4a:
-            let out = tmp.appendingPathComponent(baseName).appendingPathExtension("m4a")
-            export(asset: asset, outputURL: out, fileType: .m4a, completion: completion)
+            let out = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
+            export(asset: asset, outputURL: out, fileType: .m4a, progress: progress, completion: completion)
+        case .wav:
+            let out = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
+            export(asset: asset, outputURL: out, fileType: .wav, progress: progress, completion: completion)
         case .mp3:
-            let wavURL = tmp.appendingPathComponent(baseName).appendingPathExtension("wav")
-            export(asset: asset, outputURL: wavURL, fileType: .wav) { result in
+            let wavURL = tmp.appendingPathComponent(baseName).appendingPathExtension(AudioFormat.wav.fileExtension)
+            export(asset: asset, outputURL: wavURL, fileType: .wav, progress: { value in
+                progress(value * 0.85)
+            }) { result in
                 switch result {
                 case .failure(let err):
-                    completion(.failure(err))
+                    DispatchQueue.main.async {
+                        completion(.failure(err))
+                    }
                 case .success:
                     do {
-                        let mp3URL = tmp.appendingPathComponent(baseName).appendingPathExtension("mp3")
-                        try wavToMp3(wavURL: wavURL, mp3URL: mp3URL)
-                        completion(.success(mp3URL))
+                        let mp3URL = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
+                        try wavToMp3(wavURL: wavURL, mp3URL: mp3URL) { encodeProgress in
+                            let mapped = 0.85 + (encodeProgress * 0.15)
+                            progress(min(max(mapped, 0), 1))
+                        }
+                        DispatchQueue.main.async {
+                            progress(1)
+                        }
+                        DispatchQueue.main.async {
+                            completion(.success(mp3URL))
+                        }
                     } catch {
-                        completion(.failure(error))
+                        DispatchQueue.main.async {
+                            completion(.failure(error))
+                        }
                     }
                 }
             }
         }
     }
 
-    private static func export(asset: AVAsset, outputURL: URL, fileType: AVFileType, completion: @escaping (Result<URL, Error>) -> Void) {
+    private static func export(
+        asset: AVAsset,
+        outputURL: URL,
+        fileType: AVFileType,
+        progress: @escaping (Double) -> Void,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
         guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
             completion(.failure(NSError(domain: "export", code: -1)))
             return
         }
+        if FileManager.default.fileExists(atPath: outputURL.path) {
+            try? FileManager.default.removeItem(at: outputURL)
+        }
         exporter.outputURL = outputURL
         exporter.outputFileType = fileType
-        Task {
-            do {
-                try await exporter.export(to: outputURL, as: fileType)
-                completion(.success(outputURL))
-            } catch {
-                completion(.failure(error))
+        let watcher = ExportProgressWatcher(exporter: exporter, progress: progress)
+        exporter.exportAsynchronously {
+            watcher.invalidate()
+            switch exporter.status {
+            case .completed:
+                DispatchQueue.main.async {
+                    progress(1)
+                    completion(.success(outputURL))
+                }
+            case .failed, .cancelled:
+                DispatchQueue.main.async {
+                    completion(.failure(exporter.error ?? NSError(domain: "export", code: -2)))
+                }
+            default:
+                break
             }
         }
     }
 
-    private static func wavToMp3(wavURL: URL, mp3URL: URL) throws {
+    private static func wavToMp3(wavURL: URL, mp3URL: URL, progress: @escaping (Double) -> Void) throws {
         guard let pcm = fopen(wavURL.path, "rb") else { throw NSError(domain: "lame", code: -1) }
         defer { fclose(pcm) }
         guard let mp3 = fopen(mp3URL.path, "wb") else { throw NSError(domain: "lame", code: -2) }
@@ -69,6 +115,8 @@ final class VideoToAudioConverter {
         var pcmBuffer = [Int16](repeating: 0, count: Int(pcmBufferSize))
         var mp3Buffer = [UInt8](repeating: 0, count: Int(8192))
         var read: Int32
+        let totalBytes = (try? FileManager.default.attributesOfItem(atPath: wavURL.path)[.size] as? NSNumber)?.doubleValue ?? 0
+        var processedBytes: Double = 0
         repeat {
             read = Int32(pcmBuffer.withUnsafeMutableBufferPointer { ptr in
                 fread(ptr.baseAddress, MemoryLayout<Int16>.size, Int(pcmBufferSize), pcm)
@@ -77,11 +125,46 @@ final class VideoToAudioConverter {
             _ = mp3Buffer.withUnsafeBufferPointer { ptr in
                 fwrite(ptr.baseAddress, Int(write), 1, mp3)
             }
+            processedBytes += Double(read) * Double(MemoryLayout<Int16>.size)
+            if totalBytes > 0 {
+                let ratio = min(max(processedBytes / totalBytes, 0), 1)
+                DispatchQueue.main.async {
+                    progress(ratio)
+                }
+            }
         } while read != 0
         let flush = lame_encode_flush(lame, &mp3Buffer, 8192)
         _ = mp3Buffer.withUnsafeBufferPointer { ptr in
             fwrite(ptr.baseAddress, Int(flush), 1, mp3)
         }
+        DispatchQueue.main.async {
+            progress(1)
+        }
         lame_close(lame)
+    }
+}
+
+private final class ExportProgressWatcher {
+    private var timer: DispatchSourceTimer?
+    private weak var exporter: AVAssetExportSession?
+
+    init(exporter: AVAssetExportSession, progress: @escaping (Double) -> Void) {
+        self.exporter = exporter
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInitiated))
+        timer.schedule(deadline: .now(), repeating: .milliseconds(120))
+        timer.setEventHandler { [weak exporter] in
+            guard let exporter = exporter else { return }
+            let value = min(max(Double(exporter.progress), 0), 1)
+            DispatchQueue.main.async {
+                progress(value)
+            }
+        }
+        timer.resume()
+        self.timer = timer
+    }
+
+    func invalidate() {
+        timer?.cancel()
+        timer = nil
     }
 }
