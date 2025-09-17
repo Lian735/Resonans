@@ -71,18 +71,17 @@ struct ConversionSettingsView: View {
             let availableForCards = max(availableWidth - spacing - arrowWidth, 0)
             let cardSize = max(min(availableForCards / 2, idealPreviewSize), 0)
 
-            if cardSize > 0, abs(resolvedPreviewSize - cardSize) > 0.5 {
-                DispatchQueue.main.async {
-                    resolvedPreviewSize = cardSize
-                }
-            }
-
             HStack(alignment: .top, spacing: spacing) {
                 videoColumn(size: cardSize)
                 arrow(height: cardSize, width: arrowWidth)
                 audioColumn(size: cardSize)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .task {
+                if cardSize > 0, abs(resolvedPreviewSize - cardSize) > 0.5 {
+                    resolvedPreviewSize = cardSize
+                }
+            }
         }
         .frame(height: max(resolvedPreviewSize, 0))
     }
