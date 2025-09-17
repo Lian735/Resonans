@@ -424,6 +424,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Resonans/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Resonans;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need access to save exported videos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to display videos.";
@@ -460,6 +461,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Resonans/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Resonans;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We need access to save exported videos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library to display videos.";
