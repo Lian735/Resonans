@@ -1,4 +1,6 @@
 import SwiftUI
+import AVFoundation
+import UIKit
 
 struct ConversionSettingsView: View {
     let videoURL: URL
@@ -11,31 +13,46 @@ struct ConversionSettingsView: View {
     private var background: Color { colorScheme == .dark ? .black : .white }
     private var primary: Color { colorScheme == .dark ? .white : .black }
 
-    @State private var selectedFormat: AudioFormat = .m4a
+    @State private var selectedFormat: AudioFormat = .mp3
     @State private var isProcessing = false
+    @State private var progressValue: Double = 0
     @State private var exportURL: URL?
     @State private var showExporter = false
 
+    private let previewSize: CGFloat = 200
+
+    private var originalFormatLabel: String {
+        let ext = videoURL.pathExtension.uppercased()
+        return ext.isEmpty ? "UNBEKANNT" : ext
+    }
+
+    private var clampedProgress: Double {
+        min(max(progressValue, 0), 1)
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
-            formatSection
-            if isProcessing {
-                ProgressView()
-                    .tint(accent.color)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Audio exportieren")
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                previewSection
+
+                exportButton
+
+                if isProcessing {
+                    progressIndicator
+                }
+
+                Spacer(minLength: 12)
             }
-            Button(action: convert) {
-                Text("Convert & Export")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundColor(background)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(accent.color.opacity(isProcessing ? 0.5 : 1))
-                    .clipShape(Capsule())
-            }
-            .disabled(isProcessing)
-            Spacer()
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.top, 32)
+            .padding(.bottom, 40)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.top, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(background.ignoresSafeArea())
         .sheet(isPresented: $showExporter, onDismiss: { dismiss() }) {
@@ -45,36 +62,149 @@ struct ConversionSettingsView: View {
         }
     }
 
-    private var formatSection: some View {
-        settingsBox {
-            Text("Format")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
-            HStack(spacing: 12) {
-                ForEach(AudioFormat.allCases, id: \.self) { format in
-                    Text(format.rawValue)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(selectedFormat == format ? background : primary.opacity(0.8))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(selectedFormat == format ? accent.color : primary.opacity(0.1))
-                        )
-                        .onTapGesture {
-                            HapticsManager.shared.selection()
-                            selectedFormat = format
-                        }
-                }
+    private var previewSection: some View {
+        ViewThatFits {
+            HStack(alignment: .top, spacing: 24) {
+                videoColumn
+                arrow(isHorizontal: true)
+                audioColumn
+            }
+            VStack(alignment: .leading, spacing: 24) {
+                videoColumn
+                arrow(isHorizontal: false)
+                audioColumn
             }
         }
     }
 
+    private var videoColumn: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VideoPreviewCard(
+                url: videoURL,
+                size: previewSize,
+                primaryColor: primary,
+                accentColor: accent.color
+            )
+            Text("Dateiformat: \(originalFormatLabel)")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary.opacity(0.65))
+        }
+    }
+
+    private var audioColumn: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            AudioPreviewCard(
+                size: previewSize,
+                primaryColor: primary,
+                accentColor: accent.color,
+                audioURL: $exportURL
+            )
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Exportformat")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.8))
+
+                Picker(selection: $selectedFormat) {
+                    ForEach(AudioFormat.allCases, id: \.self) { format in
+                        Text(format.rawValue)
+                            .tag(format)
+                    }
+                } label: {
+                    HStack {
+                        Text(selectedFormat.rawValue)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(primary)
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(primary.opacity(0.6))
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .frame(width: previewSize)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .fill(primary.opacity(0.07))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                    .strokeBorder(primary.opacity(0.1), lineWidth: 1)
+                            )
+                    )
+                }
+                .pickerStyle(.menu)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func arrow(isHorizontal: Bool) -> some View {
+        if isHorizontal {
+            VStack {
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.55))
+                Spacer()
+            }
+            .frame(width: 28, height: previewSize)
+        } else {
+            HStack {
+                Spacer()
+                Image(systemName: "arrow.down")
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.55))
+                Spacer()
+            }
+            .frame(height: 28)
+        }
+    }
+
+    private var exportButton: some View {
+        Button(action: convert) {
+            HStack {
+                Spacer()
+                Text(isProcessing ? "Export läuft…" : "Exportieren")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundColor(background)
+                Spacer()
+            }
+            .padding(.vertical, 14)
+            .background(accent.color.opacity(isProcessing ? 0.6 : 1))
+            .clipShape(Capsule())
+            .shadow(color: accent.color.opacity(0.35), radius: 14, x: 0, y: 8)
+        }
+        .disabled(isProcessing)
+        .opacity(isProcessing ? 0.9 : 1)
+    }
+
+    private var progressIndicator: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ProgressView(value: clampedProgress, total: 1)
+                .tint(accent.color)
+            Text("\(Int(clampedProgress * 100))% abgeschlossen")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary.opacity(0.7))
+        }
+        .frame(maxWidth: previewSize)
+    }
+
     private func convert() {
         guard !isProcessing else { return }
+        HapticsManager.shared.pulse()
+        exportURL = nil
+        progressValue = 0
         isProcessing = true
-        VideoToAudioConverter.convert(videoURL: videoURL, format: selectedFormat) { result in
-            DispatchQueue.main.async {
+        VideoToAudioConverter.convert(
+            videoURL: videoURL,
+            format: selectedFormat,
+            progress: { value in
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        progressValue = value
+                    }
+                }
+            },
+            completion: { result in
                 isProcessing = false
                 switch result {
                 case .success(let url):
@@ -84,26 +214,260 @@ struct ConversionSettingsView: View {
                     dismiss()
                 }
             }
+        )
+    }
+}
+
+private struct VideoPreviewCard: View {
+    let url: URL
+    let size: CGFloat
+    let primaryColor: Color
+    let accentColor: Color
+
+    @State private var thumbnail: UIImage?
+    @State private var player: AVPlayer?
+    @State private var isPlaying = false
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 0
+    @State private var timeObserver: Any?
+    @State private var endObserver: NSObjectProtocol?
+    @State private var hasLoadedMetadata = false
+
+    var body: some View {
+        ZStack {
+            if let player = player, isPlaying {
+                PlayerRepresentable(player: player)
+                    .clipped()
+            } else if let thumbnail = thumbnail {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primaryColor.opacity(0.08))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .stroke(primaryColor.opacity(0.15), lineWidth: 1)
+        )
+        .overlay(alignment: .bottomLeading) {
+            if duration > 0 {
+                Text(formatTime(isPlaying ? currentTime : duration))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .padding(8)
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            Button(action: togglePlayback) {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(9)
+                    .background(Circle().fill(accentColor.opacity(0.95)))
+                    .shadow(color: .black.opacity(0.45), radius: 6, x: 0, y: 2)
+            }
+            .buttonStyle(.plain)
+            .padding(10)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .onTapGesture {
+            togglePlayback()
+        }
+        .onAppear(perform: loadMetadata)
+        .onDisappear(perform: stopPlayback)
+    }
+
+    private func togglePlayback() {
+        if isPlaying {
+            stopPlayback()
+        } else {
+            if player == nil {
+                player = AVPlayer(url: url)
+            }
+            addObservers()
+            player?.seek(to: .zero)
+            player?.play()
+            isPlaying = true
         }
     }
 
-    private func settingsBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            content()
+    private func stopPlayback() {
+        player?.pause()
+        if let player = player, let timeObserver = timeObserver {
+            player.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
         }
-        .padding(AppStyle.innerPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
+        if let endObserver = endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+        currentTime = 0
+        isPlaying = false
+    }
+
+    private func addObservers() {
+        guard let player = player else { return }
+        if timeObserver == nil {
+            let interval = CMTime(seconds: 0.3, preferredTimescale: 600)
+            timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+                currentTime = time.seconds
+            }
+        }
+        if endObserver == nil {
+            endObserver = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime,
+                object: player.currentItem,
+                queue: .main
+            ) { _ in
+                stopPlayback()
+                player.seek(to: .zero)
+            }
+        }
+    }
+
+    private func loadMetadata() {
+        guard !hasLoadedMetadata else { return }
+        hasLoadedMetadata = true
+        let asset = AVAsset(url: url)
+        let durationSeconds = CMTimeGetSeconds(asset.duration)
+        if durationSeconds.isFinite {
+            duration = max(durationSeconds, 0)
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            let snapshotTime: CMTime
+            if durationSeconds.isFinite, durationSeconds > 0 {
+                let midpoint = max(min(durationSeconds / 2, durationSeconds - 0.1), 0)
+                snapshotTime = CMTime(seconds: midpoint, preferredTimescale: 600)
+            } else {
+                snapshotTime = CMTime(seconds: 0, preferredTimescale: 600)
+            }
+            if let cgImage = try? generator.copyCGImage(at: snapshotTime, actualTime: nil) {
+                let image = UIImage(cgImage: cgImage)
+                DispatchQueue.main.async {
+                    thumbnail = image
+                }
+            }
+        }
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "0:00" }
+        let totalSeconds = max(Int(seconds.rounded()), 0)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+private struct AudioPreviewCard: View {
+    let size: CGFloat
+    let primaryColor: Color
+    let accentColor: Color
+    @Binding var audioURL: URL?
+
+    @State private var player: AVPlayer?
+    @State private var isPlaying = false
+    @State private var endObserver: NSObjectProtocol?
+
+    var body: some View {
+        ZStack {
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(0.07))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
-                .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.3), radius: 1, x: 0, y: 1)
+                .fill(primaryColor.opacity(0.07))
+            Image(systemName: "waveform")
+                .font(.system(size: size * 0.35, weight: .regular))
+                .foregroundStyle(accentColor.opacity(0.4))
+            Button(action: togglePlayback) {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(24)
+                    .background(Circle().fill(accentColor))
+                    .shadow(color: accentColor.opacity(0.35), radius: 10, x: 0, y: 6)
+            }
+            .buttonStyle(.plain)
+            .disabled(audioURL == nil)
+            .opacity(audioURL == nil ? 0.5 : 1)
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .stroke(primaryColor.opacity(0.15), lineWidth: 1)
         )
-        .padding(.horizontal, AppStyle.horizontalPadding)
+        .onChange(of: audioURL) { _ in
+            resetPlayback()
+        }
+        .onDisappear {
+            resetPlayback()
+        }
+    }
+
+    private func togglePlayback() {
+        guard let audioURL = audioURL else { return }
+        if isPlaying {
+            pause()
+            return
+        }
+        if player == nil || (player?.currentItem?.asset as? AVURLAsset)?.url != audioURL {
+            player = AVPlayer(url: audioURL)
+        }
+        addEndObserver()
+        player?.seek(to: .zero)
+        player?.play()
+        isPlaying = true
+    }
+
+    private func pause() {
+        player?.pause()
+        isPlaying = false
+    }
+
+    private func resetPlayback() {
+        pause()
+        if let endObserver = endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+        player = nil
+    }
+
+    private func addEndObserver() {
+        guard let player = player, endObserver == nil else { return }
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: player.currentItem,
+            queue: .main
+        ) { _ in
+            pause()
+            player.seek(to: .zero)
+        }
+    }
+}
+
+private struct PlayerRepresentable: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> PlayerView {
+        let view = PlayerView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspectFill
+        return view
+    }
+
+    func updateUIView(_ uiView: PlayerView, context: Context) {
+        uiView.playerLayer.player = player
+    }
+
+    final class PlayerView: UIView {
+        override static var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
     }
 }
 
