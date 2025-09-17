@@ -34,28 +34,35 @@ struct ConversionSettingsView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Export Audio")
+                Text("Extract audio")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 previewSection
 
-                exportButton
-
-                if isProcessing {
-                    progressIndicator
-                }
-
                 Spacer(minLength: 12)
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
             .padding(.top, 32)
-            .padding(.bottom, 40)
+            .padding(.bottom, 160)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(background.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) {
+            VStack(alignment: .leading, spacing: 16) {
+                if isProcessing {
+                    progressIndicator
+                }
+                exportButton
+            }
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(background.opacity(0.95).ignoresSafeArea())
+        }
         .sheet(isPresented: $showExporter, onDismiss: { dismiss() }) {
             if let exportURL = exportURL {
                 ExportPicker(url: exportURL)
@@ -171,6 +178,7 @@ struct ConversionSettingsView: View {
         }
         .disabled(isProcessing)
         .opacity(isProcessing ? 0.9 : 1)
+        .frame(maxWidth: .infinity)
     }
 
     private var progressIndicator: some View {
@@ -181,7 +189,7 @@ struct ConversionSettingsView: View {
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(primary.opacity(0.7))
         }
-        .frame(maxWidth: resolvedPreviewSize)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func convert() {
@@ -262,42 +270,49 @@ private struct VideoPreviewCard: View {
                     .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
             }
         }
-        .overlay(alignment: .topLeading) {
-            Button(action: togglePlayback) {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
-                    .padding(9)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .padding(4)
+        .overlay {
+            PlaybackControlIcon(
+                isPlaying: isPlaying,
+                isDisabled: false,
+                backgroundColor: Color.black.opacity(0.65),
+                iconColor: .white
+            )
+            .padding()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
         .onTapGesture {
             togglePlayback()
         }
         .onAppear(perform: loadMetadata)
-        .onDisappear(perform: stopPlayback)
+        .onDisappear(perform: resetPlayback)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(isPlaying ? "Pause preview" : "Play preview")
+        .accessibilityAddTraits(.isButton)
     }
 
     private func togglePlayback() {
         if isPlaying {
-            stopPlayback()
-        } else {
-            if player == nil {
-                player = AVPlayer(url: url)
-            }
-            addObservers()
-            player?.seek(to: .zero)
-            player?.play()
-            isPlaying = true
+            pausePlayback()
+            return
         }
+
+        if player == nil {
+            player = AVPlayer(url: url)
+        }
+        addObservers()
+        player?.play()
+        isPlaying = true
     }
 
-    private func stopPlayback() {
+    private func pausePlayback() {
         player?.pause()
+        isPlaying = false
+    }
+
+    private func resetPlayback() {
+        pausePlayback()
         if let player = player, let timeObserver = timeObserver {
             player.removeTimeObserver(timeObserver)
             self.timeObserver = nil
@@ -307,7 +322,7 @@ private struct VideoPreviewCard: View {
             self.endObserver = nil
         }
         currentTime = 0
-        isPlaying = false
+        player = nil
     }
 
     private func addObservers() {
@@ -324,8 +339,10 @@ private struct VideoPreviewCard: View {
                 object: player.currentItem,
                 queue: .main
             ) { _ in
-                stopPlayback()
+                player.pause()
                 player.seek(to: .zero)
+                currentTime = 0
+                isPlaying = false
             }
         }
     }
@@ -375,6 +392,9 @@ private struct AudioPreviewCard: View {
     @State private var player: AVPlayer?
     @State private var isPlaying = false
     @State private var endObserver: NSObjectProtocol?
+    @State private var timeObserver: Any?
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 0
 
     var body: some View {
         ZStack {
@@ -383,17 +403,6 @@ private struct AudioPreviewCard: View {
             Image(systemName: "waveform")
                 .font(.system(size: size * 0.4, weight: .regular))
                 .foregroundStyle(accentColor.opacity(0.45))
-            Button(action: togglePlayback) {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(28)
-                    .background(Circle().fill(accentColor))
-                    .shadow(color: accentColor.opacity(0.35), radius: 10, x: 0, y: 6)
-            }
-            .buttonStyle(.plain)
-            .disabled(audioURL == nil)
-            .opacity(audioURL == nil ? 0.5 : 1)
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
@@ -403,55 +412,171 @@ private struct AudioPreviewCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(primaryColor, lineWidth: audioURL == nil ? 0 : 4)
+                .stroke(primaryColor.opacity(audioURL == nil ? 0.25 : 1), lineWidth: 4)
         )
+        .overlay(alignment: .bottomLeading) {
+            if duration > 0 {
+                Text(formatTime(isPlaying ? currentTime : duration))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .padding(8)
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
+            }
+        }
+        .overlay {
+            PlaybackControlIcon(
+                isPlaying: isPlaying,
+                isDisabled: audioURL == nil,
+                backgroundColor: audioURL == nil ? accentColor.opacity(0.45) : accentColor,
+                iconColor: .white
+            )
+            .padding()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
         .onChange(of: audioURL) { _ in
             resetPlayback()
+            if let url = audioURL {
+                loadMetadata(for: url)
+            } else {
+                duration = 0
+            }
         }
         .onDisappear {
             resetPlayback()
         }
+        .onAppear {
+            if let url = audioURL {
+                loadMetadata(for: url)
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .onTapGesture {
+            guard audioURL != nil else { return }
+            togglePlayback()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(audioURL == nil ? "Audio preview unavailable" : (isPlaying ? "Pause audio preview" : "Play audio preview"))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(audioURL == nil ? "Export audio to enable preview" : nil)
     }
 
     private func togglePlayback() {
         guard let audioURL = audioURL else { return }
         if isPlaying {
-            pause()
+            pausePlayback()
             return
         }
-        if player == nil || (player?.currentItem?.asset as? AVURLAsset)?.url != audioURL {
-            player = AVPlayer(url: audioURL)
-        }
-        addEndObserver()
-        player?.seek(to: .zero)
+        preparePlayer(for: audioURL)
         player?.play()
         isPlaying = true
     }
 
-    private func pause() {
+    private func preparePlayer(for url: URL) {
+        if player == nil || (player?.currentItem?.asset as? AVURLAsset)?.url != url {
+            removeObservers()
+            player = AVPlayer(url: url)
+        }
+        addObservers()
+    }
+
+    private func pausePlayback() {
         player?.pause()
         isPlaying = false
     }
 
     private func resetPlayback() {
-        pause()
+        pausePlayback()
+        removeObservers()
+        player = nil
+        currentTime = 0
+    }
+
+    private func removeObservers() {
+        if let player = player, let timeObserver = timeObserver {
+            player.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
         if let endObserver = endObserver {
             NotificationCenter.default.removeObserver(endObserver)
             self.endObserver = nil
         }
-        player = nil
     }
 
-    private func addEndObserver() {
-        guard let player = player, endObserver == nil else { return }
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: player.currentItem,
-            queue: .main
-        ) { _ in
-            pause()
-            player.seek(to: .zero)
+    private func addObservers() {
+        guard let player = player else { return }
+        if timeObserver == nil {
+            let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+            timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+                currentTime = time.seconds
+            }
         }
+        if endObserver == nil {
+            endObserver = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime,
+                object: player.currentItem,
+                queue: .main
+            ) { _ in
+                player.pause()
+                player.seek(to: .zero)
+                currentTime = 0
+                isPlaying = false
+            }
+        }
+    }
+
+    private func loadMetadata(for url: URL) {
+        let asset = AVAsset(url: url)
+        let key = "duration"
+        if asset.statusOfValue(forKey: key, error: nil) == .loaded {
+            updateDuration(with: asset)
+        } else {
+            asset.loadValuesAsynchronously(forKeys: [key]) {
+                updateDuration(with: asset)
+            }
+        }
+    }
+
+    private func updateDuration(with asset: AVAsset) {
+        let seconds = CMTimeGetSeconds(asset.duration)
+        if seconds.isFinite && seconds > 0 {
+            DispatchQueue.main.async {
+                duration = seconds
+            }
+        } else {
+            DispatchQueue.main.async {
+                duration = 0
+            }
+        }
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "00:00" }
+        let totalSeconds = max(Int(seconds.rounded()), 0)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, secs)
+    }
+}
+
+private struct PlaybackControlIcon: View {
+    let isPlaying: Bool
+    let isDisabled: Bool
+    let backgroundColor: Color
+    let iconColor: Color
+
+    var body: some View {
+        Circle()
+            .fill(backgroundColor)
+            .frame(width: 76, height: 76)
+            .overlay(
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(iconColor)
+            )
+            .shadow(color: Color.black.opacity(0.35), radius: 12, x: 0, y: 8)
+            .opacity(isDisabled ? 0.55 : 1)
+            .scaleEffect(isDisabled ? 0.96 : 1)
     }
 }
 

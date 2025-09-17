@@ -84,6 +84,9 @@ struct ContentView: View {
                                 guard videoURL != nil else { return }
                                 HapticsManager.shared.pulse()
                                 showConversionSheet = true
+                                withAnimation {
+                                    selectedAsset = nil
+                                }
                             }) {
                                 Text("Extract Audio")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
