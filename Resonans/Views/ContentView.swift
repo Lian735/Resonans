@@ -81,9 +81,9 @@ struct ContentView: View {
                         Spacer()
                         if selectedAsset != nil {
                             Button(action: {
+                                guard videoURL != nil else { return }
                                 HapticsManager.shared.pulse()
                                 showConversionSheet = true
-                                withAnimation { selectedAsset = nil }
                             }) {
                                 Text("Extract Audio")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -93,6 +93,8 @@ struct ContentView: View {
                                     .background(primary)
                                     .clipShape(Capsule())
                             }
+                            .disabled(videoURL == nil)
+                            .opacity(videoURL == nil ? 0.6 : 1)
                             .padding(.bottom, 0)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
@@ -230,7 +232,7 @@ struct ContentView: View {
                         }
                     }
                 }
-            } else {
+            } else if !showConversionSheet {
                 videoURL = nil
             }
         }
@@ -247,7 +249,15 @@ struct ContentView: View {
                 showConversionSheet = true
             }
         }
-        .sheet(isPresented: $showConversionSheet) {
+        .sheet(
+            isPresented: $showConversionSheet,
+            onDismiss: {
+                withAnimation {
+                    selectedAsset = nil
+                }
+                videoURL = nil
+            }
+        ) {
             if let url = videoURL {
                 ConversionSettingsView(videoURL: url)
             }
