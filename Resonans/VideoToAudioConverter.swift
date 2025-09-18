@@ -120,103 +120,115 @@ final class VideoToAudioConverter {
                 return
             }
 
-            let reader = try AVAssetReader(asset: asset)
+            Task {
+                do {
+                    let formatDescriptions: [CMFormatDescription] = try await track.load(.formatDescriptions)
+                    let cmDesc: CMFormatDescription? = formatDescriptions.first
+                    let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+                    let sampleRate = asbd?.mSampleRate ?? 44_100
+                    let channels = Int(asbd?.mChannelsPerFrame ?? 2)
 
-            let formatDescription = track.formatDescriptions.first as? CMAudioFormatDescription
-            let asbd = formatDescription.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-            let sampleRate = asbd?.mSampleRate ?? 44_100
-            let channels = Int(asbd?.mChannelsPerFrame ?? 2)
+                    let pcmSettings: [String: Any] = [
+                        AVFormatIDKey: kAudioFormatLinearPCM,
+                        AVSampleRateKey: sampleRate,
+                        AVNumberOfChannelsKey: channels,
+                        AVLinearPCMBitDepthKey: 16,
+                        AVLinearPCMIsBigEndianKey: false,
+                        AVLinearPCMIsFloatKey: false,
+                        AVLinearPCMIsNonInterleaved: false
+                    ]
 
-            let pcmSettings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatLinearPCM,
-                AVSampleRateKey: sampleRate,
-                AVNumberOfChannelsKey: channels,
-                AVLinearPCMBitDepthKey: 16,
-                AVLinearPCMIsBigEndianKey: false,
-                AVLinearPCMIsFloatKey: false,
-                AVLinearPCMIsNonInterleavedKey: false
-            ]
-
-            let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
-            readerOutput.alwaysCopiesSampleData = false
-            guard reader.canAdd(readerOutput) else {
-                DispatchQueue.main.async {
-                    completion(.failure(NSError(domain: "export", code: -5)))
-                }
-                return
-            }
-            reader.add(readerOutput)
-
-            let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
-            let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmSettings)
-            writerInput.expectsMediaDataInRealTime = false
-            guard writer.canAdd(writerInput) else {
-                DispatchQueue.main.async {
-                    completion(.failure(NSError(domain: "export", code: -6)))
-                }
-                return
-            }
-            writer.add(writerInput)
-
-            guard writer.startWriting() else {
-                throw writer.error ?? NSError(domain: "export", code: -7)
-            }
-
-            let durationSeconds = asset.duration.seconds
-            reader.startReading()
-            writer.startSession(atSourceTime: .zero)
-
-            let queue = DispatchQueue(label: "wav.export.queue")
-            writerInput.requestMediaDataWhenReady(on: queue) {
-                while writerInput.isReadyForMoreMediaData {
-                    if reader.status == .reading, let sampleBuffer = readerOutput.copyNextSampleBuffer() {
-                        if !writerInput.append(sampleBuffer) {
-                            reader.cancelReading()
-                            writerInput.markAsFinished()
-                            writer.cancelWriting()
-                            let error = writer.error ?? NSError(domain: "export", code: -8)
-                            DispatchQueue.main.async {
-                                completion(.failure(error))
-                            }
-                            return
-                        }
-
-                        if durationSeconds.isFinite && durationSeconds > 0 {
-                            let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
-                            let ratio = min(max(time / durationSeconds, 0), 1)
-                            DispatchQueue.main.async {
-                                progress(ratio)
-                            }
-                        }
-                    } else {
-                        writerInput.markAsFinished()
-                        switch reader.status {
-                        case .completed:
-                            writer.finishWriting {
-                                if let error = writer.error {
-                                    DispatchQueue.main.async {
-                                        completion(.failure(error))
-                                    }
-                                } else {
-                                    DispatchQueue.main.async {
-                                        progress(1)
-                                        completion(.success(outputURL))
-                                    }
-                                }
-                            }
-                        case .failed, .cancelled:
-                            let error = reader.error ?? writer.error ?? NSError(domain: "export", code: -9)
-                            writer.cancelWriting()
-                            DispatchQueue.main.async {
-                                completion(.failure(error))
-                            }
-                        default:
-                            break
+                    // Recreate the remainder of the original function from here using `pcmSettings`:
+                    let reader = try AVAssetReader(asset: asset)
+                    let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
+                    readerOutput.alwaysCopiesSampleData = false
+                    guard reader.canAdd(readerOutput) else {
+                        DispatchQueue.main.async {
+                            completion(.failure(NSError(domain: "export", code: -5)))
                         }
                         return
                     }
+                    reader.add(readerOutput)
+
+                    let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
+                    let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmSettings)
+                    writerInput.expectsMediaDataInRealTime = false
+                    guard writer.canAdd(writerInput) else {
+                        DispatchQueue.main.async {
+                            completion(.failure(NSError(domain: "export", code: -6)))
+                        }
+                        return
+                    }
+                    writer.add(writerInput)
+
+                    guard writer.startWriting() else {
+                        throw writer.error ?? NSError(domain: "export", code: -7)
+                    }
+
+                    let durationSeconds = asset.duration.seconds
+                    reader.startReading()
+                    writer.startSession(atSourceTime: .zero)
+
+                    let queue = DispatchQueue(label: "wav.export.queue")
+                    writerInput.requestMediaDataWhenReady(on: queue) {
+                        while writerInput.isReadyForMoreMediaData {
+                            if reader.status == .reading, let sampleBuffer = readerOutput.copyNextSampleBuffer() {
+                                if !writerInput.append(sampleBuffer) {
+                                    reader.cancelReading()
+                                    writerInput.markAsFinished()
+                                    writer.cancelWriting()
+                                    let error = writer.error ?? NSError(domain: "export", code: -8)
+                                    DispatchQueue.main.async {
+                                        completion(.failure(error))
+                                    }
+                                    return
+                                }
+
+                                if durationSeconds.isFinite && durationSeconds > 0 {
+                                    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+                                    let ratio = min(max(time / durationSeconds, 0), 1)
+                                    DispatchQueue.main.async {
+                                        progress(ratio)
+                                    }
+                                }
+                            } else {
+                                writerInput.markAsFinished()
+                                switch reader.status {
+                                case .completed:
+                                    writer.finishWriting {
+                                        if let error = writer.error {
+                                            DispatchQueue.main.async {
+                                                completion(.failure(error))
+                                            }
+                                        } else {
+                                            DispatchQueue.main.async {
+                                                progress(1)
+                                                completion(.success(outputURL))
+                                            }
+                                        }
+                                    }
+                                case .failed, .cancelled:
+                                    let error = reader.error ?? writer.error ?? NSError(domain: "export", code: -9)
+                                    writer.cancelWriting()
+                                    DispatchQueue.main.async {
+                                        completion(.failure(error))
+                                    }
+                                default:
+                                    break
+                                }
+                                return
+                            }
+                        }
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        completion(.failure(error))
+                    }
                 }
             }
+
+            // Early return because the async Task will handle the rest
+            return
         } catch {
             DispatchQueue.main.async {
                 completion(.failure(error))
@@ -290,3 +302,4 @@ private final class ExportProgressWatcher {
         timer = nil
     }
 }
+

@@ -18,6 +18,10 @@ struct ConversionSettingsView: View {
     @State private var progressValue: Double = 0
     @State private var exportURL: URL?
     @State private var showExporter = false
+    @State private var showAdvanced = false
+    // Example advanced settings state
+    @State private var bitrate: Double = 192 // kbps
+    @State private var showBitrateInfo = false
 
     private let idealPreviewSize: CGFloat = 140
     @State private var resolvedPreviewSize: CGFloat = 140
@@ -40,6 +44,10 @@ struct ConversionSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 previewSection
+
+                Spacer(minLength: 20)
+
+                settingsSection
 
                 Spacer(minLength: 12)
             }
@@ -70,6 +78,173 @@ struct ConversionSettingsView: View {
         }
     }
 
+    // MARK: - Settings Section
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            // File Size
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primary.opacity(0.09))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("File Size")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    HStack(spacing: 16) {
+                        Text("Original: \(fileSizeString(for: videoURL))")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                        Text("Estimated: \(estimatedExportSizeString())")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                    }
+                }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+            }
+
+            // Export Format
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primary.opacity(0.09))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Format")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    Text("Original: \(originalFormatLabel)")
+                        .font(.system(size: 14))
+                        .foregroundStyle(primary.opacity(0.8))
+                    HStack {
+                        Text("When Exported:")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                        Picker("", selection: $selectedFormat) {
+                            Text("mp3").tag(AudioFormat.mp3)
+                            Text("wav").tag(AudioFormat.wav)
+                            Text("m4a").tag(AudioFormat.m4a)
+                        }
+                        .pickerStyle(.menu)
+                    }
+                }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+            }
+
+            // More… button
+            if !showAdvanced {
+                Button(action: {
+                    withAnimation(.spring()) { showAdvanced.toggle() }
+                }) {
+                    if showAdvanced {
+                        Text("Hide")
+                            .transition(.opacity)
+                    } else {
+                        Text("More")
+                            .transition(.opacity)
+                    }
+                }
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(accent.color)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .buttonStyle(.plain)
+                .animation(.spring(), value: showAdvanced)
+            }
+
+            // Advanced settings
+            Group {
+                if showAdvanced {
+                    VStack(spacing: 18) {
+                        // Bitrate setting
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .fill(primary.opacity(0.09))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                                )
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Bitrate")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(primary)
+                                    Spacer()
+                                    Text("\(Int(bitrate)) kbps")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(primary.opacity(0.8))
+                                    Button(action: {
+                                        withAnimation { showBitrateInfo.toggle() }
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .opacity(0.5)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                if showBitrateInfo {
+                                    Text("Bitrate controls audio quality and file size.")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(primary.opacity(0.7))
+                                        .transition(.opacity)
+                                }
+                                Slider(value: $bitrate, in: 64...320, step: 1)
+                                    .tint(accent.color)
+                            }
+                            .padding(.vertical, 14)
+                            .padding(.horizontal, 18)
+                        }
+                        // Add more advanced settings here as needed
+
+                        Button(action: {
+                            withAnimation(.spring()) { showAdvanced.toggle() }
+                        }) {
+                            if showAdvanced {
+                                Text("Hide")
+                                    .transition(.opacity)
+                            } else {
+                                Text("More")
+                                    .transition(.opacity)
+                            }
+                        }
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(accent.color)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .buttonStyle(.plain)
+                        .animation(.spring(), value: showAdvanced)
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Helpers
+    private func fileSizeString(for url: URL) -> String {
+        let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = resourceValues?.fileSize {
+            return ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
+        }
+        return "—"
+    }
+
+    private func estimatedExportSizeString() -> String {
+        // Very rough estimate: duration (seconds) * bitrate (kbps) * 125 = bytes
+        let asset = AVAsset(url: videoURL)
+        let duration = CMTimeGetSeconds(asset.duration)
+        guard duration.isFinite else { return "—" }
+        let bitsPerSecond = bitrate * 1000
+        let bytes = duration * bitsPerSecond / 8
+        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
     private var previewSection: some View {
         GeometryReader { geometry in
             let spacing: CGFloat = 20
@@ -94,61 +269,34 @@ struct ConversionSettingsView: View {
     }
 
     private func videoColumn(size: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 12) {
             VideoPreviewCard(
                 url: videoURL,
                 size: size,
                 primaryColor: primary
             )
-            Text("File format: \(originalFormatLabel)")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary.opacity(0.65))
+            Text("Video")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
+        .frame(maxWidth: .infinity)
     }
 
     private func audioColumn(size: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 12) {
             AudioPreviewCard(
                 size: size,
                 primaryColor: primary,
                 accentColor: accent.color,
                 audioURL: $exportURL
             )
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Export format")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.8))
-
-                Picker(selection: $selectedFormat) {
-                    ForEach(AudioFormat.allCases, id: \.self) { format in
-                        Text(format.rawValue)
-                            .tag(format)
-                    }
-                } label: {
-                    HStack {
-                        Text(selectedFormat.rawValue)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(primary)
-                        Spacer()
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(primary.opacity(0.6))
-                    }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                    .frame(width: size)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .fill(primary.opacity(0.07))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                                    .strokeBorder(primary.opacity(0.1), lineWidth: 1)
-                            )
-                    )
-                }
-                .pickerStyle(.menu)
-            }
+            Text("Audio")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
+        .frame(maxWidth: .infinity)
     }
 
     private func arrow(height: CGFloat, width: CGFloat) -> some View {
@@ -235,6 +383,8 @@ private struct VideoPreviewCard: View {
     @State private var timeObserver: Any?
     @State private var endObserver: NSObjectProtocol?
     @State private var hasLoadedMetadata = false
+    @State private var showControls = true
+    @State private var hideControlsWorkItem: DispatchWorkItem?
 
     var body: some View {
         ZStack {
@@ -257,32 +407,34 @@ private struct VideoPreviewCard: View {
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .stroke(primaryColor.opacity(0.15), lineWidth: 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(primaryColor, lineWidth: 4)
-        )
         .overlay(alignment: .bottomLeading) {
             if duration > 0 {
                 Text(formatTime(isPlaying ? currentTime : duration))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .padding(8)
+                    .padding(11)
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
             }
         }
         .overlay {
-            PlaybackControlIcon(
-                isPlaying: isPlaying,
-                isDisabled: false,
-                backgroundColor: Color.black.opacity(0.65),
-                iconColor: .white
-            )
-            .padding()
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+            if showControls {
+                PlaybackControlIcon(
+                    isPlaying: isPlaying,
+                    isDisabled: false,
+                    backgroundColor: Color.black.opacity(0.65),
+                    iconColor: .white
+                )
+                .padding()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .transition(.opacity)
+                .animation(.easeInOut, value: showControls)
+            }
         }
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
         .onTapGesture {
+            showControls = true
+            resetHideControlsTimer()
             togglePlayback()
         }
         .onAppear(perform: loadMetadata)
@@ -304,11 +456,30 @@ private struct VideoPreviewCard: View {
         addObservers()
         player?.play()
         isPlaying = true
+        showControls = true
+        resetHideControlsTimer()
+    }
+
+    private func resetHideControlsTimer() {
+        hideControlsWorkItem?.cancel()
+        if isPlaying {
+            let workItem = DispatchWorkItem {
+                if isPlaying {
+                    withAnimation {
+                        showControls = false
+                    }
+                }
+            }
+            hideControlsWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: workItem)
+        }
     }
 
     private func pausePlayback() {
         player?.pause()
         isPlaying = false
+        showControls = true
+        hideControlsWorkItem?.cancel()
     }
 
     private func resetPlayback() {
@@ -323,6 +494,7 @@ private struct VideoPreviewCard: View {
         }
         currentTime = 0
         player = nil
+        hideControlsWorkItem?.cancel()
     }
 
     private func addObservers() {
@@ -343,6 +515,8 @@ private struct VideoPreviewCard: View {
                 player.seek(to: .zero)
                 currentTime = 0
                 isPlaying = false
+                showControls = true
+                hideControlsWorkItem?.cancel()
             }
         }
     }
@@ -397,23 +571,31 @@ private struct AudioPreviewCard: View {
     @State private var duration: Double = 0
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primaryColor.opacity(0.07))
+        // Precompute values to help the type-checker
+        let cornerRadius = AppStyle.cornerRadius
+        let iconSize = max(size * 0.4, 1)
+        let baseShape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let baseFill = primaryColor.opacity(0.07)
+        let borderStroke = primaryColor.opacity(0.15)
+        // let emphasisStroke = primaryColor.opacity(audioURL == nil ? 0 : 0)
+
+        return ZStack {
+            // Background layer
+            baseShape
+                .fill(baseFill)
+
+            // Icon layer
             Image(systemName: "waveform")
-                .font(.system(size: size * 0.4, weight: .regular))
-                .foregroundStyle(accentColor.opacity(0.45))
+                .font(.system(size: iconSize, weight: .regular))
+                .foregroundStyle(accentColor.opacity(1))
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .clipShape(baseShape)
         .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(primaryColor.opacity(0.15), lineWidth: 1)
+            baseShape
+                .stroke(borderStroke, lineWidth: 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(primaryColor.opacity(audioURL == nil ? 0.25 : 1), lineWidth: 4)
-        )
+        // Removed emphasis stroke
         .overlay(alignment: .bottomLeading) {
             if duration > 0 {
                 Text(formatTime(isPlaying ? currentTime : duration))
@@ -423,33 +605,7 @@ private struct AudioPreviewCard: View {
                     .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
             }
         }
-        .overlay {
-            PlaybackControlIcon(
-                isPlaying: isPlaying,
-                isDisabled: audioURL == nil,
-                backgroundColor: audioURL == nil ? accentColor.opacity(0.45) : accentColor,
-                iconColor: .white
-            )
-            .padding()
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-        }
-        .onChange(of: audioURL) { _ in
-            resetPlayback()
-            if let url = audioURL {
-                loadMetadata(for: url)
-            } else {
-                duration = 0
-            }
-        }
-        .onDisappear {
-            resetPlayback()
-        }
-        .onAppear {
-            if let url = audioURL {
-                loadMetadata(for: url)
-            }
-        }
+        
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
         .onTapGesture {
             guard audioURL != nil else { return }
@@ -458,7 +614,7 @@ private struct AudioPreviewCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(audioURL == nil ? "Audio preview unavailable" : (isPlaying ? "Pause audio preview" : "Play audio preview"))
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint(audioURL == nil ? "Export audio to enable preview" : nil)
+        .modifier(AccessibilityHintIfNeeded(shouldShow: audioURL == nil, hint: "Export audio to enable preview"))
     }
 
     private func togglePlayback() {
@@ -566,17 +722,10 @@ private struct PlaybackControlIcon: View {
     let iconColor: Color
 
     var body: some View {
-        Circle()
-            .fill(backgroundColor)
-            .frame(width: 76, height: 76)
-            .overlay(
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(iconColor)
-            )
-            .shadow(color: Color.black.opacity(0.35), radius: 12, x: 0, y: 8)
-            .opacity(isDisabled ? 0.55 : 1)
-            .scaleEffect(isDisabled ? 0.96 : 1)
+                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -606,6 +755,19 @@ struct ExportPicker: UIViewControllerRepresentable {
         UIDocumentPickerViewController(forExporting: [url])
     }
     func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+}
+
+private struct AccessibilityHintIfNeeded: ViewModifier {
+    let shouldShow: Bool
+    let hint: LocalizedStringKey
+
+    func body(content: Content) -> some View {
+        if shouldShow {
+            content.accessibilityHint(hint)
+        } else {
+            content
+        }
+    }
 }
 
 #Preview {
