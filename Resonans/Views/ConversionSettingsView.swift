@@ -17,13 +17,8 @@ struct ConversionSettingsView: View {
     @State private var isProcessing = false
     @State private var progressValue: Double = 0
     @State private var exportURL: URL?
+    @State private var showExporter = false
     @State private var showAdvanced = false
-    @State private var showSuccessSheet = false
-    @State private var audioProperties: AudioProperties?
-    @State private var isLoadingAudioProperties = false
-    @State private var hasLoadedDefaultBitrate = false
-    @State private var userHasAdjustedBitrate = false
-    @State private var didCancelConversion = false
     // Example advanced settings state
     @State private var bitrate: Double = 192 // kbps
     @State private var showBitrateInfo = false
@@ -68,7 +63,7 @@ struct ConversionSettingsView: View {
                 if isProcessing {
                     progressIndicator
                 }
-                actionButtons
+                exportButton
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
             .padding(.top, 12)
@@ -76,23 +71,11 @@ struct ConversionSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(background.opacity(0.95).ignoresSafeArea())
         }
-        .sheet(isPresented: $showSuccessSheet) {
+        .sheet(isPresented: $showExporter, onDismiss: { dismiss() }) {
             if let exportURL = exportURL {
-                ConversionSuccessSheet(
-                    url: exportURL,
-                    accentColor: accent.color,
-                    primaryColor: primary,
-                    backgroundColor: background,
-                    onDone: {
-                        showSuccessSheet = false
-                        dismiss()
-                    }
-                )
-                .presentationDetents([.fraction(0.55)])
-                .presentationDragIndicator(.visible)
+                ExportPicker(url: exportURL)
             }
         }
-        .onAppear(perform: ensureAudioPropertiesLoaded)
     }
 
     // MARK: - Settings Section
@@ -114,7 +97,7 @@ struct ConversionSettingsView: View {
                         Text("Original: \(fileSizeString(for: videoURL))")
                             .font(.system(size: 14))
                             .foregroundStyle(primary.opacity(0.8))
-                        Text("Estimated: \(estimatedSizeText)")
+                        Text("Estimated: \(estimatedExportSizeString())")
                             .font(.system(size: 14))
                             .foregroundStyle(primary.opacity(0.8))
                     }
@@ -212,24 +195,8 @@ struct ConversionSettingsView: View {
                                         .foregroundStyle(primary.opacity(0.7))
                                         .transition(.opacity)
                                 }
-                                Slider(
-                                    value: $bitrate,
-                                    in: 64...320,
-                                    step: 1,
-                                    onEditingChanged: { editing in
-                                        if editing {
-                                            userHasAdjustedBitrate = true
-                                        }
-                                    }
-                                )
-                                .tint(accent.color)
-                                .disabled(selectedFormat == .wav)
-                                .opacity(selectedFormat == .wav ? 0.5 : 1)
-                                if selectedFormat == .wav {
-                                    Text("WAV exports use lossless quality and ignore bitrate settings.")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(primary.opacity(0.65))
-                                }
+                                Slider(value: $bitrate, in: 64...320, step: 1)
+                                    .tint(accent.color)
                             }
                             .padding(.vertical, 14)
                             .padding(.horizontal, 18)
@@ -271,94 +238,14 @@ struct ConversionSettingsView: View {
         return "—"
     }
 
-    private var estimatedSizeText: String {
-        if isLoadingAudioProperties {
-            return "Calculating…"
-        }
-        guard let bytes = estimatedExportSizeBytes() else { return "—" }
-        let clampedBytes = max(bytes, 0)
-        return ByteCountFormatter.string(fromByteCount: Int64(clampedBytes.rounded()), countStyle: .file)
-    }
-
-    private func estimatedExportSizeBytes() -> Double? {
-        if let props = audioProperties {
-            let duration = props.duration
-            guard duration.isFinite, duration > 0 else { return nil }
-            switch selectedFormat {
-            case .mp3:
-                let bitsPerSecond = Double(max(64, min(320, Int(bitrate)))) * 1000
-                return duration * bitsPerSecond / 8
-            case .m4a:
-                let chosenBitrate = Double(max(64, min(320, Int(bitrate))))
-                return duration * chosenBitrate * 1000 / 8
-            case .wav:
-                let bitsPerChannel = props.bitsPerChannel > 0 ? Double(props.bitsPerChannel) : 16
-                let sampleRate = props.sampleRate > 0 ? props.sampleRate : 44_100
-                return duration * sampleRate * Double(max(props.channels, 1)) * bitsPerChannel / 8
-            }
-        } else {
-            let asset = AVAsset(url: videoURL)
-            let duration = CMTimeGetSeconds(asset.duration)
-            guard duration.isFinite, duration > 0 else { return nil }
-            let bitsPerSecond = Double(bitrate) * 1000
-            return duration * bitsPerSecond / 8
-        }
-    }
-
-    private func ensureAudioPropertiesLoaded() {
-        guard !isLoadingAudioProperties, audioProperties == nil else { return }
-        isLoadingAudioProperties = true
-        Task {
-            let asset = AVURLAsset(url: videoURL)
-            do {
-                let durationTime = try await asset.load(.duration)
-                let duration = durationTime.seconds
-                let tracks = try await asset.loadTracks(withMediaType: .audio)
-
-                var sampleRate = 44_100.0
-                var channels = 2
-                var bitsPerChannel = 16
-                var estimatedBitrate: Double?
-
-                if let track = tracks.first {
-                    estimatedBitrate = try await track.load(.estimatedDataRate)
-                    let descriptions = try await track.load(.formatDescriptions)
-                    if let description = descriptions.first,
-                       let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee {
-                        if asbd.mSampleRate > 0 { sampleRate = asbd.mSampleRate }
-                        if asbd.mChannelsPerFrame > 0 { channels = Int(asbd.mChannelsPerFrame) }
-                        if asbd.mBitsPerChannel > 0 { bitsPerChannel = Int(asbd.mBitsPerChannel) }
-                    }
-                }
-
-                await MainActor.run {
-                    audioProperties = AudioProperties(
-                        duration: duration.isFinite ? duration : 0,
-                        sampleRate: sampleRate,
-                        channels: channels,
-                        bitsPerChannel: bitsPerChannel,
-                        estimatedBitrate: estimatedBitrate
-                    )
-
-                    if !userHasAdjustedBitrate,
-                       !hasLoadedDefaultBitrate,
-                       let estimatedBitrate = estimatedBitrate,
-                       estimatedBitrate > 0 {
-                        let kbps = min(max(estimatedBitrate / 1000, 64), 320)
-                        bitrate = kbps
-                    }
-
-                    hasLoadedDefaultBitrate = true
-                    isLoadingAudioProperties = false
-                }
-            } catch {
-                await MainActor.run {
-                    audioProperties = nil
-                    hasLoadedDefaultBitrate = true
-                    isLoadingAudioProperties = false
-                }
-            }
-        }
+    private func estimatedExportSizeString() -> String {
+        // Very rough estimate: duration (seconds) * bitrate (kbps) * 125 = bytes
+        let asset = AVAsset(url: videoURL)
+        let duration = CMTimeGetSeconds(asset.duration)
+        guard duration.isFinite else { return "—" }
+        let bitsPerSecond = bitrate * 1000
+        let bytes = duration * bitsPerSecond / 8
+        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
     }
 
     private var previewSection: some View {
@@ -426,52 +313,14 @@ struct ConversionSettingsView: View {
         .frame(width: width, height: height)
     }
 
-    private var actionButtons: some View {
-        GeometryReader { geometry in
-            let spacing: CGFloat = 12
-            let totalWidth = geometry.size.width
-            let cancelWidth = max((totalWidth - spacing) * 0.25, 0)
-            let exportWidth = max((totalWidth - spacing) * 0.75, 0)
-
-            HStack(spacing: spacing) {
-                cancelButton
-                    .frame(width: cancelWidth)
-                exportButton
-                    .frame(width: exportWidth)
-            }
-            .frame(width: totalWidth, alignment: .center)
-        }
-        .frame(height: 52)
-    }
-
-    private var cancelButton: some View {
-        Button(action: cancel) {
-            HStack {
-                Spacer(minLength: 0)
-                Text("Cancel")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(primary)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 14)
-            .background(primary.opacity(0.08))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(primary.opacity(0.15), lineWidth: 1)
-            )
-        }
-        .opacity(isProcessing ? 0.85 : 1)
-    }
-
     private var exportButton: some View {
         Button(action: convert) {
             HStack {
-                Spacer(minLength: 0)
+                Spacer()
                 Text(isProcessing ? "Exporting…" : "Export")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundColor(background)
-                Spacer(minLength: 0)
+                Spacer()
             }
             .padding(.vertical, 14)
             .background(accent.color.opacity(isProcessing ? 0.6 : 1))
@@ -480,6 +329,7 @@ struct ConversionSettingsView: View {
         }
         .disabled(isProcessing)
         .opacity(isProcessing ? 0.9 : 1)
+        .frame(maxWidth: .infinity)
     }
 
     private var progressIndicator: some View {
@@ -493,27 +343,15 @@ struct ConversionSettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func cancel() {
-        HapticsManager.shared.selection()
-        didCancelConversion = true
-        isProcessing = false
-        showSuccessSheet = false
-        exportURL = nil
-        dismiss()
-    }
-
     private func convert() {
         guard !isProcessing else { return }
         HapticsManager.shared.pulse()
         exportURL = nil
         progressValue = 0
         isProcessing = true
-        didCancelConversion = false
-        showSuccessSheet = false
         VideoToAudioConverter.convert(
             videoURL: videoURL,
             format: selectedFormat,
-            bitrate: Int(bitrate),
             progress: { value in
                 DispatchQueue.main.async {
                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -525,24 +363,14 @@ struct ConversionSettingsView: View {
                 isProcessing = false
                 switch result {
                 case .success(let url):
-                    guard !didCancelConversion else { return }
                     exportURL = url
-                    HapticsManager.shared.notify(.success)
-                    showSuccessSheet = true
+                    showExporter = true
                 case .failure:
                     dismiss()
                 }
             }
         )
     }
-}
-
-private struct AudioProperties {
-    let duration: Double
-    let sampleRate: Double
-    let channels: Int
-    let bitsPerChannel: Int
-    let estimatedBitrate: Double?
 }
 
 private struct VideoPreviewCard: View {
@@ -930,129 +758,6 @@ struct ExportPicker: UIViewControllerRepresentable {
         UIDocumentPickerViewController(forExporting: [url])
     }
     func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-}
-
-struct ConversionSuccessSheet: View {
-    let url: URL
-    let accentColor: Color
-    let primaryColor: Color
-    let backgroundColor: Color
-    let onDone: () -> Void
-
-    @State private var animateCheckmark = false
-    @State private var showExporter = false
-    @State private var showShareSheet = false
-
-    var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                Text("Converted!")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(primaryColor)
-                Spacer()
-                Button(action: {
-                    HapticsManager.shared.selection()
-                    onDone()
-                }) {
-                    Text("Done")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                }
-                .foregroundStyle(accentColor)
-            }
-            .padding(.top, 4)
-
-            VStack(spacing: 18) {
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.18))
-                        .frame(width: 140, height: 140)
-                        .scaleEffect(animateCheckmark ? 1 : 0.6)
-                        .opacity(animateCheckmark ? 1 : 0)
-                    Circle()
-                        .stroke(Color.green.opacity(0.3), lineWidth: 4)
-                        .frame(width: 140, height: 140)
-                        .scaleEffect(animateCheckmark ? 1.1 : 0.7)
-                        .opacity(animateCheckmark ? 1 : 0)
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 100, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.green)
-                        .scaleEffect(animateCheckmark ? 1 : 0.6)
-                        .rotationEffect(.degrees(animateCheckmark ? 0 : -14))
-                        .opacity(animateCheckmark ? 1 : 0)
-                }
-                .frame(height: 150)
-                .animation(.spring(response: 0.7, dampingFraction: 0.75, blendDuration: 0.35), value: animateCheckmark)
-
-                Text("Successfully converted")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primaryColor.opacity(0.9))
-            }
-            .frame(maxWidth: .infinity)
-
-            VStack(spacing: 12) {
-                Button(action: {
-                    HapticsManager.shared.pulse()
-                    showExporter = true
-                }) {
-                    Label("Save to Files", systemImage: "square.and.arrow.down")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(accentColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: accentColor.opacity(0.3), radius: 12, x: 0, y: 6)
-                }
-
-                Button(action: {
-                    HapticsManager.shared.selection()
-                    showShareSheet = true
-                }) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(primaryColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(primaryColor.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 18)
-        .padding(.bottom, 32)
-        .frame(maxWidth: .infinity, alignment: .top)
-        .background(backgroundColor.opacity(0.98).ignoresSafeArea())
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7, blendDuration: 0.3)) {
-                animateCheckmark = true
-            }
-        }
-        .sheet(isPresented: $showExporter) {
-            ExportPicker(url: url)
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: [url])
-        }
-    }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        if let popover = controller.popoverPresentationController {
-            popover.sourceView = controller.view
-            popover.sourceRect = controller.view.bounds
-            popover.permittedArrowDirections = []
-        }
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 private struct AccessibilityHintIfNeeded: ViewModifier {
