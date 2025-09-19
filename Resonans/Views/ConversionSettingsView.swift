@@ -104,6 +104,7 @@ struct ConversionSettingsView: View {
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // Export Format
@@ -135,6 +136,7 @@ struct ConversionSettingsView: View {
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // More… button
@@ -198,6 +200,7 @@ struct ConversionSettingsView: View {
                             }
                             .padding(.vertical, 14)
                             .padding(.horizontal, 18)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         // Add more advanced settings here as needed
 
