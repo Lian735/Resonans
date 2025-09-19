@@ -17,6 +17,21 @@ struct SettingsView: View {
     private var accent: AccentColorOption {
         AccentColorOption(rawValue: accentRaw) ?? .purple
     }
+    private var appVersionString: String {
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let buildVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        switch (shortVersion?.isEmpty == false, buildVersion?.isEmpty == false) {
+        case (true, true):
+            if shortVersion == buildVersion { return shortVersion! }
+            return "\(shortVersion!) (\(buildVersion!))"
+        case (true, false):
+            return shortVersion!
+        case (false, true):
+            return buildVersion!
+        default:
+            return "—"
+        }
+    }
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
 
@@ -189,7 +204,7 @@ struct SettingsView: View {
             HStack {
                 Text("Version")
                 Spacer()
-                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                Text(appVersionString)
             }
             .foregroundStyle(primary.opacity(0.8))
 
