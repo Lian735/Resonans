@@ -22,6 +22,18 @@ struct SettingsView: View {
 
     private var primary: Color { colorScheme == .dark ? .white : .black }
 
+    private var versionDisplayString: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        if let version = version, !version.isEmpty {
+            if let build = build, !build.isEmpty {
+                return "\(version) (\(build))"
+            }
+            return version
+        }
+        return "—"
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -189,7 +201,7 @@ struct SettingsView: View {
             HStack {
                 Text("Version")
                 Spacer()
-                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                Text(versionDisplayString)
             }
             .foregroundStyle(primary.opacity(0.8))
 
