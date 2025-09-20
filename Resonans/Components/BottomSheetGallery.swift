@@ -10,7 +10,7 @@ struct BottomSheetGallery: View {
 
     private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
     @Environment(\.colorScheme) private var colorScheme
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
 
     var body: some View {
         let grouped = Dictionary(grouping: assets) { asset in
@@ -26,7 +26,7 @@ struct BottomSheetGallery: View {
                             .foregroundStyle(primary.opacity(0.85))
                             .padding(.leading, 6)
                             .padding(.bottom, 4)
-                            .appTextShadow(colorScheme: colorScheme)
+                            .shadow(color: (colorScheme == .light ? Color.white : Color.black).opacity(0.9), radius: 4, x: 0, y: -1)
                     ) {
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(items, id: \.localIdentifier) { asset in
@@ -156,7 +156,6 @@ struct BottomSheetGallery: View {
                 }
             }
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-            .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
             .scaleEffect(hasAppeared ? 1 : 0.8)
             .onTapGesture {
                 HapticsManager.shared.pulse()

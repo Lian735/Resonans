@@ -39,8 +39,10 @@ struct ContentView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     @Environment(\.colorScheme) private var colorScheme
-    private var background: Color { AppStyle.background(for: colorScheme) }
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
+    private var background: Color { colorScheme == .dark ? .black : .white }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
+    /// Uses white shadows in light mode and black shadows in dark mode
+    private var shadowColor: Color { colorScheme == .light ? .white : .black }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -387,7 +389,7 @@ struct ContentView: View {
             .tracking(0.5)
             .foregroundStyle(primary)
             .padding(.leading, 22)
-            .appTextShadow(colorScheme: colorScheme)
+            .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             .animation(.easeInOut(duration: 0.25), value: selectedTab)
             Spacer()
             Button(action: {
@@ -397,7 +399,7 @@ struct ContentView: View {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(primary)
-                    .appTextShadow(colorScheme: colorScheme)
+                    .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             }
             .buttonStyle(.plain)
             .padding(.trailing, 22)
@@ -418,20 +420,97 @@ struct ContentView: View {
                             }
                         }
                 }
-                primarySourceCard(width: fullWidth)
+                // Large rectangle (plus)
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .fill(primary.opacity(0.09))
+                        .overlay(
+                            VStack(spacing: 14) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 56, weight: .bold))
+                                    .foregroundStyle(primary)
+                                Text("Click to Extract Audio")
+                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(primary)
+                                
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                        )
+                        .frame(width: fullWidth, height: 165)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                        .onTapGesture {
+                            HapticsManager.shared.pulse()
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = true
+                            }
+                        }
+                        .scaleEffect(showSourceOptions ? 0.75 : 1.0)
+                        .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
+                        .opacity(showSourceOptions ? 0.0 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: showSourceOptions)
+                        .allowsHitTesting(!showSourceOptions)
+                        .zIndex(showSourceOptions ? 0 : 1)
+                }
+                // Two small rectangles (Files and Gallery)
                 HStack(spacing: 16) {
-                    sourceOptionCard(icon: "doc.fill", title: "Files", width: targetWidth) {
-                        showFilePicker = true
-                        withAnimation(.easeInOut(duration: 0.35)) {
-                            showSourceOptions = false
+                    // Files rectangle
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .fill(primary.opacity(0.09))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "doc.fill")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundStyle(primary)
+                                Text("Files")
+                                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(primary)
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                        )
+                        .frame(width: targetWidth, height: 165)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                        .onTapGesture {
+                            HapticsManager.shared.pulse()
+                            showFilePicker = true
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = false
+                            }
                         }
-                    }
-                    sourceOptionCard(icon: "photo.on.rectangle.angled", title: "Gallery", width: targetWidth) {
-                        selectedTab = 1
-                        withAnimation(.easeInOut(duration: 0.35)) {
-                            showSourceOptions = false
+                    // Gallery rectangle
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .fill(primary.opacity(0.09))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundStyle(primary)
+                                Text("Gallery")
+                                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(primary)
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                        )
+                        .frame(width: targetWidth, height: 165)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+                        .onTapGesture {
+                            HapticsManager.shared.pulse()
+                            selectedTab = 1
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showSourceOptions = false
+                            }
                         }
-                    }
                 }
                 .scaleEffect(showSourceOptions ? 1.0 : 0.75)
                 .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
@@ -454,48 +533,6 @@ struct ContentView: View {
             )
         }
         .frame(height: 165)
-    }
-
-    private func primarySourceCard(width: CGFloat) -> some View {
-        VStack(spacing: 14) {
-            Image(systemName: "plus")
-                .font(.system(size: 56, weight: .bold))
-                .foregroundStyle(primary)
-            Text("Click to Extract Audio")
-                .font(.system(size: 24, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
-        }
-        .frame(width: width, height: 165)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
-        .onTapGesture {
-            HapticsManager.shared.pulse()
-            withAnimation(.easeInOut(duration: 0.35)) {
-                showSourceOptions = true
-            }
-        }
-        .scaleEffect(showSourceOptions ? 0.75 : 1.0)
-        .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
-        .opacity(showSourceOptions ? 0.0 : 1.0)
-        .animation(.easeInOut(duration: 0.3), value: showSourceOptions)
-        .allowsHitTesting(!showSourceOptions)
-        .zIndex(showSourceOptions ? 0 : 1)
-    }
-
-    private func sourceOptionCard(icon: String, title: String, width: CGFloat, action: @escaping () -> Void) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(primary)
-            Text(title)
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
-        }
-        .frame(width: width, height: 165)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
-        .onTapGesture {
-            HapticsManager.shared.pulse()
-            action()
-        }
     }
 
     private var recentSection: some View {
@@ -537,12 +574,15 @@ struct ContentView: View {
             .padding(.bottom, 14)
             .frame(height: showAllRecents ? nil : 323)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(
-            primary: primary,
-            colorScheme: colorScheme,
-            fillOpacity: AppStyle.subtleCardFillOpacity,
-            shadowLevel: .medium
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: shadowColor.opacity(0.55), radius: 22, x: 0, y: 14)
+                .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
         )
         .padding(.horizontal, AppStyle.horizontalPadding)
         .padding(.bottom, 120)

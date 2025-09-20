@@ -20,7 +20,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
 
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
 
     private var versionDisplayString: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -187,7 +187,6 @@ struct SettingsView: View {
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
             }
             .padding(.top, 4)
         }
@@ -219,7 +218,6 @@ struct SettingsView: View {
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
             }
             .padding(.top, 12)
         }
@@ -257,11 +255,15 @@ struct SettingsView: View {
         }
         .padding(AppStyle.innerPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(
-            primary: primary,
-            colorScheme: colorScheme,
-            fillOpacity: AppStyle.subtleCardFillOpacity,
-            shadowLevel: .medium
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
+                .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.3), radius: 1, x: 0, y: 1)
         )
         .padding(.horizontal, AppStyle.horizontalPadding)
     }

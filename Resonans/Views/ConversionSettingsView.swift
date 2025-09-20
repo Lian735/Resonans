@@ -10,8 +10,9 @@ struct ConversionSettingsView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     @Environment(\.colorScheme) private var colorScheme
-    private var background: Color { AppStyle.background(for: colorScheme) }
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
+    private var background: Color { colorScheme == .dark ? .black : .white }
+    private var adaptiveBackground: Color { colorScheme == .dark ? Color(white: 0.1) : Color(white: 0.9) }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
 
     @State private var selectedFormat: AudioFormat = .mp3
     @State private var isProcessing = false
@@ -64,7 +65,6 @@ struct ConversionSettingsView: View {
                                 Capsule()
                                     .stroke(primary.opacity(0.15), lineWidth: 1)
                             )
-                            .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.3)
                     }
                 }
                 .padding(.top, 18)
@@ -145,39 +145,61 @@ struct ConversionSettingsView: View {
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 18) {
             // File Size
-            infoPanel {
-                Text("File Size")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                HStack(spacing: 16) {
-                    Text("Original: \(fileSizeString(for: videoURL))")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
-                    Text("Estimated: \(estimatedExportSizeString())")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primary.opacity(0.09))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("File Size")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    HStack(spacing: 16) {
+                        Text("Original: \(fileSizeString(for: videoURL))")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                        Text("Estimated: \(estimatedExportSizeString())")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                    }
                 }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // Export Format
-            infoPanel {
-                Text("Format")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Text("Original: \(originalFormatLabel)")
-                    .font(.system(size: 14))
-                    .foregroundStyle(primary.opacity(0.8))
-                HStack {
-                    Text("When Exported:")
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primary.opacity(0.09))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Format")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    Text("Original: \(originalFormatLabel)")
                         .font(.system(size: 14))
                         .foregroundStyle(primary.opacity(0.8))
-                    Picker("", selection: $selectedFormat) {
-                        Text("mp3").tag(AudioFormat.mp3)
-                        Text("wav").tag(AudioFormat.wav)
-                        Text("m4a").tag(AudioFormat.m4a)
+                    HStack {
+                        Text("When Exported:")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                        Picker("", selection: $selectedFormat) {
+                            Text("mp3").tag(AudioFormat.mp3)
+                            Text("wav").tag(AudioFormat.wav)
+                            Text("m4a").tag(AudioFormat.m4a)
+                        }
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
                 }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // More… button
@@ -206,38 +228,49 @@ struct ConversionSettingsView: View {
                 if showAdvanced {
                     VStack(spacing: 18) {
                         // Bitrate setting
-                        infoPanel {
-                            HStack {
-                                Text("Bitrate")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(primary)
-                                Spacer()
-                                Text(bitrateLabel)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(primary.opacity(0.8))
-                                Button(action: {
-                                    withAnimation { showBitrateInfo.toggle() }
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .opacity(0.5)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .fill(primary.opacity(0.09))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                                )
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Bitrate")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(primary)
+                                    Spacer()
+                                    Text(bitrateLabel)
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(primary.opacity(0.8))
+                                    Button(action: {
+                                        withAnimation { showBitrateInfo.toggle() }
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .opacity(0.5)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
+                                if showBitrateInfo {
+                                    Text("Bitrate controls audio quality and file size.")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(primary.opacity(0.7))
+                                        .transition(.opacity)
+                                }
+                                if selectedFormat == .wav {
+                                    Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(primary.opacity(0.7))
+                                        .transition(.opacity)
+                                } else {
+                                    Slider(value: $bitrate, in: 64...320, step: 1)
+                                        .tint(accent.color)
+                                }
                             }
-                            if showBitrateInfo {
-                                Text("Bitrate controls audio quality and file size.")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(primary.opacity(0.7))
-                                    .transition(.opacity)
-                            }
-                            if selectedFormat == .wav {
-                                Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(primary.opacity(0.7))
-                                    .transition(.opacity)
-                            } else {
-                                Slider(value: $bitrate, in: 64...320, step: 1)
-                                    .tint(accent.color)
-                            }
+                            .padding(.vertical, 14)
+                            .padding(.horizontal, 18)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         // Add more advanced settings here as needed
 
@@ -264,16 +297,6 @@ struct ConversionSettingsView: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func infoPanel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            content()
-        }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
     }
 
     // MARK: - Helpers
@@ -643,7 +666,6 @@ private struct VideoPreviewCard: View {
     let size: CGFloat
     let primaryColor: Color
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var thumbnail: UIImage?
     @State private var player: AVPlayer?
     @State private var isPlaying = false
@@ -701,7 +723,6 @@ private struct VideoPreviewCard: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-        .appShadow(colorScheme: colorScheme, level: .medium, opacity: 0.35)
         .onTapGesture {
             showControls = true
             resetHideControlsTimer()
@@ -833,7 +854,6 @@ private struct AudioPreviewCard: View {
     let accentColor: Color
     @Binding var audioURL: URL?
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var player: AVPlayer?
     @State private var isPlaying = false
     @State private var endObserver: NSObjectProtocol?
@@ -876,9 +896,8 @@ private struct AudioPreviewCard: View {
                     .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 2)
             }
         }
-
+        
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-        .appShadow(colorScheme: colorScheme, level: .medium, opacity: 0.35)
         .onTapGesture {
             guard audioURL != nil else { return }
             togglePlayback()
