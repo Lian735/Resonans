@@ -8,20 +8,26 @@ struct BottomSheetGallery: View {
     let onLastItemAppear: () -> Void
     @Binding var selectedAsset: PHAsset?
 
+    @State private var sections: [AssetSection] = []
+    @State private var cachedIdentifiers: [String] = []
+
     private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
     @Environment(\.colorScheme) private var colorScheme
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
     var body: some View {
-        let grouped = Dictionary(grouping: assets) { asset in
-            asset.creationDate.map { Calendar.current.startOfDay(for: $0) } ?? Date.distantPast
-        }
-        let sortedDates = grouped.keys.sorted(by: >)
+        let identifiers = assets.map(\.localIdentifier)
         LazyVStack(alignment: .leading, spacing: 18, pinnedViews: [.sectionHeaders]) {
-            ForEach(sortedDates, id: \.self) { date in
-                if let items = grouped[date] {
-                    Section(header:
-                        Text(dateFormatted(date))
+            ForEach(sections) { section in
+                Section(header:
+                    Text(section.title)
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(primary.opacity(0.85))
                             .padding(.leading, 6)
@@ -29,7 +35,7 @@ struct BottomSheetGallery: View {
                             .appTextShadow(colorScheme: colorScheme)
                     ) {
                         LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(items, id: \.localIdentifier) { asset in
+                            ForEach(section.assets, id: \.localIdentifier) { asset in
                                 let globalIndex = assets.firstIndex(where: { $0.localIdentifier == asset.localIdentifier })
                                 Thumb(
                                     asset: asset,
@@ -54,13 +60,55 @@ struct BottomSheetGallery: View {
                 }
             }
         }
+        .onAppear {
+            if sections.isEmpty || cachedIdentifiers != identifiers {
+                rebuildSections(with: assets, identifiers: identifiers)
+            }
+        }
+        .onChange(of: identifiers) { _, newIdentifiers in
+            rebuildSections(with: assets, identifiers: newIdentifiers)
+        }
     }
 
-    private func dateFormatted(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+    private func rebuildSections(with assets: [PHAsset], identifiers: [String]) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard !assets.isEmpty else {
+                DispatchQueue.main.async {
+                    if self.cachedIdentifiers != identifiers {
+                        self.cachedIdentifiers = identifiers
+                    }
+                    self.sections = []
+                    Thumb.updatePrefetching(with: [])
+                }
+                return
+            }
+
+            let calendar = Calendar.current
+            let grouped = Dictionary(grouping: assets) { asset in
+                asset.creationDate.map { calendar.startOfDay(for: $0) } ?? Date.distantPast
+            }
+            let sortedDates = grouped.keys.sorted(by: >)
+            let formatter = BottomSheetGallery.dayFormatter
+            let newSections: [AssetSection] = sortedDates.compactMap { date in
+                guard let items = grouped[date] else { return nil }
+                return AssetSection(id: date, title: formatter.string(from: date), assets: items)
+            }
+            let prefetchAssets = Array(newSections.flatMap(\.assets).prefix(60))
+
+            DispatchQueue.main.async {
+                let currentIdentifiers = self.assets.map(\.localIdentifier)
+                guard currentIdentifiers == identifiers else { return }
+                self.cachedIdentifiers = identifiers
+                self.sections = newSections
+                Thumb.updatePrefetching(with: prefetchAssets)
+            }
+        }
+    }
+
+    private struct AssetSection: Identifiable {
+        let id: Date
+        let title: String
+        let assets: [PHAsset]
     }
 
     private struct Thumb: View {
@@ -77,6 +125,21 @@ struct BottomSheetGallery: View {
         @State private var endObserver: NSObjectProtocol?
         @Environment(\.colorScheme) private var colorScheme
         private var primary: Color { colorScheme == .dark ? .white : .black }
+
+        private static let imageManager: PHCachingImageManager = {
+            let manager = PHCachingImageManager()
+            manager.allowsCachingHighQualityImages = true
+            return manager
+        }()
+
+        private static let thumbnailTargetSize = CGSize(width: 200, height: 200)
+
+        private final class AssetBox: @unchecked Sendable {
+            let asset: AVAsset
+            init(asset: AVAsset) {
+                self.asset = asset
+            }
+        }
 
         var body: some View {
             // Image or placeholder
@@ -168,33 +231,61 @@ struct BottomSheetGallery: View {
                 if image == nil {
                     loadThumbnail()
                 }
-                loadDuration()
+                if durationText.isEmpty {
+                    loadDuration()
+                }
                 if !hasAppeared {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
                         hasAppeared = true
                     }
                 }
             }
-            .onChange(of: isSelected) { newValue in
+            .onChange(of: isSelected) { _, newValue in
                 if !newValue {
                     stopPreview()
                 }
             }
-            .onChange(of: asset.localIdentifier) { _ in
-                loadDuration()
+            .onChange(of: asset.localIdentifier) { _, _ in
+                if durationText.isEmpty {
+                    loadDuration()
+                }
             }
             .onDisappear {
                 stopPreview()
             }
         }
 
+        static func updatePrefetching(with assets: [PHAsset]) {
+            imageManager.stopCachingImagesForAllAssets()
+            guard !assets.isEmpty else { return }
+            let options = makeImageRequestOptions()
+            imageManager.startCachingImages(
+                for: assets,
+                targetSize: thumbnailTargetSize,
+                contentMode: .aspectFill,
+                options: options
+            )
+        }
+
+        private static func makeImageRequestOptions() -> PHImageRequestOptions {
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .opportunistic
+            options.resizeMode = .fast
+            options.isNetworkAccessAllowed = true
+            return options
+        }
+
         private func loadThumbnail() {
-            let manager = PHCachingImageManager()
-            manager.requestImage(for: asset,
-                                 targetSize: CGSize(width: 200, height: 200),
-                                 contentMode: .aspectFill,
-                                 options: nil) { result, _ in
-                image = result
+            let options = Thumb.makeImageRequestOptions()
+            Thumb.imageManager.requestImage(for: asset,
+                                             targetSize: Thumb.thumbnailTargetSize,
+                                             contentMode: .aspectFill,
+                                             options: options) { result, _ in
+                if let result = result {
+                    DispatchQueue.main.async {
+                        image = result
+                    }
+                }
             }
         }
 
@@ -213,20 +304,12 @@ struct BottomSheetGallery: View {
                     DispatchQueue.main.async { durationText = "—" }
                     return
                 }
-
-                let key = "duration"
-                if avAsset.statusOfValue(forKey: key, error: nil) == .loaded {
-                    let sec = avAsset.duration.seconds
-                    DispatchQueue.main.async {
-                        durationText = sec > 0 ? formatDuration(sec) : "—"
-                    }
-                } else {
-                    // Duration isn’t ready yet – load it explicitly.
-                    avAsset.loadValuesAsynchronously(forKeys: [key]) {
-                        let sec = avAsset.duration.seconds
-                        DispatchQueue.main.async {
-                            durationText = sec > 0 ? formatDuration(sec) : "—"
-                        }
+                let boxedAsset = AssetBox(asset: avAsset)
+                Task {
+                    let seconds = (try? await boxedAsset.asset.load(.duration).seconds) ?? 0
+                    let formatted = seconds > 0 ? formatDuration(seconds) : "—"
+                    await MainActor.run {
+                        durationText = formatted
                     }
                 }
             }
