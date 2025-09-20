@@ -10,8 +10,9 @@ struct ConversionSettingsView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     @Environment(\.colorScheme) private var colorScheme
-    private var background: Color { AppColor.background(for: colorScheme) }
-    private var primary: Color { AppColor.primary(for: colorScheme) }
+    private var background: Color { colorScheme == .dark ? .black : .white }
+    private var adaptiveBackground: Color { colorScheme == .dark ? Color(white: 0.1) : Color(white: 0.9) }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
 
     @State private var selectedFormat: AudioFormat = .mp3
     @State private var isProcessing = false
@@ -144,48 +145,62 @@ struct ConversionSettingsView: View {
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 18) {
             // File Size
-            VStack(alignment: .leading, spacing: 8) {
-                Text("File Size")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                HStack(spacing: 16) {
-                    Text("Original: \(fileSizeString(for: videoURL))")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
-                    Text("Estimated: \(estimatedExportSizeString())")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primary.opacity(0.09))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("File Size")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    HStack(spacing: 16) {
+                        Text("Original: \(fileSizeString(for: videoURL))")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                        Text("Estimated: \(estimatedExportSizeString())")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                    }
                 }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .appCardBackground(primary: primary, colorScheme: colorScheme, elevation: .medium)
 
             // Export Format
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Format")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Text("Original: \(originalFormatLabel)")
-                    .font(.system(size: 14))
-                    .foregroundStyle(primary.opacity(0.8))
-                HStack {
-                    Text("When Exported:")
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(primary.opacity(0.09))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Format")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    Text("Original: \(originalFormatLabel)")
                         .font(.system(size: 14))
                         .foregroundStyle(primary.opacity(0.8))
-                    Picker("", selection: $selectedFormat) {
-                        Text("mp3").tag(AudioFormat.mp3)
-                        Text("wav").tag(AudioFormat.wav)
-                        Text("m4a").tag(AudioFormat.m4a)
+                    HStack {
+                        Text("When Exported:")
+                            .font(.system(size: 14))
+                            .foregroundStyle(primary.opacity(0.8))
+                        Picker("", selection: $selectedFormat) {
+                            Text("mp3").tag(AudioFormat.mp3)
+                            Text("wav").tag(AudioFormat.wav)
+                            Text("m4a").tag(AudioFormat.m4a)
+                        }
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
                 }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .appCardBackground(primary: primary, colorScheme: colorScheme, elevation: .medium)
 
             // More… button
             if !showAdvanced {
@@ -213,43 +228,50 @@ struct ConversionSettingsView: View {
                 if showAdvanced {
                     VStack(spacing: 18) {
                         // Bitrate setting
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Bitrate")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(primary)
-                                Spacer()
-                                Text(bitrateLabel)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(primary.opacity(0.8))
-                                Button(action: {
-                                    withAnimation { showBitrateInfo.toggle() }
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .opacity(0.5)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                .fill(primary.opacity(0.09))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                                )
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Bitrate")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(primary)
+                                    Spacer()
+                                    Text(bitrateLabel)
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(primary.opacity(0.8))
+                                    Button(action: {
+                                        withAnimation { showBitrateInfo.toggle() }
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .opacity(0.5)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
+                                if showBitrateInfo {
+                                    Text("Bitrate controls audio quality and file size.")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(primary.opacity(0.7))
+                                        .transition(.opacity)
+                                }
+                                if selectedFormat == .wav {
+                                    Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(primary.opacity(0.7))
+                                        .transition(.opacity)
+                                } else {
+                                    Slider(value: $bitrate, in: 64...320, step: 1)
+                                        .tint(accent.color)
+                                }
                             }
-                            if showBitrateInfo {
-                                Text("Bitrate controls audio quality and file size.")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(primary.opacity(0.7))
-                                    .transition(.opacity)
-                            }
-                            if selectedFormat == .wav {
-                                Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(primary.opacity(0.7))
-                                    .transition(.opacity)
-                            } else {
-                                Slider(value: $bitrate, in: 64...320, step: 1)
-                                    .tint(accent.color)
-                            }
+                            .padding(.vertical, 14)
+                            .padding(.horizontal, 18)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 18)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .appCardBackground(primary: primary, colorScheme: colorScheme, elevation: .medium)
                         // Add more advanced settings here as needed
 
                         Button(action: {
@@ -396,7 +418,7 @@ struct ConversionSettingsView: View {
             .padding(.vertical, 14)
             .background(accent.color.opacity(isProcessing ? 0.6 : 1))
             .clipShape(Capsule())
-            .appShadow(.medium, colorScheme: colorScheme)
+            .shadow(color: accent.color.opacity(0.35), radius: 14, x: 0, y: 8)
         }
         .disabled(isProcessing)
         .opacity(isProcessing ? 0.9 : 1)
@@ -624,7 +646,7 @@ private struct ConversionSuccessSheet: View {
                 })
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
-            .appShadow(.medium, colorScheme: colorScheme)
+            .shadow(color: accentColor.opacity(0.35), radius: 14, x: 0, y: 8)
             .padding(.bottom, 30)
         }
         .background(LinearGradient(
