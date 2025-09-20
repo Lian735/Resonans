@@ -39,8 +39,10 @@ struct ContentView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     @Environment(\.colorScheme) private var colorScheme
-    private var background: Color { AppColor.background(for: colorScheme) }
-    private var primary: Color { AppColor.primary(for: colorScheme) }
+    private var background: Color { colorScheme == .dark ? .black : .white }
+    private var primary: Color { colorScheme == .dark ? .white : .black }
+    /// Uses white shadows in light mode and black shadows in dark mode
+    private var shadowColor: Color { colorScheme == .light ? .white : .black }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -387,7 +389,7 @@ struct ContentView: View {
             .tracking(0.5)
             .foregroundStyle(primary)
             .padding(.leading, 22)
-            .appShadow(.text, colorScheme: colorScheme)
+            .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             .animation(.easeInOut(duration: 0.25), value: selectedTab)
             Spacer()
             Button(action: {
@@ -397,7 +399,7 @@ struct ContentView: View {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(primary)
-                    .appShadow(.text, colorScheme: colorScheme)
+                    .shadow(color: shadowColor.opacity(0.8), radius: 4, x: 0, y: 1)
             }
             .buttonStyle(.plain)
             .padding(.trailing, 22)
@@ -421,7 +423,7 @@ struct ContentView: View {
                 // Large rectangle (plus)
                 ZStack {
                     RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .fill(primary.opacity(AppSurface.cardFillOpacity))
+                        .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 14) {
                                 Image(systemName: "plus")
@@ -435,10 +437,11 @@ struct ContentView: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                                .strokeBorder(primary.opacity(AppSurface.cardStrokeOpacity), lineWidth: 1)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: fullWidth, height: 165)
-                        .appShadow(.high, colorScheme: colorScheme)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
                             HapticsManager.shared.pulse()
                             withAnimation(.easeInOut(duration: 0.35)) {
@@ -456,7 +459,7 @@ struct ContentView: View {
                 HStack(spacing: 16) {
                     // Files rectangle
                     RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .fill(primary.opacity(AppSurface.cardFillOpacity))
+                        .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
                                 Image(systemName: "doc.fill")
@@ -469,10 +472,11 @@ struct ContentView: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                                .strokeBorder(primary.opacity(AppSurface.cardStrokeOpacity), lineWidth: 1)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
-                        .appShadow(.medium, colorScheme: colorScheme)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
                             HapticsManager.shared.pulse()
                             showFilePicker = true
@@ -482,7 +486,7 @@ struct ContentView: View {
                         }
                     // Gallery rectangle
                     RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .fill(primary.opacity(AppSurface.cardFillOpacity))
+                        .fill(primary.opacity(0.09))
                         .overlay(
                             VStack(spacing: 8) {
                                 Image(systemName: "photo.on.rectangle.angled")
@@ -495,10 +499,11 @@ struct ContentView: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                                .strokeBorder(primary.opacity(AppSurface.cardStrokeOpacity), lineWidth: 1)
+                                .strokeBorder(primary.opacity(0.10), lineWidth: 1)
                         )
                         .frame(width: targetWidth, height: 165)
-                        .appShadow(.medium, colorScheme: colorScheme)
+                        .shadow(color: shadowColor.opacity(0.65), radius: 26, x: 0, y: 20)
+                        .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
                         .onTapGesture {
                             HapticsManager.shared.pulse()
                             selectedTab = 1
@@ -569,7 +574,16 @@ struct ContentView: View {
             .padding(.bottom, 14)
             .frame(height: showAllRecents ? nil : 323)
         }
-        .appCardBackground(primary: primary, colorScheme: colorScheme, elevation: .medium)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: shadowColor.opacity(0.55), radius: 22, x: 0, y: 14)
+                .shadow(color: .white.opacity(0.05), radius: 1, x: 0, y: 1)
+        )
         .padding(.horizontal, AppStyle.horizontalPadding)
         .padding(.bottom, 120)
     }
