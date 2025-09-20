@@ -457,31 +457,27 @@ struct ConversionSettingsView: View {
     }
 
     private func loadAudioProperties() {
-        let asset = AVAsset(url: videoURL)
+        let sourceURL = videoURL
         Task {
-            var durationSeconds: Double = 0
-            do {
-                let duration = try await asset.load(.duration)
+            let asset = AVURLAsset(url: sourceURL)
+            let durationSeconds: Double
+            if let duration = try? await asset.load(.duration) {
                 durationSeconds = duration.seconds
-            } catch {
-                durationSeconds = asset.duration.seconds
+            } else {
+                durationSeconds = 0
             }
 
             var sampleRate: Double = 44_100
             var channels: Int = 2
 
-            let track = asset.tracks(withMediaType: .audio).first
-            if let track = track {
-                do {
-                    let formatDescriptions = try await track.load(.formatDescriptions)
-                    if let description = formatDescriptions.first,
-                       let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(description) {
-                        let asbd = asbdPtr.pointee
-                        sampleRate = asbd.mSampleRate
-                        channels = Int(asbd.mChannelsPerFrame)
-                    }
-                } catch {
-                    // If loading format descriptions fails, keep defaults.
+            if let tracks = try? await asset.loadTracks(withMediaType: .audio),
+               let track = tracks.first {
+                if let formatDescriptions = try? await track.load(.formatDescriptions),
+                   let description = formatDescriptions.first,
+                   let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(description) {
+                    let asbd = asbdPtr.pointee
+                    sampleRate = asbd.mSampleRate
+                    channels = Int(asbd.mChannelsPerFrame)
                 }
             }
 
@@ -794,12 +790,14 @@ private struct VideoPreviewCard: View {
     private func loadMetadata() {
         guard !hasLoadedMetadata else { return }
         hasLoadedMetadata = true
-        let asset = AVAsset(url: url)
-        let durationSeconds = CMTimeGetSeconds(asset.duration)
-        if durationSeconds.isFinite {
-            duration = max(durationSeconds, 0)
-        }
-        DispatchQueue.global(qos: .userInitiated).async {
+        let sourceURL = url
+        Task {
+            let asset = AVURLAsset(url: sourceURL)
+            let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
+            await MainActor.run {
+                duration = durationSeconds.isFinite ? max(durationSeconds, 0) : 0
+            }
+
             let generator = AVAssetImageGenerator(asset: asset)
             generator.appliesPreferredTrackTransform = true
             let snapshotTime: CMTime
@@ -809,9 +807,10 @@ private struct VideoPreviewCard: View {
             } else {
                 snapshotTime = CMTime(seconds: 0, preferredTimescale: 600)
             }
-            if let cgImage = try? generator.copyCGImage(at: snapshotTime, actualTime: nil) {
+            generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, result, _ in
+                guard result == .succeeded, let cgImage = cgImage else { return }
                 let image = UIImage(cgImage: cgImage)
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     thumbnail = image
                 }
             }
@@ -879,6 +878,22 @@ private struct AudioPreviewCard: View {
 
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
         .appShadow(colorScheme: colorScheme, level: .medium, opacity: 0.35)
+        .onAppear {
+            if let url = audioURL {
+                loadMetadata(for: url)
+            }
+        }
+        .onChange(of: audioURL) { _, newValue in
+            if let url = newValue {
+                loadMetadata(for: url)
+            } else {
+                resetPlayback()
+                duration = 0
+            }
+        }
+        .onDisappear {
+            resetPlayback()
+        }
         .onTapGesture {
             guard audioURL != nil else { return }
             togglePlayback()
@@ -954,26 +969,11 @@ private struct AudioPreviewCard: View {
     }
 
     private func loadMetadata(for url: URL) {
-        let asset = AVAsset(url: url)
-        let key = "duration"
-        if asset.statusOfValue(forKey: key, error: nil) == .loaded {
-            updateDuration(with: asset)
-        } else {
-            asset.loadValuesAsynchronously(forKeys: [key]) {
-                updateDuration(with: asset)
-            }
-        }
-    }
-
-    private func updateDuration(with asset: AVAsset) {
-        let seconds = CMTimeGetSeconds(asset.duration)
-        if seconds.isFinite && seconds > 0 {
-            DispatchQueue.main.async {
-                duration = seconds
-            }
-        } else {
-            DispatchQueue.main.async {
-                duration = 0
+        Task {
+            let asset = AVURLAsset(url: url)
+            let seconds = (try? await asset.load(.duration).seconds) ?? 0
+            await MainActor.run {
+                duration = seconds.isFinite && seconds > 0 ? seconds : 0
             }
         }
     }

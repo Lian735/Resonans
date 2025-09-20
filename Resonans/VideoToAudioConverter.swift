@@ -17,6 +17,102 @@ enum AudioFormat: String, CaseIterable {
 }
 
 final class VideoToAudioConverter {
+    private final class MediaExportContext: @unchecked Sendable {
+        let reader: AVAssetReader
+        let readerOutput: AVAssetReaderTrackOutput
+        let writer: AVAssetWriter
+        let writerInput: AVAssetWriterInput
+        let outputURL: URL
+        let durationSeconds: Double
+        private let progressHandler: @Sendable (Double) -> Void
+        private let completionHandler: @Sendable (Result<URL, Error>) -> Void
+
+        init(
+            reader: AVAssetReader,
+            readerOutput: AVAssetReaderTrackOutput,
+            writer: AVAssetWriter,
+            writerInput: AVAssetWriterInput,
+            outputURL: URL,
+            durationSeconds: Double,
+            progress: @escaping (Double) -> Void,
+            completion: @escaping (Result<URL, Error>) -> Void
+        ) {
+            self.reader = reader
+            self.readerOutput = readerOutput
+            self.writer = writer
+            self.writerInput = writerInput
+            self.outputURL = outputURL
+            self.durationSeconds = durationSeconds
+            self.progressHandler = { value in
+                DispatchQueue.main.async {
+                    progress(min(max(value, 0), 1))
+                }
+            }
+            self.completionHandler = { result in
+                DispatchQueue.main.async {
+                    completion(result)
+                }
+            }
+        }
+
+        func reportProgress(_ value: Double) {
+            progressHandler(value)
+        }
+
+        func finish(with result: Result<URL, Error>) {
+            completionHandler(result)
+        }
+    }
+
+    private static func runExportLoop(
+        context: MediaExportContext,
+        queueLabel: String,
+        appendFailureCode: Int,
+        readerFailureCode: Int
+    ) {
+        let queue = DispatchQueue(label: queueLabel)
+        context.writerInput.requestMediaDataWhenReady(on: queue) { [context] in
+            while context.writerInput.isReadyForMoreMediaData {
+                if context.reader.status == .reading,
+                   let sampleBuffer = context.readerOutput.copyNextSampleBuffer() {
+                    if !context.writerInput.append(sampleBuffer) {
+                        context.reader.cancelReading()
+                        context.writerInput.markAsFinished()
+                        context.writer.cancelWriting()
+                        let error = context.writer.error ?? NSError(domain: "export", code: appendFailureCode)
+                        context.finish(with: .failure(error))
+                        return
+                    }
+
+                    if context.durationSeconds > 0 {
+                        let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+                        context.reportProgress(time / context.durationSeconds)
+                    }
+                } else {
+                    context.writerInput.markAsFinished()
+                    switch context.reader.status {
+                    case .completed:
+                        context.writer.finishWriting {
+                            if let error = context.writer.error {
+                                context.finish(with: .failure(error))
+                            } else {
+                                context.reportProgress(1)
+                                context.finish(with: .success(context.outputURL))
+                            }
+                        }
+                    case .failed, .cancelled:
+                        let error = context.reader.error ?? context.writer.error ?? NSError(domain: "export", code: readerFailureCode)
+                        context.writer.cancelWriting()
+                        context.finish(with: .failure(error))
+                    default:
+                        break
+                    }
+                    return
+                }
+            }
+        }
+    }
+
     static func convert(
         videoURL: URL,
         format: AudioFormat,
@@ -24,20 +120,19 @@ final class VideoToAudioConverter {
         progress: @escaping (Double) -> Void,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        let asset = AVURLAsset(url: videoURL)
         let baseName = videoURL.deletingPathExtension().lastPathComponent + "_out"
         let tmp = FileManager.default.temporaryDirectory
         progress(0)
         switch format {
         case .m4a:
             let out = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
-            exportToM4A(asset: asset, outputURL: out, bitrate: bitrate, progress: progress, completion: completion)
+            exportToM4A(videoURL: videoURL, outputURL: out, bitrate: bitrate, progress: progress, completion: completion)
         case .wav:
             let out = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
-            exportToWAV(asset: asset, outputURL: out, progress: progress, completion: completion)
+            exportToWAV(videoURL: videoURL, outputURL: out, progress: progress, completion: completion)
         case .mp3:
             let wavURL = tmp.appendingPathComponent(baseName).appendingPathExtension(AudioFormat.wav.fileExtension)
-            exportToWAV(asset: asset, outputURL: wavURL, progress: { value in
+            exportToWAV(videoURL: videoURL, outputURL: wavURL, progress: { value in
                 progress(value * 0.85)
             }) { result in
                 switch result {
@@ -69,276 +164,188 @@ final class VideoToAudioConverter {
     }
 
     private static func exportToM4A(
-        asset: AVAsset,
+        videoURL: URL,
         outputURL: URL,
         bitrate: Int,
         progress: @escaping (Double) -> Void,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        do {
-            if FileManager.default.fileExists(atPath: outputURL.path) {
-                try FileManager.default.removeItem(at: outputURL)
-            }
-
-            guard let track = asset.tracks(withMediaType: .audio).first else {
+        Task {
+            func fail(_ error: Error) {
                 DispatchQueue.main.async {
-                    completion(.failure(NSError(domain: "export", code: -3)))
-                }
-                return
-            }
-
-            Task {
-                do {
-                    let formatDescriptions: [CMFormatDescription] = try await track.load(.formatDescriptions)
-                    let cmDesc: CMFormatDescription? = formatDescriptions.first
-                    let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                    let sampleRate = asbd?.mSampleRate ?? 44_100
-                    let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
-
-                    let readerSettings: [String: Any] = [
-                        AVFormatIDKey: kAudioFormatLinearPCM,
-                        AVSampleRateKey: sampleRate,
-                        AVNumberOfChannelsKey: channels,
-                        AVLinearPCMBitDepthKey: 16,
-                        AVLinearPCMIsBigEndianKey: false,
-                        AVLinearPCMIsFloatKey: false,
-                        AVLinearPCMIsNonInterleaved: false
-                    ]
-
-                    let writerSettings: [String: Any] = [
-                        AVFormatIDKey: kAudioFormatMPEG4AAC,
-                        AVEncoderBitRateKey: max(bitrate, 64) * 1000,
-                        AVSampleRateKey: sampleRate,
-                        AVNumberOfChannelsKey: channels,
-                        AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-                    ]
-
-                    let reader = try AVAssetReader(asset: asset)
-                    let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: readerSettings)
-                    readerOutput.alwaysCopiesSampleData = false
-                    guard reader.canAdd(readerOutput) else {
-                        DispatchQueue.main.async {
-                            completion(.failure(NSError(domain: "export", code: -10)))
-                        }
-                        return
-                    }
-                    reader.add(readerOutput)
-
-                    let writer = try AVAssetWriter(outputURL: outputURL, fileType: .m4a)
-                    let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
-                    writerInput.expectsMediaDataInRealTime = false
-                    guard writer.canAdd(writerInput) else {
-                        DispatchQueue.main.async {
-                            completion(.failure(NSError(domain: "export", code: -11)))
-                        }
-                        return
-                    }
-                    writer.add(writerInput)
-
-                    guard writer.startWriting() else {
-                        throw writer.error ?? NSError(domain: "export", code: -12)
-                    }
-
-                    reader.startReading()
-                    writer.startSession(atSourceTime: .zero)
-
-                    let durationSeconds = asset.duration.seconds
-                    let queue = DispatchQueue(label: "m4a.export.queue")
-                    writerInput.requestMediaDataWhenReady(on: queue) {
-                        while writerInput.isReadyForMoreMediaData {
-                            if reader.status == .reading, let sampleBuffer = readerOutput.copyNextSampleBuffer() {
-                                if !writerInput.append(sampleBuffer) {
-                                    reader.cancelReading()
-                                    writerInput.markAsFinished()
-                                    writer.cancelWriting()
-                                    let error = writer.error ?? NSError(domain: "export", code: -13)
-                                    DispatchQueue.main.async {
-                                        completion(.failure(error))
-                                    }
-                                    return
-                                }
-
-                                if durationSeconds.isFinite && durationSeconds > 0 {
-                                    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
-                                    let ratio = min(max(time / durationSeconds, 0), 1)
-                                    DispatchQueue.main.async {
-                                        progress(ratio)
-                                    }
-                                }
-                            } else {
-                                writerInput.markAsFinished()
-                                switch reader.status {
-                                case .completed:
-                                    writer.finishWriting {
-                                        if let error = writer.error {
-                                            DispatchQueue.main.async {
-                                                completion(.failure(error))
-                                            }
-                                        } else {
-                                            DispatchQueue.main.async {
-                                                progress(1)
-                                                completion(.success(outputURL))
-                                            }
-                                        }
-                                    }
-                                case .failed, .cancelled:
-                                    let error = reader.error ?? writer.error ?? NSError(domain: "export", code: -14)
-                                    writer.cancelWriting()
-                                    DispatchQueue.main.async {
-                                        completion(.failure(error))
-                                    }
-                                default:
-                                    break
-                                }
-                                return
-                            }
-                        }
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        completion(.failure(error))
-                    }
+                    completion(.failure(error))
                 }
             }
 
-            return
-        } catch {
-            DispatchQueue.main.async {
-                completion(.failure(error))
+            do {
+                if FileManager.default.fileExists(atPath: outputURL.path) {
+                    try FileManager.default.removeItem(at: outputURL)
+                }
+
+                let asset = AVURLAsset(url: videoURL)
+                guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
+                    fail(NSError(domain: "export", code: -3))
+                    return
+                }
+
+                let formatDescriptions = try await track.load(.formatDescriptions)
+                let cmDesc: CMFormatDescription? = formatDescriptions.first
+                let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+                let sampleRate = asbd?.mSampleRate ?? 44_100
+                let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
+
+                let readerSettings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatLinearPCM,
+                    AVSampleRateKey: sampleRate,
+                    AVNumberOfChannelsKey: channels,
+                    AVLinearPCMBitDepthKey: 16,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsFloatKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+
+                let writerSettings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatMPEG4AAC,
+                    AVEncoderBitRateKey: max(bitrate, 64) * 1000,
+                    AVSampleRateKey: sampleRate,
+                    AVNumberOfChannelsKey: channels,
+                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                ]
+
+                let reader = try AVAssetReader(asset: asset)
+                let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: readerSettings)
+                readerOutput.alwaysCopiesSampleData = false
+                guard reader.canAdd(readerOutput) else {
+                    fail(NSError(domain: "export", code: -10))
+                    return
+                }
+                reader.add(readerOutput)
+
+                let writer = try AVAssetWriter(outputURL: outputURL, fileType: .m4a)
+                let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
+                writerInput.expectsMediaDataInRealTime = false
+                guard writer.canAdd(writerInput) else {
+                    fail(NSError(domain: "export", code: -11))
+                    return
+                }
+                writer.add(writerInput)
+
+                guard writer.startWriting() else {
+                    throw writer.error ?? NSError(domain: "export", code: -12)
+                }
+
+                let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
+                reader.startReading()
+                writer.startSession(atSourceTime: .zero)
+
+                let context = MediaExportContext(
+                    reader: reader,
+                    readerOutput: readerOutput,
+                    writer: writer,
+                    writerInput: writerInput,
+                    outputURL: outputURL,
+                    durationSeconds: durationSeconds,
+                    progress: progress,
+                    completion: completion
+                )
+
+                runExportLoop(
+                    context: context,
+                    queueLabel: "m4a.export.queue",
+                    appendFailureCode: -13,
+                    readerFailureCode: -14
+                )
+            } catch {
+                fail(error)
             }
         }
     }
 
     private static func exportToWAV(
-        asset: AVAsset,
+        videoURL: URL,
         outputURL: URL,
         progress: @escaping (Double) -> Void,
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
-        do {
-            if FileManager.default.fileExists(atPath: outputURL.path) {
-                try FileManager.default.removeItem(at: outputURL)
-            }
-
-            guard let track = asset.tracks(withMediaType: .audio).first else {
+        Task {
+            func fail(_ error: Error) {
                 DispatchQueue.main.async {
-                    completion(.failure(NSError(domain: "export", code: -4)))
-                }
-                return
-            }
-
-            Task {
-                do {
-                    let formatDescriptions: [CMFormatDescription] = try await track.load(.formatDescriptions)
-                    let cmDesc: CMFormatDescription? = formatDescriptions.first
-                    let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                    let sampleRate = asbd?.mSampleRate ?? 44_100
-                    let channels = Int(asbd?.mChannelsPerFrame ?? 2)
-
-                    let pcmSettings: [String: Any] = [
-                        AVFormatIDKey: kAudioFormatLinearPCM,
-                        AVSampleRateKey: sampleRate,
-                        AVNumberOfChannelsKey: channels,
-                        AVLinearPCMBitDepthKey: 16,
-                        AVLinearPCMIsBigEndianKey: false,
-                        AVLinearPCMIsFloatKey: false,
-                        AVLinearPCMIsNonInterleaved: false
-                    ]
-
-                    // Recreate the remainder of the original function from here using `pcmSettings`:
-                    let reader = try AVAssetReader(asset: asset)
-                    let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
-                    readerOutput.alwaysCopiesSampleData = false
-                    guard reader.canAdd(readerOutput) else {
-                        DispatchQueue.main.async {
-                            completion(.failure(NSError(domain: "export", code: -5)))
-                        }
-                        return
-                    }
-                    reader.add(readerOutput)
-
-                    let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
-                    let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmSettings)
-                    writerInput.expectsMediaDataInRealTime = false
-                    guard writer.canAdd(writerInput) else {
-                        DispatchQueue.main.async {
-                            completion(.failure(NSError(domain: "export", code: -6)))
-                        }
-                        return
-                    }
-                    writer.add(writerInput)
-
-                    guard writer.startWriting() else {
-                        throw writer.error ?? NSError(domain: "export", code: -7)
-                    }
-
-                    let durationSeconds = asset.duration.seconds
-                    reader.startReading()
-                    writer.startSession(atSourceTime: .zero)
-
-                    let queue = DispatchQueue(label: "wav.export.queue")
-                    writerInput.requestMediaDataWhenReady(on: queue) {
-                        while writerInput.isReadyForMoreMediaData {
-                            if reader.status == .reading, let sampleBuffer = readerOutput.copyNextSampleBuffer() {
-                                if !writerInput.append(sampleBuffer) {
-                                    reader.cancelReading()
-                                    writerInput.markAsFinished()
-                                    writer.cancelWriting()
-                                    let error = writer.error ?? NSError(domain: "export", code: -8)
-                                    DispatchQueue.main.async {
-                                        completion(.failure(error))
-                                    }
-                                    return
-                                }
-
-                                if durationSeconds.isFinite && durationSeconds > 0 {
-                                    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
-                                    let ratio = min(max(time / durationSeconds, 0), 1)
-                                    DispatchQueue.main.async {
-                                        progress(ratio)
-                                    }
-                                }
-                            } else {
-                                writerInput.markAsFinished()
-                                switch reader.status {
-                                case .completed:
-                                    writer.finishWriting {
-                                        if let error = writer.error {
-                                            DispatchQueue.main.async {
-                                                completion(.failure(error))
-                                            }
-                                        } else {
-                                            DispatchQueue.main.async {
-                                                progress(1)
-                                                completion(.success(outputURL))
-                                            }
-                                        }
-                                    }
-                                case .failed, .cancelled:
-                                    let error = reader.error ?? writer.error ?? NSError(domain: "export", code: -9)
-                                    writer.cancelWriting()
-                                    DispatchQueue.main.async {
-                                        completion(.failure(error))
-                                    }
-                                default:
-                                    break
-                                }
-                                return
-                            }
-                        }
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        completion(.failure(error))
-                    }
+                    completion(.failure(error))
                 }
             }
 
-            // Early return because the async Task will handle the rest
-            return
-        } catch {
-            DispatchQueue.main.async {
-                completion(.failure(error))
+            do {
+                if FileManager.default.fileExists(atPath: outputURL.path) {
+                    try FileManager.default.removeItem(at: outputURL)
+                }
+
+                let asset = AVURLAsset(url: videoURL)
+                guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
+                    fail(NSError(domain: "export", code: -4))
+                    return
+                }
+
+                let formatDescriptions = try await track.load(.formatDescriptions)
+                let cmDesc: CMFormatDescription? = formatDescriptions.first
+                let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+                let sampleRate = asbd?.mSampleRate ?? 44_100
+                let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
+
+                let pcmSettings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatLinearPCM,
+                    AVSampleRateKey: sampleRate,
+                    AVNumberOfChannelsKey: channels,
+                    AVLinearPCMBitDepthKey: 16,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsFloatKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+
+                let reader = try AVAssetReader(asset: asset)
+                let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
+                readerOutput.alwaysCopiesSampleData = false
+                guard reader.canAdd(readerOutput) else {
+                    fail(NSError(domain: "export", code: -5))
+                    return
+                }
+                reader.add(readerOutput)
+
+                let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
+                let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmSettings)
+                writerInput.expectsMediaDataInRealTime = false
+                guard writer.canAdd(writerInput) else {
+                    fail(NSError(domain: "export", code: -6))
+                    return
+                }
+                writer.add(writerInput)
+
+                guard writer.startWriting() else {
+                    throw writer.error ?? NSError(domain: "export", code: -7)
+                }
+
+                let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
+                reader.startReading()
+                writer.startSession(atSourceTime: .zero)
+
+                let context = MediaExportContext(
+                    reader: reader,
+                    readerOutput: readerOutput,
+                    writer: writer,
+                    writerInput: writerInput,
+                    outputURL: outputURL,
+                    durationSeconds: durationSeconds,
+                    progress: progress,
+                    completion: completion
+                )
+
+                runExportLoop(
+                    context: context,
+                    queueLabel: "wav.export.queue",
+                    appendFailureCode: -8,
+                    readerFailureCode: -9
+                )
+            } catch {
+                fail(error)
             }
         }
     }

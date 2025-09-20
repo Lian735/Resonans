@@ -212,7 +212,7 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: selectedTab) { newValue in
+        .onChange(of: selectedTab) { _, newValue in
             if showSourceOptions {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
@@ -222,7 +222,7 @@ struct ContentView: View {
                 withAnimation { selectedAsset = nil }
             }
         }
-        .onChange(of: selectedAsset) { asset in
+        .onChange(of: selectedAsset) { _, asset in
             if let asset = asset {
                 let options = PHVideoRequestOptions()
                 options.isNetworkAccessAllowed = true
@@ -301,7 +301,7 @@ struct ContentView: View {
                     .opacity(showHomeTopBorder ? 1 : 0)
                     .animation(.easeInOut(duration: 0.2), value: showHomeTopBorder)
             }
-            .onChange(of: homeScrollTrigger) { _ in
+            .onChange(of: homeScrollTrigger) { _, _ in
                 withAnimation {
                     proxy.scrollTo("top", anchor: .top)
                 }
@@ -354,7 +354,7 @@ struct ContentView: View {
                     .opacity(showGalleryTopBorder ? 1 : 0)
                     .animation(.easeInOut(duration: 0.2), value: showGalleryTopBorder)
             }
-            .onChange(of: galleryScrollTrigger) { _ in
+            .onChange(of: galleryScrollTrigger) { _, _ in
                 withAnimation {
                     proxy.scrollTo("top", anchor: .top)
                 }

@@ -70,7 +70,7 @@ struct SettingsView: View {
                     .opacity(showTopBorder ? 1 : 0)
                     .animation(.easeInOut(duration: 0.2), value: showTopBorder)
             }
-            .onChange(of: scrollToTopTrigger) { _ in
+            .onChange(of: scrollToTopTrigger) { _, _ in
                 withAnimation {
                     proxy.scrollTo("top", anchor: .top)
                 }
@@ -153,7 +153,7 @@ struct SettingsView: View {
                 Text("Vibration")
                     .foregroundStyle(primary.opacity(0.9))
             }
-            .onChange(of: hapticsEnabled) { _ in
+            .onChange(of: hapticsEnabled) { _, _ in
                 HapticsManager.shared.selection()
             }
 
@@ -161,7 +161,7 @@ struct SettingsView: View {
                 Text("Sounds")
                     .foregroundStyle(primary.opacity(0.9))
             }
-            .onChange(of: soundsEnabled) { _ in
+            .onChange(of: soundsEnabled) { _, _ in
                 HapticsManager.shared.selection()
             }
 
@@ -169,7 +169,7 @@ struct SettingsView: View {
                 Text("Experimental Features")
                     .foregroundStyle(primary.opacity(0.9))
             }
-            .onChange(of: experimentalEnabled) { _ in
+            .onChange(of: experimentalEnabled) { _, _ in
                 HapticsManager.shared.selection()
             }
 
