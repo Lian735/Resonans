@@ -11,6 +11,7 @@ struct ConversionSettingsView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { colorScheme == .dark ? .black : .white }
+    private var adaptiveBackground: Color { colorScheme == .dark ? Color(white: 0.1) : Color(white: 0.9) }
     private var primary: Color { colorScheme == .dark ? .white : .black }
 
     @State private var selectedFormat: AudioFormat = .mp3
@@ -43,26 +44,50 @@ struct ConversionSettingsView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Extract audio")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Title and Done button at the top (like ConversionSuccessSheet)
+                HStack {
+                    Text("Extract audio")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(primary)
+                    Spacer()
+                    Button(action: {
+                        HapticsManager.shared.selection()
+                        dismiss()
+                    }) {
+                        Text("Done")
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 20)
+                            .background(primary.opacity(0.07))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(primary.opacity(0.15), lineWidth: 1)
+                            )
+                    }
+                }
+                .padding(.top, 18)
+                .padding(.bottom, 4)
 
                 previewSection
 
                 Spacer(minLength: 20)
 
                 settingsSection
-
-                Spacer(minLength: 12)
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.top, 32)
             .padding(.bottom, 160)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(background.ignoresSafeArea())
+        .background(LinearGradient(
+            colors: [accent.gradient, colorScheme == .dark ? .black : .white],
+            startPoint: .topLeading,
+            endPoint: .bottom
+        )
+            .ignoresSafeArea()
+        )
         .safeAreaInset(edge: .bottom) {
             VStack(alignment: .leading, spacing: 16) {
                 if isProcessing {
@@ -74,20 +99,30 @@ struct ConversionSettingsView: View {
             .padding(.top, 12)
             .padding(.bottom, 28)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(background.opacity(0.95).ignoresSafeArea())
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color.clear,                  // oben transparent – direkt hinter den Buttons
+                        colorScheme == .dark ? .black : .white.opacity(0.8),     // unten dunkler – Screenrand
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+            )
         }
-        .sheet(isPresented: $showSuccessSheet, onDismiss: { dismiss() }) {
+        .sheet(isPresented: $showSuccessSheet) {
             if let exportURL = exportURL {
                 ConversionSuccessSheet(
                     exportURL: exportURL,
                     accentColor: accent.color,
                     primaryColor: primary,
-                    backgroundColor: background,
                     onSave: { showExporter = true },
                     onDone: {
                         showSuccessSheet = false
                     }
                 )
+                .presentationBackground(.regularMaterial)
             }
         }
         .sheet(isPresented: $showExporter) {
@@ -101,6 +136,9 @@ struct ConversionSettingsView: View {
                 loadAudioProperties()
             }
         }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(false)
     }
 
     // MARK: - Settings Section
@@ -372,7 +410,7 @@ struct ConversionSettingsView: View {
         Button(action: convert) {
             HStack {
                 Spacer()
-                Text(isProcessing ? "Exporting…" : "Export")
+                Text(isProcessing ? "Converting…" : "Convert")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundColor(background)
                 Spacer()
@@ -386,35 +424,9 @@ struct ConversionSettingsView: View {
         .opacity(isProcessing ? 0.9 : 1)
     }
 
-    private var cancelButton: some View {
-        Button(action: cancel) {
-            HStack {
-                Spacer()
-                Text("Cancel")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(primary)
-                Spacer()
-            }
-            .padding(.vertical, 14)
-            .background(primary.opacity(0.1))
-            .clipShape(Capsule())
-        }
-        .disabled(isProcessing)
-        .opacity(isProcessing ? 0.6 : 1)
-    }
-
     private var actionButtons: some View {
-        GeometryReader { geometry in
-            let width = geometry.size.width
-            HStack(spacing: 12) {
-                cancelButton
-                    .frame(width: width * 0.25)
-                exportButton
-                    .frame(width: width * 0.75)
-            }
-            .frame(width: width, height: geometry.size.height, alignment: .center)
-        }
-        .frame(height: 54)
+        exportButton
+            .frame(maxWidth: .infinity)
     }
 
     private var progressIndicator: some View {
@@ -486,16 +498,13 @@ struct ConversionSettingsView: View {
                 do {
                     let formatDescriptions = try await track.load(.formatDescriptions)
                     if let description = formatDescriptions.first,
-                       let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee {
+                       let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(description) {
+                        let asbd = asbdPtr.pointee
                         sampleRate = asbd.mSampleRate
                         channels = Int(asbd.mChannelsPerFrame)
                     }
                 } catch {
-                    if let fallback = track.formatDescriptions.first as? CMAudioFormatDescription,
-                       let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(fallback)?.pointee {
-                        sampleRate = asbd.mSampleRate
-                        channels = Int(asbd.mChannelsPerFrame)
-                    }
+                    // If loading format descriptions fails, keep defaults.
                 }
             }
 
@@ -512,97 +521,143 @@ private struct ConversionSuccessSheet: View {
     let exportURL: URL
     let accentColor: Color
     let primaryColor: Color
-    let backgroundColor: Color
     let onSave: () -> Void
     let onDone: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var animateCheck = false
     @State private var showHalo = false
+    @State private var showExporter = false
+    @State private var showCheckmark = false
 
     var body: some View {
-        VStack(spacing: 28) {
+        VStack {
+            // Title and Done button at the top
             HStack {
                 Text("Converted!")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(primaryColor)
                 Spacer()
-                Button("Done") {
+                Button(action: {
                     HapticsManager.shared.selection()
                     onDone()
-                }
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(accentColor)
-            }
-
-            ZStack {
-                Circle()
-                    .stroke(accentColor.opacity(0.25), lineWidth: 12)
-                    .scaleEffect(showHalo ? 1.35 : 0.65)
-                    .opacity(showHalo ? 0 : 1)
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 96, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.green)
-                    .scaleEffect(animateCheck ? 1 : 0.65)
-                    .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 12)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 150)
-            .onAppear {
-                animateCheck = false
-                showHalo = false
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) {
-                    animateCheck = true
-                }
-                withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
-                    showHalo = true
+                }) {
+                    Text("Done")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 20)
+                        .background(primaryColor.opacity(0.07))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(primaryColor.opacity(0.15), lineWidth: 1)
+                        )
                 }
             }
+            .padding(.top, 18)
+            .padding(.bottom, 4)
+            .padding(.horizontal, AppStyle.horizontalPadding)
 
-            Text("Successfully converted")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(primaryColor)
-                .multilineTextAlignment(.center)
+            Spacer()
+
+            VStack {
+                ZStack {
+                    Circle()
+                        .stroke(Color.green.opacity(0.25), lineWidth: 12)
+                        .scaleEffect(showHalo ? 1.35 : 0.65)
+                        .opacity(showHalo ? 0 : 1)
+                        .blur(radius: showHalo ? 10 : 0)
+
+                    Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle.fill")
+                        .contentTransition(.symbolEffect(.replace))
+                        .font(.system(size: 96, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.green)
+                        .scaleEffect(animateCheck ? 1 : 0.65)
+                        .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 12)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 150)
+                .onAppear {
+                    animateCheck = false
+                    showHalo = false
+                    showCheckmark = false
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) {
+                        animateCheck = true
+                    }
+                    withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
+                        showHalo = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation(.spring(response: 0.45, dampingFraction: 9)) {
+                            showCheckmark = true
+                        }
+                    }
+                }
+
+                Text("Successfully converted.")
+                    .font(.system(size: 25, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primaryColor)
+                    .multilineTextAlignment(.center)
+            }
+
+            Spacer()
 
             VStack(spacing: 14) {
                 Button(action: {
                     HapticsManager.shared.selection()
-                    onSave()
+                    showExporter = true
                 }) {
-                    Label("Save to Files", systemImage: "tray.and.arrow.down")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: .infinity)
-                        .background(accentColor)
-                        .clipShape(Capsule())
+                    HStack {
+                        Spacer()
+                        Label("Save to Files", systemImage: "tray.and.arrow.down")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(colorScheme == .dark ? .black : .white )
+                        Spacer()
+                    }
+                    .padding(.vertical, 14)
+                    .background(accentColor.opacity(1))
+                    .clipShape(Capsule())
+                }
+                .disabled(false)
+                .opacity(1)
+                .sheet(isPresented: $showExporter) {
+                    ExportPicker(url: exportURL)
                 }
 
                 ShareLink(item: exportURL) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(accentColor)
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Capsule()
-                                .stroke(accentColor.opacity(0.35), lineWidth: 2)
-                        )
+                    HStack {
+                        Spacer()
+                        Label("Share", systemImage: "square.and.arrow.up")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(accentColor)
+                        Spacer()
+                    }
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .stroke(accentColor.opacity(0.35), lineWidth: 1)
+                            .fill(accentColor.opacity(0.07))
+                    )
                 }
                 .simultaneousGesture(TapGesture().onEnded {
                     HapticsManager.shared.selection()
                 })
             }
-
-            Spacer(minLength: 8)
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .shadow(color: accentColor.opacity(0.35), radius: 14, x: 0, y: 8)
+            .padding(.bottom, 30)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 30)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(backgroundColor.ignoresSafeArea())
-        .presentationDetents([.fraction(0.55), .large])
+        .background(LinearGradient(
+            colors: [.green.opacity(0.3), colorScheme == .dark ? .black : .white],
+            startPoint: .topLeading,
+            endPoint: .bottom
+        )
+            .ignoresSafeArea())
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(false)
     }
 }
 
@@ -1006,8 +1061,17 @@ private struct AccessibilityHintIfNeeded: ViewModifier {
     }
 }
 
-#Preview {
-    ConversionSettingsView(videoURL: URL(fileURLWithPath: "/tmp/test.mov"))
-        .background(Color.black)
-        .preferredColorScheme(.dark)
+ #Preview {
+     ConversionSettingsView(videoURL: URL(fileURLWithPath: "/tmp/test.mov"))
+         .background(Color.black)
+         .preferredColorScheme(.dark)
+ }
+
+struct VisualEffectBlur: UIViewRepresentable {
+    var blurStyle: UIBlurEffect.Style
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        return UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
+    }
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
 }
+

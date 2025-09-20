@@ -13,7 +13,7 @@ struct ContentView: View {
     @State private var showSourceOptions = false
     @State private var showConversionSheet = false
     
-    // Recent extractions
+    // Recent conversions
     @State private var recents: [RecentItem] = [
 
     ]
@@ -538,7 +538,7 @@ struct ContentView: View {
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Title inside the box
-            Text("Recent extractions")
+            Text("Recent conversions")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(primary)
                 .padding(.top, 16)
