@@ -74,21 +74,39 @@ private struct AppShadowModifier: ViewModifier {
     func body(content: Content) -> some View {
         let configuration = AppStyle.shadowConfiguration(for: level)
         let mainOpacity = overrideOpacity ?? configuration.opacity
-        var view = content.shadow(
-            color: AppStyle.shadowColor(for: colorScheme).opacity(mainOpacity),
-            radius: configuration.radius,
-            x: 0,
-            y: configuration.yOffset
-        )
-        if configuration.includesHighlight {
-            view = view.shadow(
-                color: AppStyle.highlightShadowColor(for: colorScheme),
-                radius: 1,
+
+        return content
+            .shadow(
+                color: AppStyle.shadowColor(for: colorScheme).opacity(mainOpacity),
+                radius: configuration.radius,
                 x: 0,
-                y: 1
+                y: configuration.yOffset
             )
+            .modifier(
+                ConditionalShadowModifier(
+                    enabled: configuration.includesHighlight,
+                    color: AppStyle.highlightShadowColor(for: colorScheme),
+                    radius: 1,
+                    x: 0,
+                    y: 1
+                )
+            )
+    }
+}
+
+private struct ConditionalShadowModifier: ViewModifier {
+    let enabled: Bool
+    let color: Color
+    let radius: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.shadow(color: color, radius: radius, x: x, y: y)
+        } else {
+            content
         }
-        return view
     }
 }
 
