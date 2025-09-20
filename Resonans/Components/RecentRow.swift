@@ -4,19 +4,23 @@ struct RecentRow: View {
     let item: RecentItem
 
     @Environment(\.colorScheme) private var colorScheme
-    private var primary: Color { colorScheme == .dark ? .white : .black }
+    private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     var body: some View {
         HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(primary.opacity(0.14))
+            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                .fill(primary.opacity(AppStyle.iconFillOpacity))
                 .frame(width: 56, height: 56)
                 .overlay(
                     Image(systemName: "waveform")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(primary.opacity(0.9))
                 )
-                .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                        .stroke(primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
+                )
+                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
@@ -42,16 +46,14 @@ struct RecentRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(primary.opacity(0.16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
-                )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .appCardStyle(
+            primary: primary,
+            colorScheme: colorScheme,
+            cornerRadius: AppStyle.compactCornerRadius,
+            fillOpacity: AppStyle.compactCardFillOpacity,
+            shadowLevel: .small
         )
-        .shadow(color: .black.opacity(0.55), radius: 18, x: 0, y: 10)
-        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.3), radius: 1, x: 0, y: 1)
     }
 }
 
