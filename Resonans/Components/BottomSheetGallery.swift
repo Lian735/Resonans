@@ -10,6 +10,10 @@ struct BottomSheetGallery: View {
 
     @State private var sections: [AssetSection] = []
     @State private var cachedIdentifiers: [String] = []
+    @State private var lastPrefetchCenterIndex: Int?
+
+    private let prefetchWindowRadius = 45
+    private let prefetchThreshold = 18
 
     private let columns: [GridItem] = Array(repeating: .init(.flexible(), spacing: 16, alignment: .center), count: 3)
     @Environment(\.colorScheme) private var colorScheme
@@ -52,6 +56,9 @@ struct BottomSheetGallery: View {
                                     if let gi = globalIndex, gi == assets.count - 1 {
                                         onLastItemAppear()
                                     }
+                                    if let gi = globalIndex {
+                                        updatePrefetchWindow(centeredAt: gi)
+                                    }
                                 }
                             }
                         }
@@ -59,6 +66,10 @@ struct BottomSheetGallery: View {
                     }
                 }
             }
+        }
+        .onDisappear {
+            Thumb.updatePrefetching(with: [])
+            lastPrefetchCenterIndex = nil
         }
         .onAppear {
             if sections.isEmpty || cachedIdentifiers != identifiers {
@@ -100,9 +111,33 @@ struct BottomSheetGallery: View {
                 guard currentIdentifiers == identifiers else { return }
                 self.cachedIdentifiers = identifiers
                 self.sections = newSections
-                Thumb.updatePrefetching(with: prefetchAssets)
+
+                if prefetchAssets.isEmpty {
+                    Thumb.updatePrefetching(with: [])
+                    self.lastPrefetchCenterIndex = nil
+                } else {
+                    self.lastPrefetchCenterIndex = nil
+                    let initialCenter = min(prefetchWindowRadius, max(self.assets.count - 1, 0))
+                    self.updatePrefetchWindow(centeredAt: initialCenter)
+                }
             }
         }
+    }
+
+    private func updatePrefetchWindow(centeredAt index: Int) {
+        guard !assets.isEmpty else { return }
+
+        if let lastCenter = lastPrefetchCenterIndex, abs(index - lastCenter) < prefetchThreshold {
+            return
+        }
+
+        let lowerBound = max(index - prefetchWindowRadius, 0)
+        let upperBound = min(index + prefetchWindowRadius, assets.count - 1)
+        guard lowerBound <= upperBound else { return }
+
+        let slice = Array(assets[lowerBound...upperBound])
+        Thumb.updatePrefetching(with: slice)
+        lastPrefetchCenterIndex = index
     }
 
     private struct AssetSection: Identifiable {
@@ -255,16 +290,37 @@ struct BottomSheetGallery: View {
             }
         }
 
+        private static var cachedPrefetchAssets: [String: PHAsset] = [:]
+
         static func updatePrefetching(with assets: [PHAsset]) {
-            imageManager.stopCachingImagesForAllAssets()
-            guard !assets.isEmpty else { return }
-            let options = makeImageRequestOptions()
-            imageManager.startCachingImages(
-                for: assets,
-                targetSize: thumbnailTargetSize,
-                contentMode: .aspectFill,
-                options: options
-            )
+            let newPrefetchMap = Dictionary(uniqueKeysWithValues: assets.map { ($0.localIdentifier, $0) })
+
+            let assetsToStop = cachedPrefetchAssets.compactMap { identifier, asset -> PHAsset? in
+                newPrefetchMap[identifier] == nil ? asset : nil
+            }
+
+            if !assetsToStop.isEmpty {
+                imageManager.stopCachingImages(
+                    for: assetsToStop,
+                    targetSize: thumbnailTargetSize,
+                    contentMode: .aspectFill,
+                    options: nil
+                )
+            }
+
+            let assetsToStart = assets.filter { cachedPrefetchAssets[$0.localIdentifier] == nil }
+
+            if !assetsToStart.isEmpty {
+                let options = cachingImageRequestOptions
+                imageManager.startCachingImages(
+                    for: assetsToStart,
+                    targetSize: thumbnailTargetSize,
+                    contentMode: .aspectFill,
+                    options: options
+                )
+            }
+
+            cachedPrefetchAssets = newPrefetchMap
         }
 
         private static func makeImageRequestOptions() -> PHImageRequestOptions {
@@ -274,6 +330,11 @@ struct BottomSheetGallery: View {
             options.isNetworkAccessAllowed = true
             return options
         }
+
+        private static let cachingImageRequestOptions: PHImageRequestOptions = {
+            let options = makeImageRequestOptions()
+            return options
+        }()
 
         private func loadThumbnail() {
             let options = Thumb.makeImageRequestOptions()
