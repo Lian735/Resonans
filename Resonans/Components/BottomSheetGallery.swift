@@ -26,7 +26,7 @@ struct BottomSheetGallery: View {
                             .foregroundStyle(primary.opacity(0.85))
                             .padding(.leading, 6)
                             .padding(.bottom, 4)
-                            .shadow(color: (colorScheme == .light ? Color.white : Color.black).opacity(0.9), radius: 4, x: 0, y: -1)
+                            .appShadow(.text, colorScheme: colorScheme)
                     ) {
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(items, id: \.localIdentifier) { asset in
@@ -155,6 +155,7 @@ struct BottomSheetGallery: View {
                     }
                 }
             }
+            .appShadow(.low, colorScheme: colorScheme)
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
             .scaleEffect(hasAppeared ? 1 : 0.8)
             .onTapGesture {

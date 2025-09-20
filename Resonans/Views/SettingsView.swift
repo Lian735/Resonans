@@ -20,7 +20,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
 
-    private var primary: Color { colorScheme == .dark ? .white : .black }
+    private var primary: Color { AppColor.primary(for: colorScheme) }
 
     private var versionDisplayString: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -255,16 +255,7 @@ struct SettingsView: View {
         }
         .padding(AppStyle.innerPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(0.07))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .strokeBorder(primary.opacity(0.10), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
-                .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.3), radius: 1, x: 0, y: 1)
-        )
+        .appCardBackground(primary: primary, colorScheme: colorScheme, elevation: .medium)
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
 }
