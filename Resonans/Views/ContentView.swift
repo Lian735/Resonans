@@ -1,6 +1,4 @@
 import SwiftUI
-import AVFoundation
-import Photos
 
 struct ContentView: View {
     @State private var videoURL: URL?
@@ -19,20 +17,16 @@ struct ContentView: View {
     ]
     @State private var showAllRecents = false
 
-    // Bottom gallery items (raw PHAssets)
-    @State private var assets: [PHAsset] = []
-    private let thumbSize = CGSize(width: 200, height: 200)
-    @State private var displayedItemCount = 30
-
     @State private var selectedTab: Int = 0
-    @State private var addCardPage: Int = 0
-    @State private var selectedAsset: PHAsset?
 
     @State private var homeScrollTrigger = false
-    @State private var galleryScrollTrigger = false
+    @State private var toolsScrollTrigger = false
     @State private var settingsScrollTrigger = false
     @State private var showHomeTopBorder = false
-    @State private var showGalleryTopBorder = false
+    @State private var showToolsTopBorder = false
+
+    private let tools = ToolItem.all
+    @State private var selectedTool: ToolItem.Identifier = .audioExtractor
 
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
@@ -41,6 +35,7 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
+    private var activeTool: ToolItem? { tools.first { $0.id == selectedTool } }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -58,7 +53,7 @@ struct ContentView: View {
                 ZStack {
                     TabView(selection: $selectedTab) {
                         homeTab.tag(0)
-                        galleryTab.tag(1)
+                        toolsTab.tag(1)
                         SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
                             .tag(2)
                     }
@@ -77,28 +72,6 @@ struct ContentView: View {
                     // Custom Tab Bar pinned at the bottom with gradient background
                     VStack {
                         Spacer()
-                        if selectedAsset != nil {
-                            Button(action: {
-                                guard videoURL != nil else { return }
-                                HapticsManager.shared.pulse()
-                                showConversionSheet = true
-                                withAnimation {
-                                    selectedAsset = nil
-                                }
-                            }) {
-                                Text("Extract Audio")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .foregroundColor(background)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 12)
-                                    .background(primary)
-                                    .clipShape(Capsule())
-                            }
-                            .disabled(videoURL == nil)
-                            .opacity(videoURL == nil ? 0.6 : 1)
-                            .padding(.bottom, 0)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
                         ZStack {
                         LinearGradient(
                             gradient: Gradient(colors: [background, background.opacity(0.0)]),
@@ -129,15 +102,15 @@ struct ContentView: View {
                                 Button(action: {
                                     HapticsManager.shared.pulse()
                                     if selectedTab == 1 {
-                                        galleryScrollTrigger.toggle()
+                                        toolsScrollTrigger.toggle()
                                     } else {
                                         selectedTab = 1
                                         DispatchQueue.main.async {
-                                            galleryScrollTrigger.toggle()
+                                            toolsScrollTrigger.toggle()
                                         }
                                     }
                                 }) {
-                                    Image(systemName: "photo.on.rectangle.angled")
+                                    Image(systemName: "wrench.and.screwdriver.fill")
                                         .font(.system(size: 24, weight: .semibold))
                                         .foregroundStyle(selectedTab == 1 ? accent.color : primary.opacity(0.5))
                                         .animation(.easeInOut(duration: 0.25), value: selectedTab)
@@ -205,11 +178,6 @@ struct ContentView: View {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
                 }
-            } else if selectedAsset != nil {
-                HapticsManager.shared.pulse(.medium)
-                withAnimation {
-                    selectedAsset = nil
-                }
             }
         }
         .onChange(of: selectedTab) { _, newValue in
@@ -217,24 +185,6 @@ struct ContentView: View {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     showSourceOptions = false
                 }
-            }
-            if newValue != 1 {
-                withAnimation { selectedAsset = nil }
-            }
-        }
-        .onChange(of: selectedAsset) { _, asset in
-            if let asset = asset {
-                let options = PHVideoRequestOptions()
-                options.isNetworkAccessAllowed = true
-                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-                    if let urlAsset = avAsset as? AVURLAsset {
-                        DispatchQueue.main.async {
-                            videoURL = urlAsset.url
-                        }
-                    }
-                }
-            } else if !showConversionSheet {
-                videoURL = nil
             }
         }
         // Removed unused .confirmationDialog
@@ -253,9 +203,6 @@ struct ContentView: View {
         .sheet(
             isPresented: $showConversionSheet,
             onDismiss: {
-                withAnimation {
-                    selectedAsset = nil
-                }
                 videoURL = nil
             }
         ) {
@@ -309,65 +256,37 @@ struct ContentView: View {
         }
     }
 
-    private var galleryTab: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack {
-                    Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .id("top")
-                    if assets.isEmpty {
-                        Text("None yet")
-                            .font(.system(size: 18, weight: .regular, design: .rounded))
-                            .foregroundStyle(primary.opacity(0.6))
-                            .padding(.top, 40)
-                    } else {
-                        BottomSheetGallery(
-                            assets: Array(assets.prefix(displayedItemCount)),
-                            onLastItemAppear: loadMoreItems,
-                            selectedAsset: $selectedAsset
-                        )
-                        .padding(.horizontal, AppStyle.horizontalPadding)
-                    }
-                    Spacer()
-                }
-                .background(
-                    GeometryReader { geo -> Color in
-                        DispatchQueue.main.async {
-                            let topPadding: CGFloat = assets.isEmpty ? 60 : 20
-                            let show = geo.frame(in: .named("galleryScroll")).minY < -topPadding
-                            if showGalleryTopBorder != show {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showGalleryTopBorder = show
-                                }
-                            }
+    private var toolsTab: some View {
+        ToolsView(
+            tools: tools,
+            selectedTool: $selectedTool,
+            scrollToTopTrigger: $toolsScrollTrigger,
+            accent: accent,
+            primary: primary,
+            colorScheme: colorScheme
+        ) { tool, isNewSelection in
+            let text = isNewSelection ? "\(tool.title) ready." : "\(tool.title) already active."
+            presentToast(text, color: accent.color)
+        }
+        .background(
+            GeometryReader { geo -> Color in
+                DispatchQueue.main.async {
+                    let show = geo.frame(in: .named("toolsScroll")).minY < -24
+                    if showToolsTopBorder != show {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showToolsTopBorder = show
                         }
-                        return Color.clear
                     }
-                )
-            }
-            .coordinateSpace(name: "galleryScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(height: 1)
-                    .opacity(showGalleryTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showGalleryTopBorder)
-            }
-            .onChange(of: galleryScrollTrigger) { _, _ in
-                withAnimation {
-                    proxy.scrollTo("top", anchor: .top)
                 }
+                return Color.clear
             }
-            .refreshable {
-                selectedAsset = nil
-                loadGallery()
-            }
-            .onAppear {
-                if assets.isEmpty {
-                    loadGallery()
-                }
-            }
+        )
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color.gray.opacity(0.5))
+                .frame(height: 1)
+                .opacity(showToolsTopBorder ? 1 : 0)
+                .animation(.easeInOut(duration: 0.2), value: showToolsTopBorder)
         }
     }
 
@@ -378,7 +297,7 @@ struct ContentView: View {
             ZStack(alignment: .leading) {
                 Text("Resonans")
                     .opacity(selectedTab == 0 ? 1 : 0)
-                Text("Gallery")
+                Text("Tools")
                     .opacity(selectedTab == 1 ? 1 : 0)
                 Text("Settings")
                     .opacity(selectedTab == 2 ? 1 : 0)
@@ -426,8 +345,8 @@ struct ContentView: View {
                             showSourceOptions = false
                         }
                     }
-                    sourceOptionCard(icon: "photo.on.rectangle.angled", title: "Gallery", width: targetWidth) {
-                        selectedTab = 1
+                    sourceOptionCard(icon: "photo.on.rectangle.angled", title: "Photo Library", width: targetWidth) {
+                        showPhotoPicker = true
                         withAnimation(.easeInOut(duration: 0.35)) {
                             showSourceOptions = false
                         }
@@ -457,14 +376,60 @@ struct ContentView: View {
     }
 
     private func primarySourceCard(width: CGFloat) -> some View {
-        VStack(spacing: 14) {
-            Image(systemName: "plus")
-                .font(.system(size: 56, weight: .bold))
-                .foregroundStyle(primary)
-            Text("Click to Extract Audio")
-                .font(.system(size: 24, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(primary.opacity(0.85))
+                Text("Active tool")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.75))
+                Spacer()
+                if let tool = activeTool {
+                    Label(tool.title, systemImage: "checkmark.seal.fill")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(accent.color)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(accent.color.opacity(colorScheme == .dark ? 0.15 : 0.12))
+                                .overlay(
+                                    Capsule()
+                                        .strokeBorder(accent.color.opacity(0.25), lineWidth: 1)
+                                )
+                        )
+                }
+            }
+
+            if let tool = activeTool {
+                Text(tool.title)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
+                Text(tool.subtitle)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.7))
+                    .lineLimit(2)
+            } else {
+                Text("Choose a tool to get started")
+                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+            }
+
+            Spacer()
+
+            HStack(spacing: 10) {
+                Image(systemName: "hand.tap.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(primary.opacity(0.6))
+                Text("Tap to pick a video")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.6))
+            }
         }
+        .padding(.horizontal, AppStyle.innerPadding)
+        .padding(.vertical, AppStyle.innerPadding)
         .frame(width: width, height: 165)
         .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
         .onTapGesture {
@@ -552,34 +517,21 @@ struct ContentView: View {
 
     // MARK: - Actions
 
-    private func loadGallery(completion: (() -> Void)? = nil) {
-        PHPhotoLibrary.requestAuthorization { status in
-            guard status == .authorized || status == .limited else { return }
-            let fetchOptions = PHFetchOptions()
-            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-            let result = PHAsset.fetchAssets(with: fetchOptions)
-            var list: [PHAsset] = []
-            result.enumerateObjects { asset, _, _ in list.append(asset) }
-            DispatchQueue.main.async {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    assets = list
+    private func presentToast(_ text: String, color: Color) {
+        message = text
+        toastColor = color
+
+        if showToast {
+            showToast = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    showToast = true
                 }
-                completion?()
             }
-        }
-    }
-
-    private func formatDuration(_ duration: Double) -> String {
-        let totalSeconds = Int(duration.rounded())
-        let minutes = totalSeconds / 60
-        let seconds = totalSeconds % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    private func loadMoreItems() {
-        if displayedItemCount < assets.count {
-            displayedItemCount = min(displayedItemCount + 30, assets.count)
+        } else {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                showToast = true
+            }
         }
     }
 }
