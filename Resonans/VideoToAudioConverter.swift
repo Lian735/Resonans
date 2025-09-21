@@ -215,6 +215,7 @@ final class VideoToAudioConverter {
                 let reader = try AVAssetReader(asset: asset)
                 let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: readerSettings)
                 readerOutput.alwaysCopiesSampleData = false
+                readerOutput.audioTimePitchAlgorithm = .timeDomain
                 guard reader.canAdd(readerOutput) else {
                     fail(NSError(domain: "export", code: -10))
                     return
@@ -304,6 +305,7 @@ final class VideoToAudioConverter {
                 let reader = try AVAssetReader(asset: asset)
                 let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
                 readerOutput.alwaysCopiesSampleData = false
+                readerOutput.audioTimePitchAlgorithm = .timeDomain
                 guard reader.canAdd(readerOutput) else {
                     fail(NSError(domain: "export", code: -5))
                     return
