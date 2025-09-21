@@ -2,38 +2,87 @@ import SwiftUI
 import AVFoundation
 import Photos
 
-struct ContentView: View {
-    @State private var videoURL: URL?
-    @State private var showPhotoPicker = false
-    @State private var showFilePicker = false
-    @State private var message: String?
-    @State private var showSourceSheet = false
-    @State private var showToast = false
-    @State private var toastColor: Color = .green
-    @State private var showSourceOptions = false
-    @State private var showConversionSheet = false
-    
-    // Recent conversions
-    @State private var recents: [RecentItem] = [
+enum MainTab: String, CaseIterable, Identifiable {
+    case home
+    case gallery
+    case settings
 
-    ]
+    var id: String { rawValue }
+
+    var navigationTitle: String {
+        switch self {
+        case .home: return "Resonans"
+        case .gallery: return "Library"
+        case .settings: return "Settings"
+        }
+    }
+
+    var tagline: String {
+        switch self {
+        case .home: return "Convert clips into studio-grade audio."
+        case .gallery: return "Browse and prepare your recent captures."
+        case .settings: return "Tailor Resonans to your workflow."
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .home: return "house.fill"
+        case .gallery: return "photo.on.rectangle.angled"
+        case .settings: return "gearshape.fill"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .home: return "Home"
+        case .gallery: return "Gallery"
+        case .settings: return "Settings"
+        }
+    }
+}
+
+private struct ToastData: Identifiable {
+    let id = UUID()
+    let message: String
+    let tint: Color
+    let iconName: String
+}
+
+private enum PickerType: Identifiable {
+    case photoLibrary
+    case files
+
+    var id: String {
+        switch self {
+        case .photoLibrary: return "photoLibrary"
+        case .files: return "files"
+        }
+    }
+}
+
+struct ContentView: View {
+    @State private var selectedTab: MainTab = .home
+
+    @State private var videoURL: URL?
+    @State private var showConversionSheet = false
+
+    @State private var activePicker: PickerType?
+    @State private var showSourceSheet = false
+
+    @State private var recents: [RecentItem] = []
     @State private var showAllRecents = false
 
-    // Bottom gallery items (raw PHAssets)
     @State private var assets: [PHAsset] = []
-    private let thumbSize = CGSize(width: 200, height: 200)
     @State private var displayedItemCount = 30
-
-    @State private var selectedTab: Int = 0
-    @State private var addCardPage: Int = 0
     @State private var selectedAsset: PHAsset?
+    @State private var isLoadingGallery = false
 
     @State private var homeScrollTrigger = false
     @State private var galleryScrollTrigger = false
     @State private var settingsScrollTrigger = false
-    @State private var showHomeTopBorder = false
-    @State private var showGalleryTopBorder = false
 
+    @State private var toastData: ToastData?
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -42,220 +91,175 @@ struct ContentView: View {
     private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
+    private static let selectionDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            background.ignoresSafeArea()
+        ZStack(alignment: .top) {
+            background
+                .ignoresSafeArea()
                 .overlay(
                     LinearGradient(
-                        colors: [accent.gradient, .clear],
+                        colors: [accent.gradient.opacity(0.45), .clear],
                         startPoint: .topLeading,
-                        endPoint: .bottom
+                        endPoint: .bottomTrailing
                     )
                     .ignoresSafeArea()
                 )
+
             VStack(spacing: 0) {
-                header
-                ZStack {
-                    TabView(selection: $selectedTab) {
-                        homeTab.tag(0)
-                        galleryTab.tag(1)
+                ResonansNavigationBar(
+                    title: selectedTab.navigationTitle,
+                    subtitle: selectedTab.tagline,
+                    accentColor: accent.color,
+                    primaryColor: primary,
+                    onHelp: showHelp
+                )
+
+                Picker("Tab", selection: $selectedTab) {
+                    ForEach(MainTab.allCases) { tab in
+                        Text(tab.shortTitle).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, AppStyle.horizontalPadding)
+                .padding(.top, 6)
+
+                Group {
+                    switch selectedTab {
+                    case .home:
+                        homeTab
+                    case .gallery:
+                        galleryTab
+                    case .settings:
                         SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
-                            .tag(2)
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                    .overlay(
-                        LinearGradient(
-                            gradient: Gradient(colors: [background, background.opacity(0.0)]),
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                        .frame(height: 200) // increased height so fade starts lower
-                        .allowsHitTesting(false),
-                        alignment: .bottom
-                    )
-                    // Custom Tab Bar pinned at the bottom with gradient background
-                    VStack {
-                        Spacer()
-                        if selectedAsset != nil {
-                            Button(action: {
-                                guard videoURL != nil else { return }
-                                HapticsManager.shared.pulse()
-                                showConversionSheet = true
-                                withAnimation {
-                                    selectedAsset = nil
-                                }
-                            }) {
-                                Text("Extract Audio")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .foregroundColor(background)
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 12)
-                                    .background(primary)
-                                    .clipShape(Capsule())
-                            }
-                            .disabled(videoURL == nil)
-                            .opacity(videoURL == nil ? 0.6 : 1)
-                            .padding(.bottom, 0)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                        ZStack {
-                        LinearGradient(
-                            gradient: Gradient(colors: [background, background.opacity(0.0)]),
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                        .frame(height: 80)
-                        .ignoresSafeArea(edges: .bottom)
-                            HStack {
-                                Spacer()
-                                Button(action: {
-                                    HapticsManager.shared.pulse()
-                                    if selectedTab == 0 {
-                                        homeScrollTrigger.toggle()
-                                    } else {
-                                        selectedTab = 0
-                                        DispatchQueue.main.async {
-                                            homeScrollTrigger.toggle()
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: "house.fill")
-                                        .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(selectedTab == 0 ? accent.color : primary.opacity(0.5))
-                                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
-                                }
-                                Spacer()
-                                Button(action: {
-                                    HapticsManager.shared.pulse()
-                                    if selectedTab == 1 {
-                                        galleryScrollTrigger.toggle()
-                                    } else {
-                                        selectedTab = 1
-                                        DispatchQueue.main.async {
-                                            galleryScrollTrigger.toggle()
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: "photo.on.rectangle.angled")
-                                        .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(selectedTab == 1 ? accent.color : primary.opacity(0.5))
-                                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
-                                }
-                                Spacer()
-                                Button(action: {
-                                    HapticsManager.shared.pulse()
-                                    if selectedTab == 2 {
-                                        settingsScrollTrigger.toggle()
-                                    } else {
-                                        selectedTab = 2
-                                        DispatchQueue.main.async {
-                                            settingsScrollTrigger.toggle()
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: "gearshape.fill")
-                                        .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(selectedTab == 2 ? accent.color : primary.opacity(0.5))
-                                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
-                                }
-                                Spacer()
-                            }
-                            .padding(.horizontal, 40)
-                            .padding(.vertical, 12)
-                            .padding(.bottom, 0)
-                        }
+                            .padding(.top, 12)
                     }
                 }
-            }
-            // Toast overlay at the very top
-            if showToast, let msg = message {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text(msg)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(primary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(toastColor.opacity(0.85))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        Spacer()
-                    }
-                    .padding(.top, 44) // closer to the top safe area
-                    Spacer()
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        withAnimation {
-                            showToast = false
-                        }
-                    }
-                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .animation(.easeInOut(duration: 0.25), value: selectedTab)
             }
         }
-        .tint(accent.color)
-        .animation(.easeInOut(duration: 0.4), value: colorScheme)
-        .animation(.easeInOut(duration: 0.4), value: accent)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if showSourceOptions {
-                HapticsManager.shared.selection()
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    showSourceOptions = false
-                }
-            } else if selectedAsset != nil {
-                HapticsManager.shared.pulse(.medium)
-                withAnimation {
-                    selectedAsset = nil
-                }
+        .overlay(alignment: .top) {
+            if let toast = toastData {
+                InlineToastView(message: toast.message, tint: toast.tint, primaryColor: primary, iconName: toast.iconName)
+                    .padding(.horizontal, AppStyle.horizontalPadding)
+                    .padding(.top, 10)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 12) {
+                if let asset = selectedAsset {
+                    SelectionSummaryView(
+                        title: asset.creationDate.map { Self.selectionDateFormatter.string(from: $0) } ?? "Selected clip",
+                        subtitle: selectionSubtitle(for: asset),
+                        isReady: videoURL != nil,
+                        accentColor: accent.color,
+                        primaryColor: primary,
+                        onClear: {
+                            HapticsManager.shared.selection()
+                            clearSelection()
+                        },
+                        onConvert: {
+                            HapticsManager.shared.pulse()
+                            guard videoURL != nil else { return }
+                            showConversionSheet = true
+                        }
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                ResonansTabBar(
+                    selectedTab: $selectedTab,
+                    accentColor: accent.color,
+                    primaryColor: primary,
+                    onReselect: { tab in
+                        switch tab {
+                        case .home:
+                            homeScrollTrigger.toggle()
+                        case .gallery:
+                            galleryScrollTrigger.toggle()
+                        case .settings:
+                            settingsScrollTrigger.toggle()
+                        }
+                    }
+                )
+            }
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.top, 12)
+            .padding(.bottom, 20)
+            .background(
+                LinearGradient(
+                    colors: [background.opacity(colorScheme == .dark ? 0.92 : 0.9), background.opacity(0.6)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+            )
         }
         .onChange(of: selectedTab) { _, newValue in
-            if showSourceOptions {
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    showSourceOptions = false
-                }
-            }
-            if newValue != 1 {
-                withAnimation { selectedAsset = nil }
+            if newValue != .gallery {
+                clearSelection()
             }
         }
         .onChange(of: selectedAsset) { _, asset in
-            if let asset = asset {
-                let options = PHVideoRequestOptions()
-                options.isNetworkAccessAllowed = true
-                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
-                    if let urlAsset = avAsset as? AVURLAsset {
-                        DispatchQueue.main.async {
-                            videoURL = urlAsset.url
-                        }
+            guard let asset = asset else {
+                if !showConversionSheet { videoURL = nil }
+                return
+            }
+
+            videoURL = nil
+            requestURL(for: asset)
+            presentToast(message: "Clip ready – tap Extract to continue.", tint: accent.color)
+        }
+        .sheet(isPresented: $showSourceSheet) {
+            SourceSelectionSheet(
+                accentColor: accent.color,
+                primaryColor: primary,
+                onImportFromLibrary: {
+                    showSourceSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        activePicker = .photoLibrary
+                    }
+                },
+                onImportFromFiles: {
+                    showSourceSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        activePicker = .files
+                    }
+                },
+                onOpenGallery: {
+                    showSourceSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        selectedTab = .gallery
                     }
                 }
-            } else if !showConversionSheet {
-                videoURL = nil
-            }
+            )
+            .presentationDetents([.height(320), .large])
         }
-        // Removed unused .confirmationDialog
-        .sheet(isPresented: $showPhotoPicker) {
-            VideoPicker { url in
-                videoURL = url
-                showConversionSheet = true
-            }
-        }
-        .sheet(isPresented: $showFilePicker) {
-            FilePicker { url in
-                videoURL = url
-                showConversionSheet = true
+        .sheet(item: $activePicker) { picker in
+            switch picker {
+            case .photoLibrary:
+                VideoPicker { url in
+                    activePicker = nil
+                    handleExternalSelection(url)
+                }
+            case .files:
+                FilePicker { url in
+                    activePicker = nil
+                    handleExternalSelection(url)
+                }
             }
         }
         .sheet(
             isPresented: $showConversionSheet,
             onDismiss: {
-                withAnimation {
-                    selectedAsset = nil
-                }
+                clearSelection()
                 videoURL = nil
             }
         ) {
@@ -263,47 +267,33 @@ struct ContentView: View {
                 ConversionSettingsView(videoURL: url)
             }
         }
+        .task {
+            if assets.isEmpty {
+                loadGallery()
+            }
+        }
+        .tint(accent.color)
     }
-
-    // MARK: - Tabs
 
     private var homeTab: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
+                VStack(spacing: 28) {
                     Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .padding(.bottom, -24)
-                        .id("top")
-                    addCard
-                        .background(
-                            GeometryReader { geo -> Color in
-                                DispatchQueue.main.async {
-                                    let show = geo.frame(in: .named("homeScroll")).minY < 0
-                                    if showHomeTopBorder != show {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            showHomeTopBorder = show
-                                        }
-                                    }
-                                }
-                                return Color.clear
-                            }
-                        )
+                        .frame(height: 1)
+                        .id("home-top")
+
+                    heroCard
+                    metricsSection
                     recentSection
-                    Spacer(minLength: 40)
                 }
-            }
-            .coordinateSpace(name: "homeScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(height: 1)
-                    .opacity(showHomeTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showHomeTopBorder)
+                .padding(.horizontal, AppStyle.horizontalPadding)
+                .padding(.top, 20)
+                .padding(.bottom, 160)
             }
             .onChange(of: homeScrollTrigger) { _, _ in
-                withAnimation {
-                    proxy.scrollTo("top", anchor: .top)
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    proxy.scrollTo("home-top", anchor: .top)
                 }
             }
         }
@@ -311,16 +301,43 @@ struct ContentView: View {
 
     private var galleryTab: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
                     Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .id("top")
+                        .frame(height: 1)
+                        .id("gallery-top")
+
+                    galleryHeader
+
                     if assets.isEmpty {
-                        Text("None yet")
-                            .font(.system(size: 18, weight: .regular, design: .rounded))
-                            .foregroundStyle(primary.opacity(0.6))
-                            .padding(.top, 40)
+                        VStack(spacing: 12) {
+                            if isLoadingGallery {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                            }
+                            Text("Allow access to your Photos library to see your clips here.")
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .foregroundStyle(primary.opacity(0.7))
+                                .multilineTextAlignment(.center)
+
+                            Button("Request Access") {
+                                HapticsManager.shared.selection()
+                                loadGallery()
+                            }
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(accent.color.opacity(0.2))
+                            .clipShape(Capsule())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .appCardStyle(
+                            primary: primary,
+                            colorScheme: colorScheme,
+                            fillOpacity: AppStyle.subtleCardFillOpacity,
+                            shadowLevel: .medium
+                        )
                     } else {
                         BottomSheetGallery(
                             assets: Array(assets.prefix(displayedItemCount)),
@@ -329,245 +346,225 @@ struct ContentView: View {
                         )
                         .padding(.horizontal, AppStyle.horizontalPadding)
                     }
-                    Spacer()
                 }
-                .background(
-                    GeometryReader { geo -> Color in
-                        DispatchQueue.main.async {
-                            let topPadding: CGFloat = assets.isEmpty ? 60 : 20
-                            let show = geo.frame(in: .named("galleryScroll")).minY < -topPadding
-                            if showGalleryTopBorder != show {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showGalleryTopBorder = show
-                                }
-                            }
-                        }
-                        return Color.clear
-                    }
-                )
-            }
-            .coordinateSpace(name: "galleryScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(height: 1)
-                    .opacity(showGalleryTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showGalleryTopBorder)
-            }
-            .onChange(of: galleryScrollTrigger) { _, _ in
-                withAnimation {
-                    proxy.scrollTo("top", anchor: .top)
-                }
+                .padding(.top, 20)
+                .padding(.bottom, 160)
             }
             .refreshable {
-                selectedAsset = nil
+                clearSelection()
                 loadGallery()
             }
-            .onAppear {
-                if assets.isEmpty {
-                    loadGallery()
+            .onChange(of: galleryScrollTrigger) { _, _ in
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    proxy.scrollTo("gallery-top", anchor: .top)
                 }
             }
         }
     }
 
-    // MARK: - Subviews
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Professional extraction")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(primary)
+                        .lineLimit(2)
 
-    private var header: some View {
-        HStack(alignment: .center) {
-            ZStack(alignment: .leading) {
-                Text("Resonans")
-                    .opacity(selectedTab == 0 ? 1 : 0)
-                Text("Gallery")
-                    .opacity(selectedTab == 1 ? 1 : 0)
-                Text("Settings")
-                    .opacity(selectedTab == 2 ? 1 : 0)
+                    Text("Select a source below to transform any video into a polished audio file in seconds.")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(primary.opacity(0.75))
+                        .lineLimit(3)
+                }
+
+                Spacer()
+
+                Image(systemName: "waveform.circle.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 54, height: 54)
+                    .foregroundStyle(accent.color)
+                    .shadow(color: accent.color.opacity(0.4), radius: 12, x: 0, y: 6)
             }
-            .font(.system(size: 46, weight: .heavy, design: .rounded))
-            .tracking(0.5)
-            .foregroundStyle(primary)
-            .padding(.leading, 22)
-            .appTextShadow(colorScheme: colorScheme)
-            .animation(.easeInOut(duration: 0.25), value: selectedTab)
-            Spacer()
-            Button(action: {
+
+            Button {
                 HapticsManager.shared.pulse()
-                /* TODO: show help */
-            }) {
-                Image(systemName: "questionmark.circle")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(primary)
-                    .appTextShadow(colorScheme: colorScheme)
+                showSourceSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "plus")
+                    Text("Start new conversion")
+                        .fontWeight(.semibold)
+                }
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(background)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(accent.color)
+                .clipShape(RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 22)
-        }
-    }
 
-    private var addCard: some View {
-        GeometryReader { geo in
-            let fullWidth = geo.size.width - (AppStyle.horizontalPadding * 2) // horizontal padding
-            let targetWidth = (fullWidth - 16) / 2
-            ZStack {
-                if showSourceOptions {
-                    background.opacity(0.001)
-                        .onTapGesture {
-                            HapticsManager.shared.pulse()
-                            withAnimation(.easeInOut(duration: 0.35)) {
-                                showSourceOptions = false
-                            }
-                        }
+            HStack(spacing: 12) {
+                quickActionButton(
+                    title: "Files",
+                    subtitle: "Import documents",
+                    icon: "folder.fill"
+                ) {
+                    HapticsManager.shared.selection()
+                    activePicker = .files
                 }
-                primarySourceCard(width: fullWidth)
-                HStack(spacing: 16) {
-                    sourceOptionCard(icon: "doc.fill", title: "Files", width: targetWidth) {
-                        showFilePicker = true
-                        withAnimation(.easeInOut(duration: 0.35)) {
-                            showSourceOptions = false
-                        }
-                    }
-                    sourceOptionCard(icon: "photo.on.rectangle.angled", title: "Gallery", width: targetWidth) {
-                        selectedTab = 1
-                        withAnimation(.easeInOut(duration: 0.35)) {
-                            showSourceOptions = false
-                        }
-                    }
-                }
-                .scaleEffect(showSourceOptions ? 1.0 : 0.75)
-                .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
-                .opacity(showSourceOptions ? 1.0 : 0.0)
-                .animation(.easeInOut(duration: 0.3), value: showSourceOptions)
-                .allowsHitTesting(showSourceOptions)
-                .zIndex(showSourceOptions ? 1 : 0)
-            }
-            .padding(.horizontal, AppStyle.horizontalPadding)
-            .frame(height: 165)
-            .gesture(
-                DragGesture(minimumDistance: 24, coordinateSpace: .local)
-                    .onEnded { value in
-                        if abs(value.translation.width) > abs(value.translation.height), abs(value.translation.width) > 36 {
-                            withAnimation(.easeInOut(duration: 0.35)) {
-                                showSourceOptions = false
-                            }
-                        }
-                    }
-            )
-        }
-        .frame(height: 165)
-    }
 
-    private func primarySourceCard(width: CGFloat) -> some View {
-        VStack(spacing: 14) {
-            Image(systemName: "plus")
-                .font(.system(size: 56, weight: .bold))
-                .foregroundStyle(primary)
-            Text("Click to Extract Audio")
-                .font(.system(size: 24, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
-        }
-        .frame(width: width, height: 165)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
-        .onTapGesture {
-            HapticsManager.shared.pulse()
-            withAnimation(.easeInOut(duration: 0.35)) {
-                showSourceOptions = true
+                quickActionButton(
+                    title: "Photos",
+                    subtitle: "Open library",
+                    icon: "photo.fill"
+                ) {
+                    HapticsManager.shared.selection()
+                    activePicker = .photoLibrary
+                }
+
+                quickActionButton(
+                    title: "Gallery",
+                    subtitle: "Recent clips",
+                    icon: "rectangle.stack.fill"
+                ) {
+                    HapticsManager.shared.selection()
+                    selectedTab = .gallery
+                }
             }
         }
-        .scaleEffect(showSourceOptions ? 0.75 : 1.0)
-        .animation(.spring(response: 0.45, dampingFraction: 0.6, blendDuration: 0), value: showSourceOptions)
-        .opacity(showSourceOptions ? 0.0 : 1.0)
-        .animation(.easeInOut(duration: 0.3), value: showSourceOptions)
-        .allowsHitTesting(!showSourceOptions)
-        .zIndex(showSourceOptions ? 0 : 1)
+        .padding(24)
+        .appCardStyle(
+            primary: primary,
+            colorScheme: colorScheme,
+            fillOpacity: AppStyle.cardFillOpacity,
+            strokeOpacity: AppStyle.strokeOpacity,
+            shadowLevel: .large
+        )
     }
 
-    private func sourceOptionCard(icon: String, title: String, width: CGFloat, action: @escaping () -> Void) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(primary)
-            Text(title)
+    private var metricsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Overview")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
-        }
-        .frame(width: width, height: 165)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
-        .onTapGesture {
-            HapticsManager.shared.pulse()
-            action()
+                .foregroundStyle(primary.opacity(0.8))
+
+            HStack(spacing: 16) {
+                MetricCard(
+                    title: "Gallery clips",
+                    value: assets.isEmpty ? "—" : "\(assets.count)",
+                    caption: "Ready for extraction",
+                    accentColor: accent.color,
+                    primaryColor: primary
+                )
+
+                MetricCard(
+                    title: "Recents",
+                    value: recents.isEmpty ? "—" : "\(recents.count)",
+                    caption: "Finished exports",
+                    accentColor: accent.color,
+                    primaryColor: primary
+                )
+            }
         }
     }
 
     private var recentSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Title inside the box
-            Text("Recent conversions")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
-                .padding(.top, 16)
-                .padding(.horizontal, AppStyle.innerPadding)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Recent conversions")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
+                Spacer()
+                if recents.count > 3 {
+                    Button(showAllRecents ? "Show less" : "Show all") {
+                        HapticsManager.shared.selection()
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showAllRecents.toggle()
+                        }
+                    }
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(accent.color)
+                    .buttonStyle(.plain)
+                }
+            }
 
-            VStack(spacing: 12) {
-                if recents.isEmpty {
-                    Text("None yet")
-                        .font(.system(size: 18, weight: .regular, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.6))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                } else {
+            if recents.isEmpty {
+                Text("Your finished conversions will appear here for quick access.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(primary.opacity(0.7))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                            .stroke(primary.opacity(0.08), lineWidth: 1)
+                    )
+            } else {
+                VStack(spacing: 12) {
                     ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
                         RecentRow(item: item)
-                            .padding(.horizontal, 12)
-                    }
-                    if recents.count > 3 {
-                        Button(action: {
-                            HapticsManager.shared.pulse()
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                showAllRecents.toggle()
-                            }
-                        }) {
-                            Text(showAllRecents ? "Show less" : "Show more")
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(primary.opacity(0.8))
-                        }
-                        .padding(.top, 4)
                     }
                 }
             }
-            .padding(.top, 10)
-            .padding(.bottom, 14)
-            .frame(height: showAllRecents ? nil : 323)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(24)
         .appCardStyle(
             primary: primary,
             colorScheme: colorScheme,
             fillOpacity: AppStyle.subtleCardFillOpacity,
             shadowLevel: .medium
         )
-        .padding(.horizontal, AppStyle.horizontalPadding)
-        .padding(.bottom, 120)
     }
 
-    // statusMessage is no longer needed; replaced by toast overlay
+    private var galleryHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Capture library")
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .foregroundStyle(primary)
 
-    // MARK: - Actions
-
-    private func loadGallery(completion: (() -> Void)? = nil) {
-        PHPhotoLibrary.requestAuthorization { status in
-            guard status == .authorized || status == .limited else { return }
-            let fetchOptions = PHFetchOptions()
-            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-            let result = PHAsset.fetchAssets(with: fetchOptions)
-            var list: [PHAsset] = []
-            result.enumerateObjects { asset, _, _ in list.append(asset) }
-            DispatchQueue.main.async {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    assets = list
-                }
-                completion?()
-            }
+            Text("Select a video to stage it for conversion. Pull to refresh if you don't see your latest clip.")
+                .font(.system(size: 15))
+                .foregroundStyle(primary.opacity(0.7))
         }
+        .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private func quickActionButton(title: String, subtitle: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(accent.color)
+                    .frame(width: 34, height: 34)
+                    .background(accent.color.opacity(0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(primary.opacity(0.6))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                    .fill(primary.opacity(AppStyle.compactCardFillOpacity))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func selectionSubtitle(for asset: PHAsset) -> String {
+        let durationText = formatDuration(asset.duration)
+        if asset.pixelWidth > 0 && asset.pixelHeight > 0 {
+            return "\(durationText) • \(asset.pixelWidth)x\(asset.pixelHeight)"
+        }
+        return durationText
     }
 
     private func formatDuration(_ duration: Double) -> String {
@@ -578,10 +575,210 @@ struct ContentView: View {
     }
 
     private func loadMoreItems() {
-        if displayedItemCount < assets.count {
-            displayedItemCount = min(displayedItemCount + 30, assets.count)
+        guard displayedItemCount < assets.count else { return }
+        displayedItemCount = min(displayedItemCount + 30, assets.count)
+    }
+
+    private func loadGallery() {
+        isLoadingGallery = true
+        PHPhotoLibrary.requestAuthorization { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    isLoadingGallery = false
+                    presentToast(message: "Photos access is required to browse your videos.", tint: .red, icon: "exclamationmark.triangle.fill")
+                }
+                return
+            }
+
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+            let result = PHAsset.fetchAssets(with: fetchOptions)
+            var list: [PHAsset] = []
+            result.enumerateObjects { asset, _, _ in list.append(asset) }
+
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                    assets = list
+                    displayedItemCount = min(30, list.count)
+                }
+                isLoadingGallery = false
+            }
         }
+    }
+
+    private func requestURL(for asset: PHAsset) {
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+            guard let urlAsset = avAsset as? AVURLAsset else { return }
+            DispatchQueue.main.async {
+                videoURL = urlAsset.url
+            }
+        }
+    }
+
+    private func handleExternalSelection(_ url: URL) {
+        videoURL = url
+        presentToast(message: "Video ready – configure your export.", tint: accent.color)
+        showConversionSheet = true
+    }
+
+    private func clearSelection() {
+        if selectedAsset != nil {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                selectedAsset = nil
+            }
+        }
+        if !showConversionSheet {
+            videoURL = nil
+        }
+    }
+
+    private func presentToast(message: String, tint: Color, icon: String = "checkmark.seal.fill") {
+        let data = ToastData(message: message, tint: tint, iconName: icon)
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+            toastData = data
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            if toastData?.id == data.id {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    toastData = nil
+                }
+            }
+        }
+    }
+
+    private func showHelp() {
+        presentToast(message: "Help center coming soon.", tint: accent.color)
+        HapticsManager.shared.selection()
     }
 }
 
-#Preview { ContentView() }
+private struct MetricCard: View {
+    let title: String
+    let value: String
+    let caption: String
+    let accentColor: Color
+    let primaryColor: Color
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(primaryColor.opacity(0.65))
+
+            Text(value)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(primaryColor)
+
+            Text(caption)
+                .font(.system(size: 12))
+                .foregroundStyle(primaryColor.opacity(0.6))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .appCardStyle(
+            primary: primaryColor,
+            colorScheme: colorScheme,
+            cornerRadius: AppStyle.compactCornerRadius,
+            fillOpacity: AppStyle.compactCardFillOpacity,
+            shadowLevel: .small
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                .stroke(accentColor.opacity(0.05), lineWidth: 1)
+        )
+    }
+}
+
+private struct SelectionSummaryView: View {
+    let title: String
+    let subtitle: String
+    let isReady: Bool
+    let accentColor: Color
+    let primaryColor: Color
+    let onClear: () -> Void
+    let onConvert: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primaryColor)
+                        .lineLimit(2)
+
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(primaryColor.opacity(0.7))
+                }
+
+                Spacer()
+
+                Button {
+                    onClear()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(primaryColor.opacity(0.7))
+                        .padding(8)
+                        .background(primaryColor.opacity(0.08))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack {
+                if isReady {
+                    Label("Ready to convert", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(accentColor)
+                } else {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                        Text("Preparing clip…")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(primaryColor.opacity(0.7))
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    onConvert()
+                } label: {
+                    Text("Extract audio")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isReady ? primaryColor : primaryColor.opacity(0.6))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(isReady ? accentColor : accentColor.opacity(0.2))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(!isReady)
+            }
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                .fill(primaryColor.opacity(AppStyle.cardFillOpacity))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                .stroke(primaryColor.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+        )
+    }
+}
+
+#Preview {
+    ContentView()
+}
