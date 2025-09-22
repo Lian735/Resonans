@@ -10,6 +10,7 @@ struct ToolItem: Identifiable {
     let subtitle: String
     let iconName: String
     let gradientColors: [Color]
+    let destination: () -> AnyView
 
     static let audioExtractor = ToolItem(
         id: .audioExtractor,
@@ -19,7 +20,8 @@ struct ToolItem: Identifiable {
         gradientColors: [
             Color(red: 0.49, green: 0.33, blue: 0.95),
             Color(red: 0.58, green: 0.41, blue: 0.98)
-        ]
+        ],
+        destination: { AnyView(AudioExtractorView()) }
     )
 
     static let all: [ToolItem] = [
