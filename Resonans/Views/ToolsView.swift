@@ -9,7 +9,6 @@ struct ToolsView: View {
     let primary: Color
     let colorScheme: ColorScheme
     let activeTool: ToolItem.Identifier?
-    let onSelect: (ToolItem, Bool) -> Void
     let onOpen: (ToolItem) -> Void
     let onClose: (ToolItem.Identifier) -> Void
 
@@ -33,22 +32,20 @@ struct ToolsView: View {
                             accent: accent.color,
                             isSelected: tool.id == selectedTool,
                             isOpen: activeTool == tool.id,
-                            onSelect: {
-                                let isNewSelection = selectedTool != tool.id
-                                if isNewSelection {
+                            onToggle: {
+                                let shouldOpen = activeTool != tool.id
+                                if selectedTool != tool.id {
                                     withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                                         selectedTool = tool.id
                                     }
                                 }
-                                onSelect(tool, isNewSelection)
-                            },
-                            onOpen: {
-                                HapticsManager.shared.pulse()
-                                onOpen(tool)
-                            },
-                            onClose: {
-                                HapticsManager.shared.pulse()
-                                onClose(tool.id)
+                                if shouldOpen {
+                                    HapticsManager.shared.pulse()
+                                    onOpen(tool)
+                                } else {
+                                    HapticsManager.shared.pulse()
+                                    onClose(tool.id)
+                                }
                             }
                         )
                         .background(
@@ -97,9 +94,7 @@ private struct ToolListRow: View {
     let accent: Color
     let isSelected: Bool
     let isOpen: Bool
-    let onSelect: () -> Void
-    let onOpen: () -> Void
-    let onClose: () -> Void
+    let onToggle: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
@@ -130,13 +125,7 @@ private struct ToolListRow: View {
 
             Spacer()
 
-            Button(action: {
-                if isOpen {
-                    onClose()
-                } else {
-                    onOpen()
-                }
-            }) {
+            Button(action: onToggle) {
                 Image(systemName: isOpen ? "xmark" : "chevron.right")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(accent)
@@ -166,10 +155,7 @@ private struct ToolListRow: View {
             opacity: (isOpen || isSelected) ? 0.6 : 0.4
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            HapticsManager.shared.selection()
-            onSelect()
-        }
+        .onTapGesture(perform: onToggle)
     }
 }
 
@@ -187,7 +173,6 @@ private struct ToolListRow: View {
                 primary: .black,
                 colorScheme: .light,
                 activeTool: nil,
-                onSelect: { _, _ in },
                 onOpen: { _ in },
                 onClose: { _ in }
             )
