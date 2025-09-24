@@ -16,8 +16,10 @@ struct ToolsView: View {
     @State private var showTopBorder = false
 
     var body: some View {
+        let backgroundColor = AppStyle.background(for: colorScheme)
+
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 VStack(spacing: 18) {
                     Color.clear
                         .frame(height: AppStyle.innerPadding)
@@ -82,7 +84,14 @@ struct ToolsView: View {
                 }
             }
         }
-        .background(AppStyle.background(for: colorScheme))
+        .background(
+            LinearGradient(
+                colors: [accent.gradient.opacity(0.4), backgroundColor],
+                startPoint: .topLeading,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
     }
 }
 
@@ -114,22 +123,9 @@ private struct ToolListRow: View {
                 .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(tool.title)
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(primary)
-                    if isOpen {
-                        Text("OPEN")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule()
-                                    .fill(accent.opacity(0.15))
-                            )
-                    }
-                }
+                Text(tool.title)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
 
                 Text(tool.subtitle)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -139,23 +135,18 @@ private struct ToolListRow: View {
 
             Spacer()
 
-            HStack(spacing: 12) {
+            Button(action: {
                 if isOpen {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark.square.fill")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(accent)
-                    }
-                    .buttonStyle(.plain)
+                    onClose()
+                } else {
+                    onOpen()
                 }
-
-                Button(action: onOpen) {
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(accent)
-                }
-                .buttonStyle(.plain)
+            }) {
+                Image(systemName: isOpen ? "xmark" : "chevron.right")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(accent)
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
@@ -169,9 +160,16 @@ private struct ToolListRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(accent.opacity(isSelected ? 0.45 : 0), lineWidth: isSelected ? 2 : 0)
+                .stroke(
+                    accent.opacity(isOpen ? 0.65 : (isSelected ? 0.45 : 0)),
+                    lineWidth: isOpen ? 3 : (isSelected ? 2 : 0)
+                )
         )
-        .appShadow(colorScheme: colorScheme, level: .medium, opacity: isSelected ? 0.55 : 0.4)
+        .appShadow(
+            colorScheme: colorScheme,
+            level: .medium,
+            opacity: (isOpen || isSelected) ? 0.6 : 0.4
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             HapticsManager.shared.selection()
