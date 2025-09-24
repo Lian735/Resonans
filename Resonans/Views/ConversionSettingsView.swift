@@ -218,7 +218,7 @@ struct ConversionSettingsView: View {
                                 Button(action: {
                                     withAnimation { showBitrateInfo.toggle() }
                                 }) {
-                                    Image(systemName: "info.circle")
+                                    Image(systemName: "questionmark.circle")
                                         .opacity(0.5)
                                 }
                                 .buttonStyle(.plain)
