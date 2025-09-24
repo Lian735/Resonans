@@ -82,14 +82,7 @@ struct ToolsView: View {
                 }
             }
         }
-        .background(
-            LinearGradient(
-                colors: [accent.gradient.opacity(0.2), AppStyle.background(for: colorScheme)],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
+        .background(AppStyle.background(for: colorScheme))
     }
 }
 
@@ -125,6 +118,17 @@ private struct ToolListRow: View {
                     Text(tool.title)
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundStyle(primary)
+                    if isOpen {
+                        Text("OPEN")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(accent.opacity(0.15))
+                            )
+                    }
                 }
 
                 Text(tool.subtitle)
@@ -135,20 +139,23 @@ private struct ToolListRow: View {
 
             Spacer()
 
-            Button(action: {
-                HapticsManager.shared.pulse()
+            HStack(spacing: 12) {
                 if isOpen {
-                    onClose()
-                } else {
-                    onOpen()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.square.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(accent)
+                    }
+                    .buttonStyle(.plain)
                 }
-            }) {
-                Image(systemName: isOpen ? "xmark" : "chevron.right")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .padding(.horizontal, 4)
+
+                Button(action: onOpen) {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
@@ -162,16 +169,9 @@ private struct ToolListRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(
-                    accent.opacity(isOpen ? 0.65 : isSelected ? 0.4 : 0),
-                    lineWidth: isOpen ? 3 : isSelected ? 2 : 0
-                )
+                .stroke(accent.opacity(isSelected ? 0.45 : 0), lineWidth: isSelected ? 2 : 0)
         )
-        .appShadow(
-            colorScheme: colorScheme,
-            level: .medium,
-            opacity: isOpen ? 0.6 : (isSelected ? 0.5 : 0.4)
-        )
+        .appShadow(colorScheme: colorScheme, level: .medium, opacity: isSelected ? 0.55 : 0.4)
         .contentShape(Rectangle())
         .onTapGesture {
             HapticsManager.shared.selection()

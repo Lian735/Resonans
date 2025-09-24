@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var favoriteToolIDs: Set<ToolItem.Identifier> = [.audioExtractor]
     @State private var recentToolIDs: [ToolItem.Identifier] = []
     @State private var activeToolID: ToolItem.Identifier?
+    @State private var showToolCloseIcon = false
+    @State private var shouldSkipCloseReset = false
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -82,12 +84,12 @@ struct ContentView: View {
                             HStack {
                                 Spacer()
                                 HStack(spacing: 32) {
-                                    bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
-                                    bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
                                     if let activeToolID {
                                         toolIconButton(for: activeToolID)
                                             .transition(.scale.combined(with: .opacity))
                                     }
+                                    bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
+                                    bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
                                     bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $settingsScrollTrigger)
                                 }
                                 .padding(.horizontal, 8)
@@ -150,11 +152,33 @@ struct ContentView: View {
                 presentToast("You're all set! Let's create.", color: accent.color)
             }
         }
+        .onChange(of: selectedTab) { _, newValue in
+            if case .tool = newValue {
+                return
+            }
+            if showToolCloseIcon {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
+                }
+            }
+        }
         .onChange(of: activeToolID) { _, newValue in
             if newValue == nil, case .tool = selectedTab {
                 selectedTab = .tools
             }
         }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                guard showToolCloseIcon else { return }
+                if shouldSkipCloseReset {
+                    shouldSkipCloseReset = false
+                    return
+                }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
+                }
+            }
+        )
     }
 
     private var header: some View {
@@ -166,8 +190,9 @@ struct ContentView: View {
                     .opacity(selectedTab == .tools ? 1 : 0)
                 Text("Settings")
                     .opacity(selectedTab == .settings ? 1 : 0)
-                if case .tool = selectedTab {
-                    Text("tool")
+                if case let .tool(identifier) = selectedTab,
+                   let tool = tools.first(where: { $0.id == identifier }) {
+                    Text(tool.title)
                         .opacity(1)
                 }
             }
@@ -180,31 +205,17 @@ struct ContentView: View {
 
             Spacer()
 
-            if case .tool = selectedTab {
-                Button(action: {
-                    HapticsManager.shared.selection()
-                    closeActiveTool()
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(accent.color)
-                        .appTextShadow(colorScheme: colorScheme)
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, 22)
-            } else if selectedTab == .settings {
-                Button(action: {
-                    HapticsManager.shared.pulse()
-                    showOnboarding = true
-                }) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(primary)
-                        .appTextShadow(colorScheme: colorScheme)
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, 22)
+            Button(action: {
+                HapticsManager.shared.pulse()
+                showOnboarding = true
+            }) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(primary)
+                    .appTextShadow(colorScheme: colorScheme)
             }
+            .buttonStyle(.plain)
+            .padding(.trailing, 22)
         }
     }
 
@@ -259,6 +270,12 @@ struct ContentView: View {
                     trigger.wrappedValue.toggle()
                 }
             }
+            if showToolCloseIcon {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
+                }
+            }
+            shouldSkipCloseReset = false
         }) {
             Image(systemName: systemName)
                 .font(.system(size: 24, weight: .semibold))
@@ -267,28 +284,55 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
     private func toolIconButton(for identifier: ToolItem.Identifier) -> some View {
-        if let tool = tools.first(where: { $0.id == identifier }) {
-            let isSelected: Bool
-            if case let .tool(current) = selectedTab, current == identifier {
-                isSelected = true
-            } else {
-                isSelected = false
+        let isSelected: Bool
+        if case let .tool(current) = selectedTab, current == identifier {
+            isSelected = true
+        } else {
+            isSelected = false
+        }
+        let isActive = activeToolID == identifier
+
+        return ZStack {
+            Button {
+                HapticsManager.shared.pulse()
+                if isSelected {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
+                        showToolCloseIcon = true
+                    }
+                    shouldSkipCloseReset = true
+                } else {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                        selectedTab = .tool(identifier)
+                    }
+                    if showToolCloseIcon {
+                        showToolCloseIcon = false
+                    }
+                    shouldSkipCloseReset = false
+                }
+            } label: {
+                Image(systemName: "arrow.up.right.square.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(isActive ? accent.color : primary.opacity(0.5))
             }
+            .buttonStyle(.plain)
+            .scaleEffect(showToolCloseIcon && isSelected ? 0.01 : 1)
+            .opacity(showToolCloseIcon && isSelected ? 0 : 1)
+            .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
+            .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
             Button {
                 HapticsManager.shared.pulse()
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    selectedTab = .tool(identifier)
-                }
+                closeActiveTool()
             } label: {
-                Image(systemName: tool.iconName)
+                Image(systemName: "xmark.square.fill")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(isSelected ? accent.color : primary.opacity(0.5))
-                    .animation(.easeInOut(duration: 0.25), value: isSelected)
+                    .foregroundStyle(accent.color)
             }
             .buttonStyle(.plain)
+            .scaleEffect(showToolCloseIcon && isSelected ? 1 : 0.01)
+            .opacity(showToolCloseIcon && isSelected ? 1 : 0)
+            .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
         }
     }
 
@@ -300,10 +344,16 @@ struct ContentView: View {
             activeToolID = tool.id
             selectedTab = .tool(tool.id)
         }
+        showToolCloseIcon = false
+        shouldSkipCloseReset = false
     }
 
     private func closeActiveTool() {
         guard let identifier = activeToolID else { return }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            showToolCloseIcon = false
+        }
+        shouldSkipCloseReset = false
         if case let .tool(current) = selectedTab, current == identifier {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                 selectedTab = .tools
