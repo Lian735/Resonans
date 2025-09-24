@@ -6,9 +6,8 @@ struct AudioExtractorView: View {
     @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
+    @State private var showSourceOptions = false
     @State private var showConversionSheet = false
-    @State private var showExporter = false
-    @State private var exporterURL: URL?
 
     @State private var recents: [RecentItem] = []
     @State private var showAllRecents = false
@@ -25,19 +24,50 @@ struct AudioExtractorView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 28) {
-                Color.clear
-                    .frame(height: AppStyle.innerPadding)
-                    .padding(.bottom, -24)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .padding(.bottom, -24)
+                        .id("top")
 
-                sourceSelectionSection
+                    ZStack {
+                        if showSourceOptions {
+                            background.opacity(0.001)
+                                .onTapGesture {
+                                    HapticsManager.shared.pulse()
+                                    withAnimation(.easeInOut(duration: 0.35)) {
+                                        showSourceOptions = false
+                                    }
+                                }
+                        }
+
+                        VStack(spacing: 18) {
+                            sourceSelectionCard
+
+                            if showSourceOptions {
+                                sourceOptionRow
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                            }
+                        }
+                    }
                     .padding(.horizontal, AppStyle.horizontalPadding)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: showSourceOptions ? 230 : 190)
 
-                recentSection
-                    .padding(.horizontal, AppStyle.horizontalPadding)
+                    recentSection
 
-                Spacer(minLength: 40)
+                    Spacer(minLength: 40)
+                }
+            }
+            .contentShape(Rectangle())
+            .onChange(of: showSourceOptions) { _, isPresented in
+                if !isPresented {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo("top", anchor: .top)
+                    }
+                }
             }
         }
         .background(
@@ -60,29 +90,19 @@ struct AudioExtractorView: View {
             onDismiss: { videoURL = nil }
         ) {
             if let url = videoURL {
-                ConversionSettingsView(videoURL: url) { exportURL, duration in
-                    handleConversionResult(url: exportURL, duration: duration)
-                }
+                ConversionSettingsView(videoURL: url)
             }
-        }
-        .sheet(isPresented: $showExporter, onDismiss: { exporterURL = nil }) {
-            if let exporterURL = exporterURL {
-                ExportPicker(url: exporterURL)
-            }
-        }
-        .task {
-            loadRecents()
         }
     }
 
-    private var sourceSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .center) {
+    private var sourceSelectionCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Extractor")
+                    Text("Audio Extractor")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundStyle(primary.opacity(0.7))
-                    Text("Pull crisp audio from any clip")
+                    Text("Ready when you are")
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(primary)
                 }
@@ -92,21 +112,39 @@ struct AudioExtractorView: View {
                     .foregroundStyle(accent.color)
             }
 
-            Text("Choose where to import your video from.")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(primary.opacity(0.65))
+            Spacer()
 
-            HStack(spacing: 16) {
-                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
-                    showFilePicker = true
+            VStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                        .fill(primary.opacity(AppStyle.iconFillOpacity))
+                        .frame(width: 84, height: 84)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                                .stroke(primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
+                        )
+                        .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.4)
+
+                    Image(systemName: "plus")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(primary)
                 }
 
-                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
-                    showPhotoPicker = true
-                }
+                Text("Click to add files")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+
+                Text("Choose a video from Files or your photo library.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.65))
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
         }
         .padding(AppStyle.innerPadding)
+        .frame(maxWidth: .infinity, minHeight: 190)
         .background(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .fill(primary.opacity(AppStyle.cardFillOpacity))
@@ -115,13 +153,39 @@ struct AudioExtractorView: View {
                         .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
                 )
         )
+        .contentShape(Rectangle())
         .appShadow(colorScheme: colorScheme, level: .large)
+        .scaleEffect(showSourceOptions ? 0.92 : 1)
+        .animation(.spring(response: 0.45, dampingFraction: 0.7), value: showSourceOptions)
+        .onTapGesture {
+            HapticsManager.shared.pulse()
+            withAnimation(.easeInOut(duration: 0.35)) {
+                showSourceOptions.toggle()
+            }
+        }
+    }
+
+    private var sourceOptionRow: some View {
+        HStack(spacing: 16) {
+            sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
+                showFilePicker = true
+                showSourceOptions = false
+            }
+
+            sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Photos") {
+                showPhotoPicker = true
+                showSourceOptions = false
+            }
+        }
+        .transition(.scale(scale: 0.85).combined(with: .opacity))
     }
 
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button {
             HapticsManager.shared.pulse()
-            action()
+            withAnimation(.easeInOut(duration: 0.3)) {
+                action()
+            }
         } label: {
             VStack(spacing: 12) {
                 Image(systemName: icon)
@@ -164,7 +228,7 @@ struct AudioExtractorView: View {
                         .padding(.vertical, 40)
                 } else {
                     ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
-                        RecentRow(item: item, onExport: presentExporter(for:))
+                        RecentRow(item: item)
                             .padding(.horizontal, 12)
                     }
 
@@ -196,34 +260,7 @@ struct AudioExtractorView: View {
                 )
         )
         .appShadow(colorScheme: colorScheme, level: .medium)
-    }
-
-    private func loadRecents() {
-        let stored = CacheManager.shared.loadRecentConversions()
-        let existing = stored.filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }
-        recents = existing.sorted(by: { $0.createdAt > $1.createdAt })
-        if existing.count != stored.count {
-            CacheManager.shared.saveRecentConversions(recents)
-        }
-    }
-
-    private func handleConversionResult(url: URL, duration: TimeInterval) {
-        let fileName = url.deletingPathExtension().lastPathComponent
-        let newItem = RecentItem(title: fileName, duration: duration, fileURL: url)
-
-        recents.removeAll(where: { $0.fileURL == url })
-        recents.insert(newItem, at: 0)
-
-        if recents.count > 10 {
-            recents = Array(recents.prefix(10))
-        }
-
-        CacheManager.shared.saveRecentConversions(recents)
-    }
-
-    private func presentExporter(for item: RecentItem) {
-        exporterURL = item.fileURL
-        showExporter = true
+        .padding(.horizontal, AppStyle.horizontalPadding)
     }
 }
 

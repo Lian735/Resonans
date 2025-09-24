@@ -4,7 +4,6 @@ import UIKit
 
 struct ConversionSettingsView: View {
     let videoURL: URL
-    let onConversionComplete: ((URL, TimeInterval) -> Void)?
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
@@ -39,11 +38,6 @@ struct ConversionSettingsView: View {
 
     private var clampedProgress: Double {
         min(max(progressValue, 0), 1)
-    }
-
-    init(videoURL: URL, onConversionComplete: ((URL, TimeInterval) -> Void)? = nil) {
-        self.videoURL = videoURL
-        self.onConversionComplete = onConversionComplete
     }
 
     var body: some View {
@@ -450,7 +444,6 @@ struct ConversionSettingsView: View {
                     exportURL = url
                     HapticsManager.shared.notify(.success)
                     showSuccessSheet = true
-                    onConversionComplete?(url, audioDuration)
                 case .failure:
                     dismiss()
                 }
