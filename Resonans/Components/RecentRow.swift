@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecentRow: View {
     let item: RecentItem
+    let onSave: (RecentItem) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     private var primary: Color { AppStyle.primary(for: colorScheme) }
@@ -33,11 +34,21 @@ struct RecentRow: View {
                     .foregroundStyle(primary.opacity(0.8))
             }
             Spacer()
+            ShareLink(item: item.fileURL) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(primary.opacity(0.9))
+                    .padding(10)
+            }
+            .simultaneousGesture(TapGesture().onEnded {
+                HapticsManager.shared.selection()
+            })
+
             Button(action: {
                 HapticsManager.shared.pulse()
-                /* TODO: share/download */
+                onSave(item)
             }) {
-                Image(systemName: "square.and.arrow.down")
+                Image(systemName: "tray.and.arrow.down")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(primary)
                     .padding(10)

@@ -441,7 +441,17 @@ struct ConversionSettingsView: View {
                 isProcessing = false
                 switch result {
                 case .success(let url):
-                    exportURL = url
+                    let durationLabel = formatTime(audioDuration)
+                    do {
+                        let item = try CacheManager.shared.recordConversion(
+                            title: videoURL.deletingPathExtension().lastPathComponent,
+                            duration: durationLabel,
+                            tempURL: url
+                        )
+                        exportURL = item.fileURL
+                    } catch {
+                        exportURL = url
+                    }
                     HapticsManager.shared.notify(.success)
                     showSuccessSheet = true
                 case .failure:

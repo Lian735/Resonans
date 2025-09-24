@@ -6,17 +6,17 @@ struct AudioExtractorView: View {
     @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
-    @State private var showSourceOptions = false
     @State private var showConversionSheet = false
 
-    @State private var recents: [RecentItem] = []
+    @State private var recents: [RecentItem] = CacheManager.shared.loadRecentConversions()
     @State private var showAllRecents = false
+    @State private var exportURLForRecent: URL?
+    @State private var showRecentExporter = false
 
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-    private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     init(onClose: @escaping () -> Void = {}) {
@@ -24,55 +24,23 @@ struct AudioExtractorView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
-                    Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .padding(.bottom, -24)
-                        .id("top")
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 28) {
+                Color.clear
+                    .frame(height: AppStyle.innerPadding)
+                    .padding(.bottom, -24)
 
-                    ZStack {
-                        if showSourceOptions {
-                            background.opacity(0.001)
-                                .onTapGesture {
-                                    HapticsManager.shared.pulse()
-                                    withAnimation(.easeInOut(duration: 0.35)) {
-                                        showSourceOptions = false
-                                    }
-                                }
-                        }
+                headerSection
 
-                        VStack(spacing: 18) {
-                            sourceSelectionCard
+                sourceOptionsSection
 
-                            if showSourceOptions {
-                                sourceOptionRow
-                                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                            }
-                        }
-                    }
-                    .padding(.horizontal, AppStyle.horizontalPadding)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: showSourceOptions ? 230 : 190)
+                recentSection
 
-                    recentSection
-
-                    Spacer(minLength: 40)
-                }
+                Spacer(minLength: 60)
             }
-            .contentShape(Rectangle())
-            .onChange(of: showSourceOptions) { _, isPresented in
-                if !isPresented {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo("top", anchor: .top)
-                    }
-                }
-            }
+            .padding(.horizontal, AppStyle.horizontalPadding)
         }
-        .background(
-            .clear
-        )
+        .background(.clear)
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
                 videoURL = url
@@ -93,99 +61,61 @@ struct AudioExtractorView: View {
                 ConversionSettingsView(videoURL: url)
             }
         }
+        .sheet(isPresented: $showRecentExporter, onDismiss: { exportURLForRecent = nil }) {
+            if let url = exportURLForRecent {
+                ExportPicker(url: url)
+            }
+        }
+        .onAppear(perform: reloadRecents)
+        .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate)) { notification in
+            guard let items = notification.object as? [RecentItem] else { return }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                recents = items
+            }
+        }
     }
 
-    private var sourceSelectionCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Audio Extractor")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.7))
-                    Text("Ready when you are")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundStyle(primary)
-                }
-                Spacer()
-                Image(systemName: "waveform")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(accent.color)
+    private var headerSection: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Extractor")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.7))
+                Text("Pull crisp audio from your videos")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
             }
 
             Spacer()
 
-            VStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                        .fill(primary.opacity(AppStyle.iconFillOpacity))
-                        .frame(width: 84, height: 84)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                                .stroke(primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
-                        )
-                        .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.4)
-
-                    Image(systemName: "plus")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundStyle(primary)
-                }
-
-                Text("Click to add files")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-
-                Text("Choose a video from Files or your photo library.")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.65))
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-
-            Spacer(minLength: 0)
-        }
-        .padding(AppStyle.innerPadding)
-        .frame(maxWidth: .infinity, minHeight: 190)
-        .background(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(AppStyle.cardFillOpacity))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                )
-        )
-        .contentShape(Rectangle())
-        .appShadow(colorScheme: colorScheme, level: .large)
-        .scaleEffect(showSourceOptions ? 0.92 : 1)
-        .animation(.spring(response: 0.45, dampingFraction: 0.7), value: showSourceOptions)
-        .onTapGesture {
-            HapticsManager.shared.pulse()
-            withAnimation(.easeInOut(duration: 0.35)) {
-                showSourceOptions.toggle()
-            }
+            Image(systemName: "waveform")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(accent.color)
         }
     }
 
-    private var sourceOptionRow: some View {
-        HStack(spacing: 16) {
-            sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
-                showFilePicker = true
-                showSourceOptions = false
-            }
+    private var sourceOptionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose a source")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
 
-            sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Photos") {
-                showPhotoPicker = true
-                showSourceOptions = false
+            HStack(spacing: 16) {
+                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
+                    showFilePicker = true
+                }
+
+                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
+                    showPhotoPicker = true
+                }
             }
         }
-        .transition(.scale(scale: 0.85).combined(with: .opacity))
     }
 
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button {
             HapticsManager.shared.pulse()
-            withAnimation(.easeInOut(duration: 0.3)) {
-                action()
-            }
+            action()
         } label: {
             VStack(spacing: 12) {
                 Image(systemName: icon)
@@ -198,15 +128,7 @@ struct AudioExtractorView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
-            .background(
-                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                    .fill(primary.opacity(AppStyle.cardFillOpacity))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                    )
-            )
-            .appShadow(colorScheme: colorScheme, level: .medium)
+            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
         }
         .buttonStyle(.plain)
     }
@@ -228,7 +150,7 @@ struct AudioExtractorView: View {
                         .padding(.vertical, 40)
                 } else {
                     ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
-                        RecentRow(item: item)
+                        RecentRow(item: item, onSave: handleRecentExport)
                             .padding(.horizontal, 12)
                     }
 
@@ -260,7 +182,20 @@ struct AudioExtractorView: View {
                 )
         )
         .appShadow(colorScheme: colorScheme, level: .medium)
-        .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private func reloadRecents() {
+        recents = CacheManager.shared.loadRecentConversions()
+    }
+
+    private func handleRecentExport(_ item: RecentItem) {
+        let url = item.fileURL
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            reloadRecents()
+            return
+        }
+        exportURLForRecent = url
+        showRecentExporter = true
     }
 }
 

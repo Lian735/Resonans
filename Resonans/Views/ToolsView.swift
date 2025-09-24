@@ -9,15 +9,12 @@ struct ToolsView: View {
     let primary: Color
     let colorScheme: ColorScheme
     let activeTool: ToolItem.Identifier?
-    let onSelect: (ToolItem, Bool) -> Void
     let onOpen: (ToolItem) -> Void
     let onClose: (ToolItem.Identifier) -> Void
 
     @State private var showTopBorder = false
 
     var body: some View {
-        let backgroundColor = AppStyle.background(for: colorScheme)
-
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 VStack(spacing: 18) {
@@ -33,22 +30,25 @@ struct ToolsView: View {
                             accent: accent.color,
                             isSelected: tool.id == selectedTool,
                             isOpen: activeTool == tool.id,
-                            onSelect: {
-                                let isNewSelection = selectedTool != tool.id
-                                if isNewSelection {
+                            onTap: {
+                                if selectedTool != tool.id {
                                     withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                                         selectedTool = tool.id
                                     }
                                 }
-                                onSelect(tool, isNewSelection)
-                            },
-                            onOpen: {
-                                HapticsManager.shared.pulse()
                                 onOpen(tool)
                             },
-                            onClose: {
-                                HapticsManager.shared.pulse()
-                                onClose(tool.id)
+                            onToggleOpenState: {
+                                if activeTool == tool.id {
+                                    onClose(tool.id)
+                                } else {
+                                    if selectedTool != tool.id {
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                                            selectedTool = tool.id
+                                        }
+                                    }
+                                    onOpen(tool)
+                                }
                             }
                         )
                         .background(
@@ -97,9 +97,8 @@ private struct ToolListRow: View {
     let accent: Color
     let isSelected: Bool
     let isOpen: Bool
-    let onSelect: () -> Void
-    let onOpen: () -> Void
-    let onClose: () -> Void
+    let onTap: () -> Void
+    let onToggleOpenState: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
@@ -131,11 +130,8 @@ private struct ToolListRow: View {
             Spacer()
 
             Button(action: {
-                if isOpen {
-                    onClose()
-                } else {
-                    onOpen()
-                }
+                HapticsManager.shared.pulse()
+                onToggleOpenState()
             }) {
                 Image(systemName: isOpen ? "xmark" : "chevron.right")
                     .font(.system(size: 24, weight: .semibold))
@@ -168,7 +164,7 @@ private struct ToolListRow: View {
         .contentShape(Rectangle())
         .onTapGesture {
             HapticsManager.shared.selection()
-            onSelect()
+            onTap()
         }
     }
 }
@@ -187,7 +183,6 @@ private struct ToolListRow: View {
                 primary: .black,
                 colorScheme: .light,
                 activeTool: nil,
-                onSelect: { _, _ in },
                 onOpen: { _ in },
                 onClose: { _ in }
             )
