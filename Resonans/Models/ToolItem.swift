@@ -14,7 +14,7 @@ struct ToolItem: Identifiable {
 
     static let audioExtractor = ToolItem(
         id: .audioExtractor,
-        title: "Audio Extractor",
+        title: "Extractor",
         subtitle: "Pull crisp audio tracks from your videos in seconds.",
         iconName: "waveform.circle.fill",
         gradientColors: [

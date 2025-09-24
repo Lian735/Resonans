@@ -14,14 +14,10 @@ struct ContentView: View {
     @State private var toolsScrollTrigger = false
     @State private var settingsScrollTrigger = false
 
-    @State private var message: String?
-    @State private var showToast = false
-    @State private var toastColor: Color = .green
-
     private let tools = ToolItem.all
     @State private var selectedTool: ToolItem.Identifier = .audioExtractor
     @State private var favoriteToolIDs: Set<ToolItem.Identifier> = [.audioExtractor]
-    @State private var recentToolIDs: [ToolItem.Identifier] = []
+    @State private var recentToolIDs: [ToolItem.Identifier] = CacheManager.shared.loadRecentTools()
     @State private var activeToolID: ToolItem.Identifier?
     @State private var showToolCloseIcon = false
     @State private var shouldSkipCloseReset = false
@@ -59,13 +55,14 @@ struct ContentView: View {
                     TabView(selection: $selectedTab) {
                         homeTab.tag(TabSelection.home)
                         toolsTab.tag(TabSelection.tools)
-                        SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
-                            .tag(TabSelection.settings)
 
                         if let activeToolID, let tool = tools.first(where: { $0.id == activeToolID }) {
                             toolView(for: tool)
                                 .tag(TabSelection.tool(activeToolID))
                         }
+
+                        SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
+                            .tag(TabSelection.settings)
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .animation(.easeInOut(duration: 0.3), value: selectedTab)
@@ -103,31 +100,6 @@ struct ContentView: View {
                 }
             }
 
-            if showToast, let msg = message {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text(msg)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(primary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(toastColor.opacity(0.85))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        Spacer()
-                    }
-                    .padding(.top, 44)
-                    Spacer()
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        withAnimation {
-                            showToast = false
-                        }
-                    }
-                }
-            }
         }
         .tint(accent.color)
         .animation(.easeInOut(duration: 0.4), value: colorScheme)
@@ -149,7 +121,7 @@ struct ContentView: View {
                 showGuidedTips = tips
                 hasCompletedOnboarding = true
                 showOnboarding = false
-                presentToast("You're all set! Let's create.", color: accent.color)
+                HapticsManager.shared.notify(.success)
             }
         }
         .onChange(of: selectedTab) { _, newValue in
@@ -183,46 +155,37 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            ZStack(alignment: .leading) {
-                Text("Home")
-                    .opacity(selectedTab == .home ? 1 : 0)
-                Text("Tools")
-                    .opacity(selectedTab == .tools ? 1 : 0)
-                Text("Settings")
-                    .opacity(selectedTab == .settings ? 1 : 0)
-                if case .tool = selectedTab {
-                    Text("Tool")
-                        .opacity(1)
-                }
-            }
-            .font(.system(size: 46, weight: .heavy, design: .rounded))
-            .tracking(0.5)
-            .foregroundStyle(primary)
-            .padding(.leading, 22)
-            .appTextShadow(colorScheme: colorScheme)
-            .animation(.easeInOut(duration: 0.25), value: selectedTab)
+            Text(headerTitle)
+                .font(.system(size: 46, weight: .heavy, design: .rounded))
+                .tracking(0.5)
+                .foregroundStyle(primary)
+                .appTextShadow(colorScheme: colorScheme)
+                .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
             Spacer()
 
             headerActionButton
         }
+        .padding(.horizontal, AppStyle.horizontalPadding)
     }
 
     @ViewBuilder
     private var headerActionButton: some View {
-        if activeToolID != nil {
-            Button(action: {
-                HapticsManager.shared.selection()
-                closeActiveTool()
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(primary)
-                    .appTextShadow(colorScheme: colorScheme)
+        switch selectedTab {
+        case .tool:
+            if activeToolID != nil {
+                Button(action: {
+                    HapticsManager.shared.selection()
+                    closeActiveTool()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(primary)
+                        .appTextShadow(colorScheme: colorScheme)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            .padding(.trailing, 22)
-        } else if selectedTab == .settings {
+        case .settings:
             Button(action: {
                 HapticsManager.shared.pulse()
                 showOnboarding = true
@@ -233,7 +196,21 @@ struct ContentView: View {
                     .appTextShadow(colorScheme: colorScheme)
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 22)
+        default:
+            EmptyView()
+        }
+    }
+
+    private var headerTitle: String {
+        switch selectedTab {
+        case .home:
+            return "Home"
+        case .tools:
+            return "Tools"
+        case .settings:
+            return "Settings"
+        case let .tool(identifier):
+            return tools.first(where: { $0.id == identifier })?.title ?? "Tool"
         }
     }
 
@@ -263,10 +240,7 @@ struct ContentView: View {
             primary: primary,
             colorScheme: colorScheme,
             activeTool: activeToolID
-        ) { tool, isNewSelection in
-            let text = isNewSelection ? "\(tool.title) ready." : "\(tool.title) already active."
-            presentToast(text, color: accent.color)
-        } onOpen: { tool in
+        ) onOpen: { tool in
             launchTool(tool)
         } onClose: { identifier in
             if activeToolID == identifier {
@@ -355,7 +329,6 @@ struct ContentView: View {
     private func launchTool(_ tool: ToolItem) {
         selectedTool = tool.id
         updateRecents(with: tool.id)
-        presentToast("\(tool.title) ready.", color: accent.color)
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
             activeToolID = tool.id
             selectedTab = .tool(tool.id)
@@ -386,24 +359,7 @@ struct ContentView: View {
         if recentToolIDs.count > 6 {
             recentToolIDs = Array(recentToolIDs.prefix(6))
         }
-    }
-
-    private func presentToast(_ text: String, color: Color) {
-        message = text
-        toastColor = color
-
-        if showToast {
-            showToast = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    showToast = true
-                }
-            }
-        } else {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                showToast = true
-            }
-        }
+        CacheManager.shared.saveRecentTools(recentToolIDs)
     }
 
     private func toolView(for tool: ToolItem) -> some View {
