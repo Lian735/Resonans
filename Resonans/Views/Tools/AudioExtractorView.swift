@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AudioExtractorView: View {
+    let onClose: () -> Void
+
     @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
@@ -16,6 +18,10 @@ struct AudioExtractorView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
+
+    init(onClose: @escaping () -> Void = {}) {
+        self.onClose = onClose
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -91,6 +97,9 @@ struct AudioExtractorView: View {
             if let url = videoURL {
                 ConversionSettingsView(videoURL: url)
             }
+        }
+        .overlay(alignment: .topTrailing) {
+            closeButton
         }
     }
 
@@ -177,6 +186,30 @@ struct AudioExtractorView: View {
             }
         }
         .transition(.scale(scale: 0.85).combined(with: .opacity))
+    }
+
+    private var closeButton: some View {
+        Button {
+            HapticsManager.shared.selection()
+            onClose()
+        } label: {
+            Image(systemName: "xmark.square.fill")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(accent.color)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                        .fill(primary.opacity(AppStyle.cardFillOpacity))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                                .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, AppStyle.horizontalPadding)
+        .padding(.top, 10)
+        .appShadow(colorScheme: colorScheme, level: .medium, opacity: 0.35)
     }
 
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
