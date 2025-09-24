@@ -84,12 +84,12 @@ struct ContentView: View {
                             HStack {
                                 Spacer()
                                 HStack(spacing: 32) {
+                                    bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
+                                    bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
                                     if let activeToolID {
                                         toolIconButton(for: activeToolID)
                                             .transition(.scale.combined(with: .opacity))
                                     }
-                                    bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
-                                    bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
                                     bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $settingsScrollTrigger)
                                 }
                                 .padding(.horizontal, 8)
@@ -190,9 +190,8 @@ struct ContentView: View {
                     .opacity(selectedTab == .tools ? 1 : 0)
                 Text("Settings")
                     .opacity(selectedTab == .settings ? 1 : 0)
-                if case let .tool(identifier) = selectedTab,
-                   let tool = tools.first(where: { $0.id == identifier }) {
-                    Text(tool.title)
+                if case .tool = selectedTab {
+                    Text("Tool")
                         .opacity(1)
                 }
             }
@@ -205,6 +204,25 @@ struct ContentView: View {
 
             Spacer()
 
+            headerActionButton
+        }
+    }
+
+    @ViewBuilder
+    private var headerActionButton: some View {
+        if activeToolID != nil {
+            Button(action: {
+                HapticsManager.shared.selection()
+                closeActiveTool()
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(primary)
+                    .appTextShadow(colorScheme: colorScheme)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 22)
+        } else if selectedTab == .settings {
             Button(action: {
                 HapticsManager.shared.pulse()
                 showOnboarding = true
@@ -291,8 +309,6 @@ struct ContentView: View {
         } else {
             isSelected = false
         }
-        let isActive = activeToolID == identifier
-
         return ZStack {
             Button {
                 HapticsManager.shared.pulse()
@@ -313,7 +329,7 @@ struct ContentView: View {
             } label: {
                 Image(systemName: "arrow.up.right.square.fill")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(isActive ? accent.color : primary.opacity(0.5))
+                    .foregroundStyle(isSelected ? accent.color : primary.opacity(0.5))
             }
             .buttonStyle(.plain)
             .scaleEffect(showToolCloseIcon && isSelected ? 0.01 : 1)

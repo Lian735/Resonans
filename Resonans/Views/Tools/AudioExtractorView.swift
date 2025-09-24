@@ -98,9 +98,6 @@ struct AudioExtractorView: View {
                 ConversionSettingsView(videoURL: url)
             }
         }
-        .overlay(alignment: .topTrailing) {
-            closeButton
-        }
     }
 
     private var sourceSelectionCard: some View {
@@ -186,30 +183,6 @@ struct AudioExtractorView: View {
             }
         }
         .transition(.scale(scale: 0.85).combined(with: .opacity))
-    }
-
-    private var closeButton: some View {
-        Button {
-            HapticsManager.shared.selection()
-            onClose()
-        } label: {
-            Image(systemName: "xmark.square.fill")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(accent.color)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                        .fill(primary.opacity(AppStyle.cardFillOpacity))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                                .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                        )
-                )
-        }
-        .buttonStyle(.plain)
-        .padding(.trailing, AppStyle.horizontalPadding)
-        .padding(.top, 10)
-        .appShadow(colorScheme: colorScheme, level: .medium, opacity: 0.35)
     }
 
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
