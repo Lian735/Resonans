@@ -71,12 +71,7 @@ struct AudioExtractorView: View {
             }
         }
         .background(
-            LinearGradient(
-                colors: [accent.gradient.opacity(0.2), background],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            .clear
         )
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in

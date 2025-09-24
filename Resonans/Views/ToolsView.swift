@@ -85,12 +85,7 @@ struct ToolsView: View {
             }
         }
         .background(
-            LinearGradient(
-                colors: [accent.gradient.opacity(0.4), backgroundColor],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            .clear
         )
     }
 }
