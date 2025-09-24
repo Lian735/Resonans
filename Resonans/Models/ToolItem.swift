@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ToolItem: Identifiable {
-    enum Identifier: String, Hashable, Codable {
+    enum Identifier: String, Hashable {
         case audioExtractor
     }
 
@@ -14,7 +14,7 @@ struct ToolItem: Identifiable {
 
     static let audioExtractor = ToolItem(
         id: .audioExtractor,
-        title: "Extractor",
+        title: "Audio Extractor",
         subtitle: "Pull crisp audio tracks from your videos in seconds.",
         iconName: "waveform.circle.fill",
         gradientColors: [
