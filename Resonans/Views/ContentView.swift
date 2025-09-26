@@ -21,7 +21,6 @@ struct ContentView: View {
     @State private var activeToolID: ToolItem.Identifier?
     @State private var showToolCloseIcon = false
     @State private var shouldSkipCloseReset = false
-    @State private var lastNonToolTab: TabSelection = .home
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -129,7 +128,6 @@ struct ContentView: View {
             if case .tool = newValue {
                 return
             }
-            lastNonToolTab = newValue
             if showToolCloseIcon {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                     showToolCloseIcon = false
@@ -206,7 +204,7 @@ struct ContentView: View {
     private var headerTitle: String {
         switch selectedTab {
         case .home:
-            return "Resonans"
+            return "Home"
         case .tools:
             return "Tools"
         case .settings:
@@ -356,11 +354,6 @@ struct ContentView: View {
     }
 
     private func launchTool(_ tool: ToolItem) {
-        if case .tool = selectedTab {
-            // keep the previous non-tool tab unchanged when already inside a tool view
-        } else {
-            lastNonToolTab = selectedTab
-        }
         selectedTool = tool.id
         updateRecents(with: tool.id)
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
@@ -379,7 +372,7 @@ struct ContentView: View {
         shouldSkipCloseReset = false
         if case let .tool(current) = selectedTab, current == identifier {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                selectedTab = lastNonToolTab
+                selectedTab = .tools
             }
         }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
