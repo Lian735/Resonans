@@ -668,9 +668,15 @@ private struct VideoPreviewCard: View {
     @State private var hasLoadedMetadata = false
     @State private var showControls = true
     @State private var hideControlsWorkItem: DispatchWorkItem?
+    @State private var isLoadingThumbnail = true
 
     var body: some View {
-        ZStack {
+        let cardShape = RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+
+        return ZStack {
+            cardShape
+                .fill(primaryColor.opacity(0.08))
+
             if let player = player, isPlaying {
                 PlayerRepresentable(player: player)
                     .scaledToFill()
@@ -679,15 +685,17 @@ private struct VideoPreviewCard: View {
                 Image(uiImage: thumbnail)
                     .resizable()
                     .scaledToFill()
-            } else {
-                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                    .fill(primaryColor.opacity(0.08))
+            }
+
+            if isLoadingThumbnail && !isPlaying && thumbnail == nil {
+                ProgressView()
+                    .tint(primaryColor.opacity(0.8))
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .clipShape(cardShape)
         .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+            cardShape
                 .stroke(primaryColor.opacity(0.15), lineWidth: 1)
         )
         .overlay(alignment: .bottomLeading) {
@@ -806,8 +814,14 @@ private struct VideoPreviewCard: View {
     }
 
     private func loadMetadata() {
-        guard !hasLoadedMetadata else { return }
+        if hasLoadedMetadata {
+            if thumbnail == nil {
+                isLoadingThumbnail = false
+            }
+            return
+        }
         hasLoadedMetadata = true
+        isLoadingThumbnail = true
         let sourceURL = url
         Task {
             let asset = AVURLAsset(url: sourceURL)
@@ -826,10 +840,12 @@ private struct VideoPreviewCard: View {
                 snapshotTime = CMTime(seconds: 0, preferredTimescale: 600)
             }
             generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, result, _ in
-                guard result == .succeeded, let cgImage = cgImage else { return }
-                let image = UIImage(cgImage: cgImage)
                 Task { @MainActor in
-                    thumbnail = image
+                    if result == .succeeded, let cgImage = cgImage {
+                        let image = UIImage(cgImage: cgImage)
+                        thumbnail = image
+                    }
+                    isLoadingThumbnail = false
                 }
             }
         }
