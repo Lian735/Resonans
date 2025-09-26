@@ -3,9 +3,10 @@ import SwiftUI
 struct AudioExtractorView: View {
     let onClose: () -> Void
 
+    @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
-    @State private var pendingMedia: PendingMedia?
+    @State private var showConversionSheet = false
 
     @State private var recents: [RecentItem] = CacheManager.shared.loadRecentConversions()
     @State private var showAllRecents = false
@@ -18,39 +19,47 @@ struct AudioExtractorView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
-    private struct PendingMedia: Identifiable {
-        let id = UUID()
-        let url: URL
-    }
-
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
     }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 24) {
+            VStack(spacing: 28) {
+                Color.clear
+                    .frame(height: AppStyle.innerPadding)
+                    .padding(.bottom, -24)
+
                 headerSection
+
                 sourceOptionsSection
+
                 recentSection
-                Spacer(minLength: 32)
+
+                Spacer(minLength: 60)
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.vertical, AppStyle.innerPadding)
         }
         .background(.clear)
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
-                pendingMedia = PendingMedia(url: url)
+                videoURL = url
+                showConversionSheet = true
             }
         }
         .sheet(isPresented: $showFilePicker) {
             FilePicker { url in
-                pendingMedia = PendingMedia(url: url)
+                videoURL = url
+                showConversionSheet = true
             }
         }
-        .sheet(item: $pendingMedia, onDismiss: { pendingMedia = nil }) { item in
-            ConversionSettingsView(videoURL: item.url)
+        .sheet(
+            isPresented: $showConversionSheet,
+            onDismiss: { videoURL = nil }
+        ) {
+            if let url = videoURL {
+                ConversionSettingsView(videoURL: url)
+            }
         }
         .sheet(isPresented: $showRecentExporter, onDismiss: { exportURLForRecent = nil }) {
             if let url = exportURLForRecent {
@@ -67,124 +76,82 @@ struct AudioExtractorView: View {
     }
 
     private var headerSection: some View {
-        sectionCard(spacing: 20) {
-            HStack(alignment: .center, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Audio Extractor")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(primary)
-                    Text("Pull crisp audio from your videos")
-                        .font(.system(size: 17, weight: .medium, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.75))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 12)
-
-                RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                    .fill(accent.color.opacity(0.18))
-                    .frame(width: 64, height: 64)
-                    .overlay(
-                        Image(systemName: "waveform")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundStyle(accent.color)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                    )
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Extractor")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.7))
+                Text("Pull crisp audio from your videos")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
             }
+
+            Spacer()
+
+            Image(systemName: "waveform")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(accent.color)
         }
     }
 
     private var sourceOptionsSection: some View {
-        sectionCard(spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Choose a source")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Text("Bring in a clip to begin extracting audio.")
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.65))
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose a source")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
 
-            LazyVGrid(columns: sourceGridColumns, spacing: 14) {
-                sourceOptionButton(
-                    icon: "doc.fill",
-                    title: "Import from Files"
-                ) {
+            HStack(spacing: 16) {
+                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
                     showFilePicker = true
                 }
 
-                sourceOptionButton(
-                    icon: "photo.on.rectangle",
-                    title: "Pick from Library"
-                ) {
+                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
                     showPhotoPicker = true
                 }
             }
         }
     }
 
-    private var sourceGridColumns: [GridItem] {
-        [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
-    }
-
-    private func sourceOptionButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+    private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button {
             HapticsManager.shared.pulse()
             action()
         } label: {
             VStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                    .fill(accent.color.opacity(0.18))
-                    .frame(width: 56, height: 56)
-                    .overlay(
-                        Image(systemName: icon)
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundStyle(accent.color)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                    )
-
+                Image(systemName: icon)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(primary)
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(primary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .padding(.horizontal, 8)
-            .background(
-                RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                    .fill(primary.opacity(AppStyle.cardFillOpacity))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                            .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                    )
-            )
+            .padding(.vertical, 24)
+            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
         }
         .buttonStyle(.plain)
     }
 
     private var recentSection: some View {
-        sectionCard(spacing: 20) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Recent conversions")
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(primary)
+                .padding(.top, 16)
+                .padding(.horizontal, AppStyle.innerPadding)
 
-            if recents.isEmpty {
-                Text("No exports yet")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.7))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 28)
-            } else {
-                VStack(spacing: 12) {
+            VStack(spacing: 12) {
+                if recents.isEmpty {
+                    Text("No exports yet")
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .foregroundStyle(primary.opacity(0.7))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 40)
+                } else {
                     ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
                         RecentRow(item: item, onSave: handleRecentExport)
+                            .padding(.horizontal, 12)
                     }
 
                     if recents.count > 3 {
@@ -196,25 +163,25 @@ struct AudioExtractorView: View {
                         } label: {
                             Text(showAllRecents ? "Show less" : "Show more")
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(accent.color)
+                                .foregroundStyle(primary.opacity(0.75))
                         }
-                        .buttonStyle(.plain)
-                        .padding(.top, 4)
+                        .padding(.top, 6)
                     }
                 }
             }
+            .padding(.top, 12)
+            .padding(.bottom, 18)
         }
-    }
-
-    private func sectionCard<Content: View>(
-        alignment: HorizontalAlignment = .leading,
-        spacing: CGFloat = 16,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: alignment, spacing: spacing, content: content)
-            .padding(AppStyle.innerPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                )
+        )
+        .appShadow(colorScheme: colorScheme, level: .medium)
     }
 
     private func reloadRecents() {
