@@ -9,6 +9,7 @@ struct ContentView: View {
     }
 
     @State private var selectedTab: TabSelection = .home
+    @State private var toolReturnTab: TabSelection = .home
 
     @State private var homeScrollTrigger = false
     @State private var toolsScrollTrigger = false
@@ -136,7 +137,7 @@ struct ContentView: View {
         }
         .onChange(of: activeToolID) { _, newValue in
             if newValue == nil, case .tool = selectedTab {
-                selectedTab = .tools
+                selectedTab = toolReturnTab
             }
         }
         .simultaneousGesture(
@@ -204,7 +205,7 @@ struct ContentView: View {
     private var headerTitle: String {
         switch selectedTab {
         case .home:
-            return "Home"
+            return "Resonans"
         case .tools:
             return "Tools"
         case .settings:
@@ -356,6 +357,11 @@ struct ContentView: View {
     private func launchTool(_ tool: ToolItem) {
         selectedTool = tool.id
         updateRecents(with: tool.id)
+        if case .tool = selectedTab {
+            // Preserve the previously stored non-tool tab when switching between tools directly.
+        } else {
+            toolReturnTab = selectedTab
+        }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
             activeToolID = tool.id
             selectedTab = .tool(tool.id)
@@ -372,7 +378,7 @@ struct ContentView: View {
         shouldSkipCloseReset = false
         if case let .tool(current) = selectedTab, current == identifier {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                selectedTab = .tools
+                selectedTab = toolReturnTab
             }
         }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
