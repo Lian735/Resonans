@@ -9,8 +9,6 @@ struct ContentView: View {
     }
 
     @State private var selectedTab: TabSelection = .home
-    @State private var lastNonToolTab: TabSelection = .home
-    @State private var previousTabSelection: TabSelection = .home
 
     @State private var homeScrollTrigger = false
     @State private var toolsScrollTrigger = false
@@ -126,26 +124,19 @@ struct ContentView: View {
                 HapticsManager.shared.notify(.success)
             }
         }
-        .onChange(of: selectedTab) { newValue in
+        .onChange(of: selectedTab) { _, newValue in
             if case .tool = newValue {
-                if case .tool = previousTabSelection {
-                    // No update needed when switching directly between tools
-                } else {
-                    lastNonToolTab = previousTabSelection
-                }
-            } else {
-                lastNonToolTab = newValue
-                if showToolCloseIcon {
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                        showToolCloseIcon = false
-                    }
+                return
+            }
+            if showToolCloseIcon {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
                 }
             }
-            previousTabSelection = newValue
         }
         .onChange(of: activeToolID) { _, newValue in
             if newValue == nil, case .tool = selectedTab {
-                selectedTab = lastNonToolTab
+                selectedTab = .tools
             }
         }
         .simultaneousGesture(
@@ -213,7 +204,7 @@ struct ContentView: View {
     private var headerTitle: String {
         switch selectedTab {
         case .home:
-            return "Resonans"
+            return "Home"
         case .tools:
             return "Tools"
         case .settings:
@@ -381,7 +372,7 @@ struct ContentView: View {
         shouldSkipCloseReset = false
         if case let .tool(current) = selectedTab, current == identifier {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                selectedTab = lastNonToolTab
+                selectedTab = .tools
             }
         }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
