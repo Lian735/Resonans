@@ -3,14 +3,10 @@ import SwiftUI
 struct AudioExtractorView: View {
     let onClose: () -> Void
 
-    private struct PendingVideoSelection: Identifiable {
-        let id = UUID()
-        let url: URL
-    }
-
+    @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
-    @State private var pendingSelection: PendingVideoSelection?
+    @State private var showConversionSheet = false
 
     @State private var recents: [RecentItem] = CacheManager.shared.loadRecentConversions()
     @State private var showAllRecents = false
@@ -29,29 +25,41 @@ struct AudioExtractorView: View {
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 24) {
+            VStack(spacing: 28) {
+                Color.clear
+                    .frame(height: AppStyle.innerPadding)
+                    .padding(.bottom, -24)
+
                 headerSection
 
                 sourceOptionsSection
 
                 recentSection
+
+                Spacer(minLength: 60)
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.vertical, AppStyle.innerPadding)
         }
-        .background(Color.clear)
+        .background(.clear)
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
-                presentConversion(for: url)
+                videoURL = url
+                showConversionSheet = true
             }
         }
         .sheet(isPresented: $showFilePicker) {
             FilePicker { url in
-                presentConversion(for: url)
+                videoURL = url
+                showConversionSheet = true
             }
         }
-        .sheet(item: $pendingSelection) { selection in
-            ConversionSettingsView(videoURL: selection.url)
+        .sheet(
+            isPresented: $showConversionSheet,
+            onDismiss: { videoURL = nil }
+        ) {
+            if let url = videoURL {
+                ConversionSettingsView(videoURL: url)
+            }
         }
         .sheet(isPresented: $showRecentExporter, onDismiss: { exportURLForRecent = nil }) {
             if let url = exportURLForRecent {
@@ -68,58 +76,37 @@ struct AudioExtractorView: View {
     }
 
     private var headerSection: some View {
-        sectionCard {
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Audio extractor")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.65))
-
-                    Text("Pull crisp audio from your videos")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundStyle(primary)
-                        .multilineTextAlignment(.leading)
-
-                    Text("Select a source to convert footage into high quality audio in just a few taps.")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.7))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-
-                RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                    .fill(accent.color.opacity(0.18))
-                    .frame(width: 54, height: 54)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                    )
-                    .overlay(
-                        Image(systemName: "waveform")
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundStyle(accent.color)
-                    )
-                    .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Extractor")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.7))
+                Text("Pull crisp audio from your videos")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
             }
+
+            Spacer()
+
+            Image(systemName: "waveform")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(accent.color)
         }
     }
 
     private var sourceOptionsSection: some View {
-        sectionCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Choose a source")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose a source")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
 
-                HStack(spacing: 16) {
-                    sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
-                        showFilePicker = true
-                    }
+            HStack(spacing: 16) {
+                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
+                    showFilePicker = true
+                }
 
-                    sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
-                        showPhotoPicker = true
-                    }
+                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
+                    showPhotoPicker = true
                 }
             }
         }
@@ -147,48 +134,54 @@ struct AudioExtractorView: View {
     }
 
     private var recentSection: some View {
-        sectionCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("Recent conversions")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(primary)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Recent conversions")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(primary)
+                .padding(.top, 16)
+                .padding(.horizontal, AppStyle.innerPadding)
 
-                    Spacer()
+            VStack(spacing: 12) {
+                if recents.isEmpty {
+                    Text("No exports yet")
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .foregroundStyle(primary.opacity(0.7))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 40)
+                } else {
+                    ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
+                        RecentRow(item: item, onSave: handleRecentExport)
+                            .padding(.horizontal, 12)
+                    }
 
-                    if !recents.isEmpty {
+                    if recents.count > 3 {
                         Button {
-                            HapticsManager.shared.selection()
+                            HapticsManager.shared.pulse()
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 showAllRecents.toggle()
                             }
                         } label: {
-                            HStack(spacing: 6) {
-                                Text(showAllRecents ? "Show less" : "Show more")
-                                Image(systemName: showAllRecents ? "chevron.up" : "chevron.down")
-                            }
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(primary.opacity(0.7))
+                            Text(showAllRecents ? "Show less" : "Show more")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(primary.opacity(0.75))
                         }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if recents.isEmpty {
-                    Text("No exports yet")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.7))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 28)
-                } else {
-                    VStack(spacing: 12) {
-                        ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
-                            RecentRow(item: item, onSave: handleRecentExport)
-                        }
+                        .padding(.top, 6)
                     }
                 }
             }
+            .padding(.top, 12)
+            .padding(.bottom, 18)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                )
+        )
+        .appShadow(colorScheme: colorScheme, level: .medium)
     }
 
     private func reloadRecents() {
@@ -203,20 +196,6 @@ struct AudioExtractorView: View {
         }
         exportURLForRecent = url
         showRecentExporter = true
-    }
-
-    private func presentConversion(for url: URL) {
-        pendingSelection = PendingVideoSelection(url: url)
-    }
-
-    private func sectionCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            content()
-        }
-        .padding(.vertical, 24)
-        .padding(.horizontal, AppStyle.innerPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(primary: primary, colorScheme: colorScheme)
     }
 }
 
