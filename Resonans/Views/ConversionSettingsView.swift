@@ -668,9 +668,15 @@ private struct VideoPreviewCard: View {
     @State private var hasLoadedMetadata = false
     @State private var showControls = true
     @State private var hideControlsWorkItem: DispatchWorkItem?
+    @State private var isLoadingPreview = true
 
     var body: some View {
-        ZStack {
+        let shape = RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+
+        return ZStack {
+            shape
+                .fill(primaryColor.opacity(0.08))
+
             if let player = player, isPlaying {
                 PlayerRepresentable(player: player)
                     .scaledToFill()
@@ -679,15 +685,17 @@ private struct VideoPreviewCard: View {
                 Image(uiImage: thumbnail)
                     .resizable()
                     .scaledToFill()
-            } else {
-                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                    .fill(primaryColor.opacity(0.08))
+            }
+
+            if isLoadingPreview {
+                ProgressView()
+                    .tint(primaryColor.opacity(0.6))
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
+        .clipShape(shape)
         .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+            shape
                 .stroke(primaryColor.opacity(0.15), lineWidth: 1)
         )
         .overlay(alignment: .bottomLeading) {
@@ -810,6 +818,9 @@ private struct VideoPreviewCard: View {
         hasLoadedMetadata = true
         let sourceURL = url
         Task {
+            await MainActor.run {
+                isLoadingPreview = true
+            }
             let asset = AVURLAsset(url: sourceURL)
             let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
             await MainActor.run {
@@ -825,12 +836,28 @@ private struct VideoPreviewCard: View {
             } else {
                 snapshotTime = CMTime(seconds: 0, preferredTimescale: 600)
             }
-            generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, result, _ in
-                guard result == .succeeded, let cgImage = cgImage else { return }
-                let image = UIImage(cgImage: cgImage)
-                Task { @MainActor in
+            let image: UIImage? = await withCheckedContinuation { continuation in
+                generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, result, _ in
+                    switch result {
+                    case .succeeded:
+                        if let cgImage = cgImage {
+                            continuation.resume(returning: UIImage(cgImage: cgImage))
+                        } else {
+                            continuation.resume(returning: nil)
+                        }
+                    case .failed, .cancelled:
+                        continuation.resume(returning: nil)
+                    @unknown default:
+                        continuation.resume(returning: nil)
+                    }
+                }
+            }
+
+            await MainActor.run {
+                if let image {
                     thumbnail = image
                 }
+                isLoadingPreview = false
             }
         }
     }
