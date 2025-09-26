@@ -668,6 +668,7 @@ private struct VideoPreviewCard: View {
     @State private var hasLoadedMetadata = false
     @State private var showControls = true
     @State private var hideControlsWorkItem: DispatchWorkItem?
+    @State private var isLoadingPreview = true
 
     var body: some View {
         ZStack {
@@ -682,6 +683,17 @@ private struct VideoPreviewCard: View {
             } else {
                 RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                     .fill(primaryColor.opacity(0.08))
+            }
+        }
+        .overlay {
+            if isLoadingPreview {
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .fill(primaryColor.opacity(0.08))
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(primaryColor.opacity(0.8))
+                }
             }
         }
         .frame(width: size, height: size)
@@ -808,6 +820,7 @@ private struct VideoPreviewCard: View {
     private func loadMetadata() {
         guard !hasLoadedMetadata else { return }
         hasLoadedMetadata = true
+        isLoadingPreview = true
         let sourceURL = url
         Task {
             let asset = AVURLAsset(url: sourceURL)
@@ -825,11 +838,18 @@ private struct VideoPreviewCard: View {
             } else {
                 snapshotTime = CMTime(seconds: 0, preferredTimescale: 600)
             }
-            generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, result, _ in
-                guard result == .succeeded, let cgImage = cgImage else { return }
-                let image = UIImage(cgImage: cgImage)
+            generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, _, _ in
                 Task { @MainActor in
-                    thumbnail = image
+                    if let cgImage = cgImage {
+                        let image = UIImage(cgImage: cgImage)
+                        thumbnail = image
+                    }
+                    isLoadingPreview = false
+                }
+            }
+            if durationSeconds <= 0 {
+                await MainActor.run {
+                    isLoadingPreview = false
                 }
             }
         }
