@@ -9,6 +9,7 @@ struct ContentView: View {
     }
 
     @State private var selectedTab: TabSelection = .home
+    @State private var lastPrimaryTab: TabSelection = .home
 
     @State private var homeScrollTrigger = false
     @State private var toolsScrollTrigger = false
@@ -128,6 +129,7 @@ struct ContentView: View {
             if case .tool = newValue {
                 return
             }
+            lastPrimaryTab = newValue
             if showToolCloseIcon {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                     showToolCloseIcon = false
@@ -204,7 +206,7 @@ struct ContentView: View {
     private var headerTitle: String {
         switch selectedTab {
         case .home:
-            return "Home"
+            return "Resonans"
         case .tools:
             return "Tools"
         case .settings:
@@ -354,6 +356,12 @@ struct ContentView: View {
     }
 
     private func launchTool(_ tool: ToolItem) {
+        if case .tool = selectedTab {
+            // Preserve previously stored tab when launching from another tool
+        } else {
+            lastPrimaryTab = selectedTab
+        }
+
         selectedTool = tool.id
         updateRecents(with: tool.id)
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
@@ -372,7 +380,7 @@ struct ContentView: View {
         shouldSkipCloseReset = false
         if case let .tool(current) = selectedTab, current == identifier {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                selectedTab = .tools
+                selectedTab = lastPrimaryTab
             }
         }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
