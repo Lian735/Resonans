@@ -239,14 +239,32 @@ struct ContentView: View {
             accent: accent,
             primary: primary,
             colorScheme: colorScheme,
-            activeTool: activeToolID
-        ) onOpen: { tool in
-            launchTool(tool)
-        } onClose: { identifier in
-            if activeToolID == identifier {
-                closeActiveTool()
+            activeTool: activeToolID,
+            onOpen: { tool in
+                launchTool(tool)
+            },
+            onClose: { identifier in
+                if activeToolID == identifier {
+                    closeActiveTool()
+                }
             }
+        )
+    }
+
+    private func symbolCompensation(for name: String) -> CGFloat {
+        switch name {
+        case "arrow.up.right.square.fill", "xmark.square.fill":
+            return 1.1
+        default:
+            return 1.0
         }
+    }
+
+    private func symbolIcon(name: String, size: CGFloat, weight: Font.Weight, color: Color) -> some View {
+        Image(systemName: name)
+            .font(.system(size: size, weight: weight))
+            .scaleEffect(symbolCompensation(for: name))
+            .foregroundStyle(color)
     }
 
     private func bottomTabButton(systemName: String, tab: TabSelection, trigger: Binding<Bool>) -> some View {
@@ -269,10 +287,13 @@ struct ContentView: View {
             }
             shouldSkipCloseReset = false
         }) {
-            Image(systemName: systemName)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(selectedTab == tab ? accent.color : primary.opacity(0.5))
-                .animation(.easeInOut(duration: 0.25), value: selectedTab)
+            symbolIcon(
+                name: systemName,
+                size: 24,
+                weight: .semibold,
+                color: selectedTab == tab ? accent.color : primary.opacity(0.5)
+            )
+            .animation(.easeInOut(duration: 0.25), value: selectedTab)
         }
     }
 
@@ -301,9 +322,12 @@ struct ContentView: View {
                     shouldSkipCloseReset = false
                 }
             } label: {
-                Image(systemName: "arrow.up.right.square.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(isSelected ? accent.color : primary.opacity(0.5))
+                symbolIcon(
+                    name: "arrow.up.right.square.fill",
+                    size: 24,
+                    weight: .semibold,
+                    color: isSelected ? accent.color : primary.opacity(0.5)
+                )
             }
             .buttonStyle(.plain)
             .scaleEffect(showToolCloseIcon && isSelected ? 0.01 : 1)
@@ -315,9 +339,12 @@ struct ContentView: View {
                 HapticsManager.shared.pulse()
                 closeActiveTool()
             } label: {
-                Image(systemName: "xmark.square.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(accent.color)
+                symbolIcon(
+                    name: "xmark.square.fill",
+                    size: 24,
+                    weight: .semibold,
+                    color: accent.color
+                )
             }
             .buttonStyle(.plain)
             .scaleEffect(showToolCloseIcon && isSelected ? 1 : 0.01)
@@ -362,9 +389,14 @@ struct ContentView: View {
         CacheManager.shared.saveRecentTools(recentToolIDs)
     }
 
+    @ViewBuilder
     private func toolView(for tool: ToolItem) -> some View {
-        tool.destination { closeActiveTool() }
+        switch tool.id {
+        case .audioExtractor:
+            AudioExtractorView(onClose: { closeActiveTool() })
+        }
     }
 }
 
 #Preview { ContentView() }
+

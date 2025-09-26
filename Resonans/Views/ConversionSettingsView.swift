@@ -461,6 +461,14 @@ struct ConversionSettingsView: View {
         )
     }
 
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "00:00" }
+        let totalSeconds = max(Int(seconds.rounded()), 0)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, secs)
+    }
+
     private func cancel() {
         HapticsManager.shared.selection()
         dismiss()
