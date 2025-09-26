@@ -19,7 +19,6 @@ struct ContentView: View {
     @State private var favoriteToolIDs: Set<ToolItem.Identifier> = [.audioExtractor]
     @State private var recentToolIDs: [ToolItem.Identifier] = CacheManager.shared.loadRecentTools()
     @State private var activeToolID: ToolItem.Identifier?
-    @State private var lastNonToolTab: TabSelection = .home
     @State private var showToolCloseIcon = false
     @State private var shouldSkipCloseReset = false
 
@@ -129,7 +128,6 @@ struct ContentView: View {
             if case .tool = newValue {
                 return
             }
-            lastNonToolTab = newValue
             if showToolCloseIcon {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                     showToolCloseIcon = false
@@ -138,13 +136,7 @@ struct ContentView: View {
         }
         .onChange(of: activeToolID) { _, newValue in
             if newValue == nil, case .tool = selectedTab {
-                let destination: TabSelection
-                if case .tool = lastNonToolTab {
-                    destination = .tools
-                } else {
-                    destination = lastNonToolTab
-                }
-                selectedTab = destination
+                selectedTab = .tools
             }
         }
         .simultaneousGesture(
@@ -212,7 +204,7 @@ struct ContentView: View {
     private var headerTitle: String {
         switch selectedTab {
         case .home:
-            return "Resonans"
+            return "Home"
         case .tools:
             return "Tools"
         case .settings:
@@ -364,11 +356,6 @@ struct ContentView: View {
     private func launchTool(_ tool: ToolItem) {
         selectedTool = tool.id
         updateRecents(with: tool.id)
-        if case .tool = selectedTab {
-            lastNonToolTab = .tools
-        } else {
-            lastNonToolTab = selectedTab
-        }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
             activeToolID = tool.id
             selectedTab = .tool(tool.id)
@@ -384,14 +371,8 @@ struct ContentView: View {
         }
         shouldSkipCloseReset = false
         if case let .tool(current) = selectedTab, current == identifier {
-            let destination: TabSelection
-            if case .tool = lastNonToolTab {
-                destination = .tools
-            } else {
-                destination = lastNonToolTab
-            }
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                selectedTab = destination
+                selectedTab = .tools
             }
         }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
