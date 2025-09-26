@@ -659,7 +659,6 @@ private struct VideoPreviewCard: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var thumbnail: UIImage?
-    @State private var isLoadingPreview = true
     @State private var player: AVPlayer?
     @State private var isPlaying = false
     @State private var currentTime: Double = 0
@@ -683,12 +682,6 @@ private struct VideoPreviewCard: View {
             } else {
                 RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                     .fill(primaryColor.opacity(0.08))
-                    .overlay {
-                        if isLoadingPreview {
-                            ProgressView()
-                                .tint(primaryColor.opacity(0.65))
-                        }
-                    }
             }
         }
         .frame(width: size, height: size)
@@ -816,7 +809,6 @@ private struct VideoPreviewCard: View {
         guard !hasLoadedMetadata else { return }
         hasLoadedMetadata = true
         let sourceURL = url
-        isLoadingPreview = true
         Task {
             let asset = AVURLAsset(url: sourceURL)
             let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
@@ -834,11 +826,10 @@ private struct VideoPreviewCard: View {
                 snapshotTime = CMTime(seconds: 0, preferredTimescale: 600)
             }
             generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: snapshotTime)]) { _, cgImage, _, result, _ in
+                guard result == .succeeded, let cgImage = cgImage else { return }
+                let image = UIImage(cgImage: cgImage)
                 Task { @MainActor in
-                    if result == .succeeded, let cgImage = cgImage {
-                        thumbnail = UIImage(cgImage: cgImage)
-                    }
-                    isLoadingPreview = false
+                    thumbnail = image
                 }
             }
         }
