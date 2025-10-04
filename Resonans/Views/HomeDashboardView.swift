@@ -161,48 +161,17 @@ private struct ToolHistoryRow: View {
     let colorScheme: ColorScheme
 
     var body: some View {
-        HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                .fill(LinearGradient(colors: tool.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
-                .overlay(
-                    Image(systemName: tool.iconName)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                )
-                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(tool.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Text(tool.subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.65))
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
+        ToolRowCard(
+            tool: tool,
+            primary: primary,
+            colorScheme: colorScheme,
+            subtitleSpacing: 4,
+            shadowLevel: .small
+        ) {
             Image(systemName: "chevron.right")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(primary.opacity(0.4))
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(AppStyle.cardFillOpacity))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                )
-        )
-        .appShadow(colorScheme: colorScheme, level: .small)
     }
 }
 
