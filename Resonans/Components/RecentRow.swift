@@ -2,69 +2,75 @@ import SwiftUI
 
 struct RecentRow: View {
     let item: RecentItem
+    let theme: AppTheme
     let onSave: (RecentItem) -> Void
-
-    @Environment(\.colorScheme) private var colorScheme
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     var body: some View {
         HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                .fill(primary.opacity(AppStyle.iconFillOpacity))
-                .frame(width: 56, height: 56)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(theme.subtleSurface)
+                .frame(width: 52, height: 52)
                 .overlay(
                     Image(systemName: "waveform")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(primary.opacity(0.9))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(theme.foreground)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
-                )
-                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.foreground)
                     .lineLimit(1)
-                    .truncationMode(.tail)
                 Text(item.duration)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(primary.opacity(0.8))
+                    .font(.footnote)
+                    .foregroundStyle(theme.secondary)
             }
+
             Spacer()
+
             ShareLink(item: item.fileURL) {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(primary.opacity(0.9))
+                    .foregroundStyle(theme.accentColor)
                     .padding(10)
+                    .background(theme.buttonBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .buttonStyle(.plain)
             .simultaneousGesture(TapGesture().onEnded {
                 HapticsManager.shared.selection()
             })
 
-            Button(action: {
-                HapticsManager.shared.pulse()
+            Button {
+                HapticsManager.shared.selection()
                 onSave(item)
-            }) {
+            } label: {
                 Image(systemName: "tray.and.arrow.down")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(theme.accentColor)
                     .padding(10)
+                    .background(theme.buttonBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(
-            primary: primary,
-            colorScheme: colorScheme,
-            cornerRadius: AppStyle.compactCornerRadius,
-            fillOpacity: AppStyle.compactCardFillOpacity,
-            shadowLevel: .small
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(theme.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(theme.border, lineWidth: 1)
+                )
         )
     }
 }
 
+#Preview {
+    RecentRow(
+        item: RecentItem(title: "Sample clip", duration: "1:20", fileURL: URL(filePath: "/tmp/sample.mp3"), createdAt: Date()),
+        theme: AppTheme(accent: .purple, colorScheme: .light),
+        onSave: { _ in }
+    )
+    .padding()
+    .background(Color(.systemGroupedBackground))
+}
