@@ -1,100 +1,114 @@
 import SwiftUI
 
 struct ContentView: View {
-    private enum Section: String, CaseIterable, Identifiable {
-        case overview
+    private enum TabSelection: Hashable {
+        case home
         case tools
         case settings
-
-        var id: Self { self }
-
-        var title: String {
-            switch self {
-            case .overview: return "Home"
-            case .tools: return "Tools"
-            case .settings: return "Settings"
-            }
-        }
-
-        var subtitle: String {
-            switch self {
-            case .overview: return "A calm place for every workflow"
-            case .tools: return "Pick the right helper for the job"
-            case .settings: return "Personalise Resonans to you"
-            }
-        }
+        case tool(ToolItem.Identifier)
     }
 
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("showGuidedTips") private var showGuidedTips = true
-    @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
-    @AppStorage("favoriteToolsRaw") private var favoriteToolsRaw = ToolItem.Identifier.audioExtractor.rawValue
+    @State private var selectedTab: TabSelection = .home
 
-    private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-    private var appearance: Appearance { Appearance(rawValue: appearanceRaw) ?? .system }
-
-    @State private var selection: Section = .overview
-    @State private var navigationPath: [ToolItem.Identifier] = []
-    @State private var recentToolIDs: [ToolItem.Identifier] = CacheManager.shared.loadRecentTools()
-    @State private var favoriteToolIDs: Set<ToolItem.Identifier> = []
-    @State private var showOnboarding = false
+    @State private var homeScrollTrigger = false
+    @State private var toolsScrollTrigger = false
+    @State private var settingsScrollTrigger = false
 
     private let tools = ToolItem.all
+    @State private var selectedTool: ToolItem.Identifier = .audioExtractor
+    @State private var favoriteToolIDs: Set<ToolItem.Identifier> = [.audioExtractor]
+    @State private var recentToolIDs: [ToolItem.Identifier] = CacheManager.shared.loadRecentTools()
+    @State private var activeToolID: ToolItem.Identifier?
+    @State private var showToolCloseIcon = false
+    @State private var shouldSkipCloseReset = false
+
+    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("showGuidedTips") private var showGuidedTips = true
+    @State private var showOnboarding = false
+
     @Environment(\.colorScheme) private var colorScheme
-    private var backgroundColor: Color { AppStyle.background(for: colorScheme) }
+    private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
-    private var favorites: [ToolItem] {
-        let ids = favoriteToolIDs
-        return tools.filter { ids.contains($0.id) }
+    private var recentTools: [ToolItem] {
+        recentToolIDs.compactMap { id in tools.first(where: { $0.id == id }) }
     }
-
-    private var recents: [ToolItem] {
-        recentToolIDs.compactMap { identifier in
-            tools.first(where: { $0.id == identifier })
-        }
-    }
-
-    @Namespace private var sectionNamespace
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ZStack(alignment: .top) {
-                backgroundLayer
+        ZStack(alignment: .topLeading) {
+            background.ignoresSafeArea()
+                .overlay(
+                    LinearGradient(
+                        colors: [accent.gradient, .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                )
 
-                VStack(spacing: 0) {
-                    header
-                        .padding(.horizontal, AppStyle.horizontalPadding)
-                        .padding(.top, 36)
-                        .padding(.bottom, 20)
+            VStack(spacing: 0) {
+                header
+                ZStack {
+                    TabView(selection: $selectedTab) {
+                        homeTab.tag(TabSelection.home)
+                        toolsTab.tag(TabSelection.tools)
 
-                    sectionPicker
-                        .padding(.horizontal, AppStyle.horizontalPadding)
+                        if let activeToolID, let tool = tools.first(where: { $0.id == activeToolID }) {
+                            toolView(for: tool)
+                                .tag(TabSelection.tool(activeToolID))
+                        }
 
-                    content
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.top, 24)
+                        SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
+                            .tag(TabSelection.settings)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
+
+                    VStack {
+                        Spacer()
+                        ZStack {
+                            LinearGradient(
+                                gradient: Gradient(colors: [background, background.opacity(0.0)]),
+                                startPoint: .bottom,
+                                endPoint: .top
+                            )
+                            .frame(height: 80)
+                            .ignoresSafeArea(edges: .bottom)
+
+                            HStack {
+                                Spacer()
+                                HStack(spacing: 32) {
+                                    bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
+                                    bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
+                                    if let activeToolID {
+                                        toolIconButton(for: activeToolID)
+                                            .transition(.scale.combined(with: .opacity))
+                                    }
+                                    bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $settingsScrollTrigger)
+                                }
+                                .padding(.horizontal, 8)
+                                .animation(.spring(response: 0.45, dampingFraction: 0.8), value: activeToolID)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 40)
+                            .padding(.vertical, 12)
+                        }
+                    }
                 }
             }
-            .navigationDestination(for: ToolItem.Identifier.self) { identifier in
-                toolDestination(for: identifier)
-            }
-            .toolbar(.hidden, for: .navigationBar)
+
         }
-        .preferredColorScheme(appearance.colorScheme)
         .tint(accent.color)
+        .animation(.easeInOut(duration: 0.4), value: colorScheme)
+        .animation(.easeInOut(duration: 0.4), value: accent)
+        .contentShape(Rectangle())
         .onAppear {
-            if favoriteToolIDs.isEmpty {
-                favoriteToolIDs = loadFavoriteIDs()
-            }
-            recentToolIDs = CacheManager.shared.loadRecentTools()
             if !hasCompletedOnboarding {
                 showOnboarding = true
             }
-        }
-        .onChange(of: favoriteToolIDs) { _, newValue in
-            storeFavoriteIDs(newValue)
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingFlowView(
@@ -103,172 +117,266 @@ struct ContentView: View {
                 primary: primary,
                 colorScheme: colorScheme
             ) { favorites, tips in
-                let normalizedFavorites = favorites.isEmpty ? Set([ToolItem.Identifier.audioExtractor]) : favorites
-                favoriteToolIDs = normalizedFavorites
+                favoriteToolIDs = favorites
                 showGuidedTips = tips
                 hasCompletedOnboarding = true
                 showOnboarding = false
                 HapticsManager.shared.notify(.success)
             }
         }
+        .onChange(of: selectedTab) { _, newValue in
+            if case .tool = newValue {
+                return
+            }
+            if showToolCloseIcon {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
+                }
+            }
+        }
+        .onChange(of: activeToolID) { _, newValue in
+            if newValue == nil, case .tool = selectedTab {
+                selectedTab = .tools
+            }
+        }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                guard showToolCloseIcon else { return }
+                if shouldSkipCloseReset {
+                    shouldSkipCloseReset = false
+                    return
+                }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
+                }
+            }
+        )
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Resonans")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.7))
-                    .appTextShadow(colorScheme: colorScheme)
-                Text(selection.title)
-                    .font(.system(size: 42, weight: .heavy, design: .rounded))
-                    .foregroundStyle(primary)
-                    .appTextShadow(colorScheme: colorScheme)
-                    .animation(.easeInOut(duration: 0.25), value: selection)
-                Text(selection.subtitle)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.7))
-                    .animation(.easeInOut(duration: 0.25), value: selection)
-            }
+        HStack(alignment: .center) {
+            Text(headerTitle)
+                .font(.system(size: 46, weight: .heavy, design: .rounded))
+                .tracking(0.5)
+                .foregroundStyle(primary)
+                .appTextShadow(colorScheme: colorScheme)
+                .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
             Spacer()
 
-            if selection == .settings {
-                Button {
-                    HapticsManager.shared.pulse()
-                    showOnboarding = true
-                } label: {
-                    Image(systemName: "questionmark.circle.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(accent.color)
-                        .padding(12)
-                        .background(
-                            Circle()
-                                .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
-                        )
-                        .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.4)
-                }
-                .buttonStyle(.plain)
-                .transition(.scale.combined(with: .opacity))
-            }
+            headerActionButton
         }
-    }
-
-    private var sectionPicker: some View {
-        HStack(spacing: 12) {
-            ForEach(Section.allCases) { section in
-                Button {
-                    guard selection != section else { return }
-                    HapticsManager.shared.selection()
-                    withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
-                        selection = section
-                    }
-                } label: {
-                    Text(section.title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(selection == section ? primary : primary.opacity(0.6))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            ZStack {
-                                if selection == section {
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .fill(accent.color.opacity(colorScheme == .dark ? 0.3 : 0.2))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                                .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                                        )
-                                        .matchedGeometryEffect(id: "sectionSelection", in: sectionNamespace)
-                                }
-                            }
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(6)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                )
-        )
-        .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
+        .padding(.horizontal, AppStyle.horizontalPadding)
     }
 
     @ViewBuilder
-    private var content: some View {
-        ZStack {
-            switch selection {
-            case .overview:
-                HomeDashboardView(
-                    favorites: favorites,
-                    recents: recents,
-                    accent: accent,
-                    primary: primary,
-                    colorScheme: colorScheme,
-                    onOpenTool: openTool,
-                    onShowTools: {
-                        withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
-                            selection = .tools
-                        }
-                    }
-                )
-                .transition(.opacity.combined(with: .move(edge: .leading)))
-            case .tools:
-                ToolsView(
-                    tools: tools,
-                    favorites: favoriteToolIDs,
-                    accent: accent,
-                    primary: primary,
-                    colorScheme: colorScheme,
-                    onOpen: openTool,
-                    onToggleFavorite: toggleFavorite
-                )
-                .transition(.opacity.combined(with: .move(edge: .trailing)))
-            case .settings:
-                SettingsView()
-                    .transition(.opacity)
+    private var headerActionButton: some View {
+        switch selectedTab {
+        case .tool:
+            if activeToolID != nil {
+                Button(action: {
+                    HapticsManager.shared.selection()
+                    closeActiveTool()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(primary)
+                        .appTextShadow(colorScheme: colorScheme)
+                }
+                .buttonStyle(.plain)
             }
+        case .settings:
+            Button(action: {
+                HapticsManager.shared.pulse()
+                showOnboarding = true
+            }) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(primary)
+                    .appTextShadow(colorScheme: colorScheme)
+            }
+            .buttonStyle(.plain)
+        default:
+            EmptyView()
         }
-        .animation(.easeInOut(duration: 0.25), value: selection)
     }
 
-    private var backgroundLayer: some View {
-        ZStack {
-            backgroundColor
-            LinearGradient(
-                colors: [
-                    accent.color.opacity(colorScheme == .dark ? 0.34 : 0.2),
-                    accent.gradient,
-                    .clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+    private var headerTitle: String {
+        switch selectedTab {
+        case .home:
+            return "Home"
+        case .tools:
+            return "Tools"
+        case .settings:
+            return "Settings"
+        case let .tool(identifier):
+            return tools.first(where: { $0.id == identifier })?.title ?? "Tool"
+        }
+    }
+
+    private var homeTab: some View {
+        HomeDashboardView(
+            tools: tools,
+            recentTools: recentTools,
+            scrollToTopTrigger: $homeScrollTrigger,
+            accent: accent,
+            primary: primary,
+            colorScheme: colorScheme,
+            onOpenTool: { launchTool($0) },
+            onShowTools: {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    selectedTab = .tools
+                }
+            }
+        )
+    }
+
+    private var toolsTab: some View {
+        ToolsView(
+            tools: tools,
+            selectedTool: $selectedTool,
+            scrollToTopTrigger: $toolsScrollTrigger,
+            accent: accent,
+            primary: primary,
+            colorScheme: colorScheme,
+            activeTool: activeToolID,
+            onOpen: { tool in
+                launchTool(tool)
+            },
+            onClose: { identifier in
+                if activeToolID == identifier {
+                    closeActiveTool()
+                }
+            }
+        )
+    }
+
+    private func symbolCompensation(for name: String) -> CGFloat {
+        switch name {
+        case "arrow.up.right.square.fill", "xmark.square.fill":
+            return 1.1
+        default:
+            return 1.0
+        }
+    }
+
+    private func symbolIcon(name: String, size: CGFloat, weight: Font.Weight, color: Color) -> some View {
+        Image(systemName: name)
+            .font(.system(size: size, weight: weight))
+            .scaleEffect(symbolCompensation(for: name))
+            .foregroundStyle(color)
+    }
+
+    private func bottomTabButton(systemName: String, tab: TabSelection, trigger: Binding<Bool>) -> some View {
+        Button(action: {
+            HapticsManager.shared.pulse()
+            if selectedTab == tab {
+                trigger.wrappedValue.toggle()
+            } else {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    selectedTab = tab
+                }
+                DispatchQueue.main.async {
+                    trigger.wrappedValue.toggle()
+                }
+            }
+            if showToolCloseIcon {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                    showToolCloseIcon = false
+                }
+            }
+            shouldSkipCloseReset = false
+        }) {
+            symbolIcon(
+                name: systemName,
+                size: 24,
+                weight: .semibold,
+                color: selectedTab == tab ? accent.color : primary.opacity(0.5)
             )
-        }
-        .ignoresSafeArea()
-    }
-
-    private func openTool(_ tool: ToolItem) {
-        updateRecents(with: tool.id)
-        if navigationPath.last != tool.id {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
-                navigationPath = [tool.id]
-            }
+            .animation(.easeInOut(duration: 0.25), value: selectedTab)
         }
     }
 
-    private func toggleFavorite(_ identifier: ToolItem.Identifier) {
-        if favoriteToolIDs.contains(identifier) {
-            favoriteToolIDs.remove(identifier)
-            if favoriteToolIDs.isEmpty {
-                favoriteToolIDs = [.audioExtractor]
-            }
+    private func toolIconButton(for identifier: ToolItem.Identifier) -> some View {
+        let isSelected: Bool
+        if case let .tool(current) = selectedTab, current == identifier {
+            isSelected = true
         } else {
-            favoriteToolIDs.insert(identifier)
+            isSelected = false
+        }
+        return ZStack {
+            Button {
+                HapticsManager.shared.pulse()
+                if isSelected {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
+                        showToolCloseIcon = true
+                    }
+                    shouldSkipCloseReset = true
+                } else {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                        selectedTab = .tool(identifier)
+                    }
+                    if showToolCloseIcon {
+                        showToolCloseIcon = false
+                    }
+                    shouldSkipCloseReset = false
+                }
+            } label: {
+                symbolIcon(
+                    name: "arrow.up.right.square.fill",
+                    size: 24,
+                    weight: .semibold,
+                    color: isSelected ? accent.color : primary.opacity(0.5)
+                )
+            }
+            .buttonStyle(.plain)
+            .scaleEffect(showToolCloseIcon && isSelected ? 0.01 : 1)
+            .opacity(showToolCloseIcon && isSelected ? 0 : 1)
+            .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
+            .animation(.easeInOut(duration: 0.25), value: selectedTab)
+
+            Button {
+                HapticsManager.shared.pulse()
+                closeActiveTool()
+            } label: {
+                symbolIcon(
+                    name: "xmark.square.fill",
+                    size: 24,
+                    weight: .semibold,
+                    color: accent.color
+                )
+            }
+            .buttonStyle(.plain)
+            .scaleEffect(showToolCloseIcon && isSelected ? 1 : 0.01)
+            .opacity(showToolCloseIcon && isSelected ? 1 : 0)
+            .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
+        }
+    }
+
+    private func launchTool(_ tool: ToolItem) {
+        selectedTool = tool.id
+        updateRecents(with: tool.id)
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
+            activeToolID = tool.id
+            selectedTab = .tool(tool.id)
+        }
+        showToolCloseIcon = false
+        shouldSkipCloseReset = false
+    }
+
+    private func closeActiveTool() {
+        guard let identifier = activeToolID else { return }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            showToolCloseIcon = false
+        }
+        shouldSkipCloseReset = false
+        if case let .tool(current) = selectedTab, current == identifier {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                selectedTab = .tools
+            }
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
+            activeToolID = nil
         }
     }
 
@@ -282,40 +390,13 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func toolDestination(for identifier: ToolItem.Identifier) -> some View {
-        if let tool = tools.first(where: { $0.id == identifier }) {
-            tool.destination {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    navigationPath.removeAll(where: { $0 == identifier })
-                }
-            }
-            .navigationTitle(tool.title)
-            .navigationBarTitleDisplayMode(.inline)
-        } else {
-            EmptyView()
+    private func toolView(for tool: ToolItem) -> some View {
+        switch tool.id {
+        case .audioExtractor:
+            AudioExtractorView(onClose: { closeActiveTool() })
         }
-    }
-
-    private func loadFavoriteIDs() -> Set<ToolItem.Identifier> {
-        let components = favoriteToolsRaw.split(separator: ",").map(String.init)
-        let identifiers = components.compactMap { ToolItem.Identifier(rawValue: $0) }
-        if identifiers.isEmpty {
-            return [.audioExtractor]
-        }
-        return Set(identifiers)
-    }
-
-    private func storeFavoriteIDs(_ newValue: Set<ToolItem.Identifier>) {
-        let normalized = newValue.isEmpty ? Set([ToolItem.Identifier.audioExtractor]) : newValue
-        let raw = normalized
-            .map { $0.rawValue }
-            .sorted()
-            .joined(separator: ",")
-        favoriteToolsRaw = raw
     }
 }
 
-#Preview {
-    ContentView()
-        .preferredColorScheme(.dark)
-}
+#Preview { ContentView() }
+
