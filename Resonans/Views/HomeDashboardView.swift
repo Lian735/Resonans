@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeDashboardView: View {
-    let tools: [ToolItem]
+    let favoriteTools: [ToolItem]
     let recentTools: [ToolItem]
     @Binding var scrollToTopTrigger: Bool
 
@@ -12,52 +12,40 @@ struct HomeDashboardView: View {
     let onOpenTool: (ToolItem) -> Void
     let onShowTools: () -> Void
 
-    @State private var showTopBorder = false
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 28) {
+                LazyVStack(spacing: 28) {
                     Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .padding(.bottom, -24)
-                        .id("homeTop")
+                        .frame(height: 1)
+                        .id("home-top")
 
                     heroCard
-                        .background(
-                            GeometryReader { geo -> Color in
-                                DispatchQueue.main.async {
-                                    let shouldShow = geo.frame(in: .named("homeScroll")).minY < 0
-                                    if showTopBorder != shouldShow {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            showTopBorder = shouldShow
-                                        }
-                                    }
-                                }
-                                return Color.clear
-                            }
-                        )
-                        .padding(.horizontal, AppStyle.horizontalPadding)
+                        .transition(.opacity.combined(with: .scale))
+
+                    if !favoriteTools.isEmpty {
+                        favoritesSection
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
 
                     recentsSection
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
 
                     Spacer(minLength: 60)
                 }
-            }
-            .coordinateSpace(name: "homeScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.45))
-                    .frame(height: 1)
-                    .opacity(showTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
+                .padding(.horizontal, AppStyle.horizontalPadding)
+                .padding(.vertical, 32)
             }
             .onChange(of: scrollToTopTrigger) { _, _ in
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    proxy.scrollTo("homeTop", anchor: .top)
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+                    proxy.scrollTo("home-top", anchor: .top)
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.35), value: favoriteTools.count)
+        .animation(.easeInOut(duration: 0.35), value: recentTools.count)
     }
 
     private var heroCard: some View {
@@ -68,7 +56,7 @@ struct HomeDashboardView: View {
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(primary.opacity(0.7))
                     Text("Craft something brilliant today")
-                        .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        .font(.system(size: 28, weight: .heavy, design: .rounded))
                         .foregroundStyle(primary)
                 }
 
@@ -88,21 +76,15 @@ struct HomeDashboardView: View {
                 HapticsManager.shared.selection()
                 onShowTools()
             } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "wrench.and.screwdriver")
-                        .font(.system(size: 18, weight: .semibold))
-                    Text("Browse tools")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                }
-                .foregroundStyle(accent.color)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(accent.color.opacity(colorScheme == .dark ? 0.28 : 0.18))
-                .clipShape(RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                        .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                )
+                Label("Browse tools", systemImage: "wrench.and.screwdriver")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                            .fill(accent.color.opacity(colorScheme == .dark ? 0.25 : 0.15))
+                    )
             }
             .buttonStyle(.plain)
         }
@@ -110,110 +92,90 @@ struct HomeDashboardView: View {
         .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
     }
 
-    private var recentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recently used")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(primary)
-                Spacer()
+    private var favoritesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionHeader(title: "Pinned favourites", icon: "heart.fill")
+
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(favoriteTools) { tool in
+                    Button {
+                        onOpenTool(tool)
+                    } label: {
+                        ToolTile(
+                            tool: tool,
+                            accent: accent.color,
+                            primary: primary,
+                            colorScheme: colorScheme,
+                            isHighlighted: false,
+                            isFavorite: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(.horizontal, AppStyle.horizontalPadding)
+        }
+    }
+
+    private var recentsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionHeader(title: "Recently opened", icon: "clock.fill")
 
             if recentTools.isEmpty {
-                Text("Jump back into tools and your history will live here.")
+                Text("Open a tool and it’ll show up here for quick access.")
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(primary.opacity(0.65))
-                    .padding(.horizontal, AppStyle.horizontalPadding)
-                    .padding(.vertical, 28)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                                    .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                            )
-                    )
-                    .appShadow(colorScheme: colorScheme, level: .medium)
-                    .padding(.horizontal, AppStyle.horizontalPadding)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 32)
+                    .padding(.horizontal, 18)
+                    .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
             } else {
                 VStack(spacing: 12) {
                     ForEach(recentTools) { tool in
                         Button {
-                            HapticsManager.shared.selection()
                             onOpenTool(tool)
                         } label: {
-                            ToolHistoryRow(tool: tool, primary: primary, colorScheme: colorScheme)
+                            ToolTile(
+                                tool: tool,
+                                accent: accent.color,
+                                primary: primary,
+                                colorScheme: colorScheme,
+                                isHighlighted: false,
+                                isFavorite: favoriteTools.contains(where: { $0.id == tool.id })
+                            )
+                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, AppStyle.horizontalPadding)
             }
         }
     }
-}
 
-private struct ToolHistoryRow: View {
-    let tool: ToolItem
-    let primary: Color
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                .fill(LinearGradient(colors: tool.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+    private func sectionHeader(title: String, icon: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(accent.color)
+                .frame(width: 36, height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(accent.color.opacity(colorScheme == .dark ? 0.26 : 0.16))
                 )
-                .overlay(
-                    Image(systemName: tool.iconName)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                )
-                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(tool.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Text(tool.subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.65))
-                    .lineLimit(2)
-            }
-
+            Text(title)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(primary)
             Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(primary.opacity(0.4))
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(AppStyle.cardFillOpacity))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                )
-        )
-        .appShadow(colorScheme: colorScheme, level: .small)
     }
 }
 
 #Preview {
     struct PreviewWrapper: View {
         @State private var trigger = false
-        let tools = ToolItem.all
         var body: some View {
             HomeDashboardView(
-                tools: tools,
-                recentTools: tools,
+                favoriteTools: ToolItem.all,
+                recentTools: ToolItem.all,
                 scrollToTopTrigger: $trigger,
                 accent: .purple,
                 primary: .black,
