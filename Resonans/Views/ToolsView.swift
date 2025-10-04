@@ -2,189 +2,71 @@ import SwiftUI
 
 struct ToolsView: View {
     let tools: [ToolItem]
-    @Binding var selectedTool: ToolItem.Identifier
-    @Binding var scrollToTopTrigger: Bool
-
+    let favorites: Set<ToolItem.Identifier>
     let accent: AccentColorOption
     let primary: Color
     let colorScheme: ColorScheme
-    let activeTool: ToolItem.Identifier?
     let onOpen: (ToolItem) -> Void
-    let onClose: (ToolItem.Identifier) -> Void
-
-    @State private var showTopBorder = false
+    let onToggleFavorite: (ToolItem.Identifier) -> Void
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical) {
-                VStack(spacing: 18) {
-                    Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .id("toolsTop")
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Creative toolkit")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
 
+                Text("Choose a tool to get started. Long-press a card to pin or unpin it from your favourites.")
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.7))
+
+                LazyVStack(spacing: 18) {
                     ForEach(tools) { tool in
-                        ToolListRow(
+                        ToolCard(
                             tool: tool,
+                            layout: .large,
                             primary: primary,
                             colorScheme: colorScheme,
                             accent: accent.color,
-                            isSelected: tool.id == selectedTool,
-                            isOpen: activeTool == tool.id,
-                            onTap: {
-                                if selectedTool != tool.id {
-                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                                        selectedTool = tool.id
-                                    }
+                            isFavorite: favorites.contains(tool.id),
+                            caption: "Open tool"
+                        ) {
+                            onOpen(tool)
+                        }
+                        .contextMenu {
+                            Button {
+                                HapticsManager.shared.selection()
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                    onToggleFavorite(tool.id)
                                 }
-                                onOpen(tool)
-                            },
-                            onToggleOpenState: {
-                                if activeTool == tool.id {
-                                    onClose(tool.id)
-                                } else {
-                                    if selectedTool != tool.id {
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                                            selectedTool = tool.id
-                                        }
-                                    }
-                                    onOpen(tool)
-                                }
+                            } label: {
+                                Label(
+                                    favorites.contains(tool.id) ? "Remove from favourites" : "Add to favourites",
+                                    systemImage: favorites.contains(tool.id) ? "heart.slash" : "heart"
+                                )
                             }
-                        )
-                        .background(
-                            GeometryReader { geo -> Color in
-                                DispatchQueue.main.async {
-                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
-                                    if showTopBorder != shouldShow {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            showTopBorder = shouldShow
-                                        }
-                                    }
-                                }
-                                return Color.clear
-                            }
-                        )
+                        }
                     }
-
-                    Spacer(minLength: 80)
-                }
-                .padding(.horizontal, AppStyle.horizontalPadding)
-            }
-            .coordinateSpace(name: "toolsScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.45))
-                    .frame(height: 1)
-                    .opacity(showTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
-            }
-            .onChange(of: scrollToTopTrigger) { _, _ in
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    proxy.scrollTo("toolsTop", anchor: .top)
                 }
             }
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.vertical, 24)
         }
-        .background(
-            .clear
-        )
-    }
-}
-
-private struct ToolListRow: View {
-    let tool: ToolItem
-    let primary: Color
-    let colorScheme: ColorScheme
-    let accent: Color
-    let isSelected: Bool
-    let isOpen: Bool
-    let onTap: () -> Void
-    let onToggleOpenState: () -> Void
-
-    var body: some View {
-        HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                .fill(LinearGradient(colors: tool.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
-                .overlay(
-                    Image(systemName: tool.iconName)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(Color.white)
-                )
-                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(tool.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-
-                Text(tool.subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.65))
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            Button(action: {
-                HapticsManager.shared.pulse()
-                onToggleOpenState()
-            }) {
-                Image(systemName: isOpen ? "xmark" : "chevron.right")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(accent)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(AppStyle.cardFillOpacity))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .stroke(
-                    accent.opacity(isOpen ? 0.65 : (isSelected ? 0.45 : 0)),
-                    lineWidth: isOpen ? 3 : (isSelected ? 2 : 0)
-                )
-        )
-        .appShadow(
-            colorScheme: colorScheme,
-            level: .medium,
-            opacity: (isOpen || isSelected) ? 0.6 : 0.4
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            HapticsManager.shared.selection()
-            onTap()
-        }
+        .scrollIndicators(.hidden)
     }
 }
 
 #Preview {
     struct PreviewWrapper: View {
-        @State private var selected = ToolItem.Identifier.audioExtractor
-        @State private var trigger = false
-
         var body: some View {
             ToolsView(
                 tools: ToolItem.all,
-                selectedTool: $selected,
-                scrollToTopTrigger: $trigger,
+                favorites: [.audioExtractor],
                 accent: .purple,
                 primary: .black,
                 colorScheme: .light,
-                activeTool: nil,
                 onOpen: { _ in },
-                onClose: { _ in }
+                onToggleFavorite: { _ in }
             )
         }
     }
