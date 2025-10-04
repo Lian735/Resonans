@@ -101,13 +101,34 @@ private struct ToolListRow: View {
     let onToggleOpenState: () -> Void
 
     var body: some View {
-        ToolRowCard(
-            tool: tool,
-            primary: primary,
-            colorScheme: colorScheme,
-            subtitleSpacing: 6,
-            shadowOpacity: (isOpen || isSelected) ? 0.6 : 0.4
-        ) {
+        HStack(spacing: 16) {
+            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                .fill(LinearGradient(colors: tool.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 52, height: 52)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+                .overlay(
+                    Image(systemName: tool.iconName)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(Color.white)
+                )
+                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(tool.title)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+
+                Text(tool.subtitle)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.65))
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
             Button(action: {
                 HapticsManager.shared.pulse()
                 onToggleOpenState()
@@ -118,12 +139,27 @@ private struct ToolListRow: View {
             }
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(AppStyle.cardFillOpacity))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                 .stroke(
                     accent.opacity(isOpen ? 0.65 : (isSelected ? 0.45 : 0)),
                     lineWidth: isOpen ? 3 : (isSelected ? 2 : 0)
                 )
+        )
+        .appShadow(
+            colorScheme: colorScheme,
+            level: .medium,
+            opacity: (isOpen || isSelected) ? 0.6 : 0.4
         )
         .contentShape(Rectangle())
         .onTapGesture {
