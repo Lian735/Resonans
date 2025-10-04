@@ -117,7 +117,6 @@ private struct AppCardStyleModifier: ViewModifier {
     let fillOpacity: Double
     let strokeOpacity: Double
     let shadowLevel: AppStyle.ShadowLevel
-    let shadowOpacity: Double?
 
     func body(content: Content) -> some View {
         content
@@ -130,13 +129,7 @@ private struct AppCardStyleModifier: ViewModifier {
                     )
             )
             .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .modifier(
-                AppShadowModifier(
-                    colorScheme: colorScheme,
-                    level: shadowLevel,
-                    overrideOpacity: shadowOpacity
-                )
-            )
+            .modifier(AppShadowModifier(colorScheme: colorScheme, level: shadowLevel, overrideOpacity: nil))
     }
 }
 
@@ -155,8 +148,7 @@ extension View {
         cornerRadius: CGFloat = AppStyle.cornerRadius,
         fillOpacity: Double = AppStyle.cardFillOpacity,
         strokeOpacity: Double = AppStyle.strokeOpacity,
-        shadowLevel: AppStyle.ShadowLevel = .medium,
-        shadowOpacity: Double? = nil
+        shadowLevel: AppStyle.ShadowLevel = .medium
     ) -> some View {
         modifier(
             AppCardStyleModifier(
@@ -165,8 +157,7 @@ extension View {
                 cornerRadius: cornerRadius,
                 fillOpacity: fillOpacity,
                 strokeOpacity: strokeOpacity,
-                shadowLevel: shadowLevel,
-                shadowOpacity: shadowOpacity
+                shadowLevel: shadowLevel
             )
         )
     }
