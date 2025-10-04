@@ -1,130 +1,192 @@
 import SwiftUI
 
 struct ToolsView: View {
-    let theme: AppTheme
     let tools: [ToolItem]
-    @Binding var favorites: Set<ToolItem.Identifier>
-    let onSelectTool: (ToolItem) -> Void
+    @Binding var selectedTool: ToolItem.Identifier
+    @Binding var scrollToTopTrigger: Bool
 
-    private var favoriteTools: [ToolItem] {
-        tools.filter { favorites.contains($0.id) }
-    }
+    let accent: AccentColorOption
+    let primary: Color
+    let colorScheme: ColorScheme
+    let activeTool: ToolItem.Identifier?
+    let onOpen: (ToolItem) -> Void
+    let onClose: (ToolItem.Identifier) -> Void
+
+    @State private var showTopBorder = false
 
     var body: some View {
-        List {
-            if !favoriteTools.isEmpty {
-                Section("Favourites") {
-                    ForEach(favoriteTools) { tool in
-                        ToolRow(theme: theme, tool: tool, isFavourite: true) {
-                            onSelectTool(tool)
-                        } onToggleFavourite: {
-                            toggleFavourite(tool.id)
-                        }
-                        .listRowBackground(theme.surface)
-                    }
-                }
-                .textCase(nil)
-            }
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) {
+                VStack(spacing: 18) {
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .id("toolsTop")
 
-            Section("All tools") {
-                ForEach(tools) { tool in
-                    ToolRow(
-                        theme: theme,
-                        tool: tool,
-                        isFavourite: favorites.contains(tool.id)
-                    ) {
-                        onSelectTool(tool)
-                    } onToggleFavourite: {
-                        toggleFavourite(tool.id)
+                    ForEach(tools) { tool in
+                        ToolListRow(
+                            tool: tool,
+                            primary: primary,
+                            colorScheme: colorScheme,
+                            accent: accent.color,
+                            isSelected: tool.id == selectedTool,
+                            isOpen: activeTool == tool.id,
+                            onTap: {
+                                if selectedTool != tool.id {
+                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                                        selectedTool = tool.id
+                                    }
+                                }
+                                onOpen(tool)
+                            },
+                            onToggleOpenState: {
+                                if activeTool == tool.id {
+                                    onClose(tool.id)
+                                } else {
+                                    if selectedTool != tool.id {
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                                            selectedTool = tool.id
+                                        }
+                                    }
+                                    onOpen(tool)
+                                }
+                            }
+                        )
+                        .background(
+                            GeometryReader { geo -> Color in
+                                DispatchQueue.main.async {
+                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
+                                    if showTopBorder != shouldShow {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            showTopBorder = shouldShow
+                                        }
+                                    }
+                                }
+                                return Color.clear
+                            }
+                        )
                     }
-                    .listRowBackground(theme.surface)
+
+                    Spacer(minLength: 80)
+                }
+                .padding(.horizontal, AppStyle.horizontalPadding)
+            }
+            .coordinateSpace(name: "toolsScroll")
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.45))
+                    .frame(height: 1)
+                    .opacity(showTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
+            }
+            .onChange(of: scrollToTopTrigger) { _, _ in
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    proxy.scrollTo("toolsTop", anchor: .top)
                 }
             }
-            .textCase(nil)
         }
-        .listStyle(.insetGrouped)
-        .listRowSeparator(.hidden)
-        .environment(\.defaultMinListRowHeight, 68)
-        .scrollContentBackground(.hidden)
-        .background(theme.background)
-    }
-
-    private func toggleFavourite(_ identifier: ToolItem.Identifier) {
-        if favorites.contains(identifier) {
-            favorites.remove(identifier)
-        } else {
-            favorites.insert(identifier)
-        }
-        HapticsManager.shared.selection()
+        .background(
+            .clear
+        )
     }
 }
 
-private struct ToolRow: View {
-    let theme: AppTheme
+private struct ToolListRow: View {
     let tool: ToolItem
-    let isFavourite: Bool
-    let onSelect: () -> Void
-    let onToggleFavourite: () -> Void
+    let primary: Color
+    let colorScheme: ColorScheme
+    let accent: Color
+    let isSelected: Bool
+    let isOpen: Bool
+    let onTap: () -> Void
+    let onToggleOpenState: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: tool.gradientColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                .fill(LinearGradient(colors: tool.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 52, height: 52)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
                 )
-                .frame(width: 50, height: 50)
                 .overlay(
                     Image(systemName: tool.iconName)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(Color.white)
                 )
+                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(tool.title)
-                    .font(.headline)
-                    .foregroundStyle(theme.foreground)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+
                 Text(tool.subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(theme.secondary)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.65))
                     .lineLimit(2)
             }
 
             Spacer()
 
-            Button(action: onToggleFavourite) {
-                Image(systemName: isFavourite ? "heart.fill" : "heart")
-                    .foregroundStyle(isFavourite ? theme.accentColor : theme.tertiary)
+            Button(action: {
+                HapticsManager.shared.pulse()
+                onToggleOpenState()
+            }) {
+                Image(systemName: isOpen ? "xmark" : "chevron.right")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(accent)
             }
             .buttonStyle(.plain)
-
-            Image(systemName: "arrow.up.right.square")
-                .foregroundStyle(theme.accentColor)
         }
-        .padding(.vertical, 8)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(AppStyle.cardFillOpacity))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .stroke(
+                    accent.opacity(isOpen ? 0.65 : (isSelected ? 0.45 : 0)),
+                    lineWidth: isOpen ? 3 : (isSelected ? 2 : 0)
+                )
+        )
+        .appShadow(
+            colorScheme: colorScheme,
+            level: .medium,
+            opacity: (isOpen || isSelected) ? 0.6 : 0.4
+        )
         .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
+        .onTapGesture {
+            HapticsManager.shared.selection()
+            onTap()
+        }
     }
 }
 
 #Preview {
     struct PreviewWrapper: View {
-        @State private var favourites: Set<ToolItem.Identifier> = [.audioExtractor]
+        @State private var selected = ToolItem.Identifier.audioExtractor
+        @State private var trigger = false
 
         var body: some View {
-            NavigationStack {
-                ToolsView(
-                    theme: AppTheme(accent: .purple, colorScheme: .light),
-                    tools: ToolItem.all,
-                    favorites: $favourites,
-                    onSelectTool: { _ in }
-                )
-            }
+            ToolsView(
+                tools: ToolItem.all,
+                selectedTool: $selected,
+                scrollToTopTrigger: $trigger,
+                accent: .purple,
+                primary: .black,
+                colorScheme: .light,
+                activeTool: nil,
+                onOpen: { _ in },
+                onClose: { _ in }
+            )
         }
     }
-
     return PreviewWrapper()
 }

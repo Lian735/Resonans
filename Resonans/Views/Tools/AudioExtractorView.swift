@@ -17,23 +17,30 @@ struct AudioExtractorView: View {
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-    private var theme: AppTheme { AppTheme(accent: accent, colorScheme: colorScheme) }
+    private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 28) {
+                Color.clear
+                    .frame(height: AppStyle.innerPadding)
+                    .padding(.bottom, -24)
+
                 headerSection
+
                 sourceOptionsSection
-                recentsSection
+
+                recentSection
+
+                Spacer(minLength: 60)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 28)
+            .padding(.horizontal, AppStyle.horizontalPadding)
         }
-        .background(theme.background.ignoresSafeArea())
+        .background(.clear)
         .sheet(isPresented: $showPhotoPicker) {
             VideoPicker { url in
                 videoURL = url
@@ -66,149 +73,115 @@ struct AudioExtractorView: View {
                 recents = items
             }
         }
-        .onDisappear(perform: onClose)
     }
 
     private var headerSection: some View {
-        SurfaceCard(theme: theme) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Extractor")
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(theme.foreground)
-                        Text("Pull crisp audio from any video clip")
-                            .font(.callout)
-                            .foregroundStyle(theme.secondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "waveform")
-                        .font(.title.weight(.bold))
-                        .foregroundStyle(theme.accentColor)
-                }
-
-                Text("Import a clip from Files or your photo library and we'll extract a clean audio track that's ready to share or archive.")
-                    .font(.callout)
-                    .foregroundStyle(theme.tertiary)
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Extractor")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.7))
+                Text("Pull crisp audio from your videos")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
             }
+
+            Spacer()
+
+            Image(systemName: "waveform")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(accent.color)
         }
     }
 
     private var sourceOptionsSection: some View {
-        SurfaceCard(theme: theme) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Choose a source")
-                    .font(.headline)
-                    .foregroundStyle(theme.foreground)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose a source")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
 
-                let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
-                LazyVGrid(columns: columns, spacing: 16) {
-                    sourceOptionCard(
-                        title: "Import from Files",
-                        subtitle: "Browse iCloud Drive and other providers",
-                        systemImage: "doc"
-                    ) {
-                        showFilePicker = true
-                    }
+            HStack(spacing: 16) {
+                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
+                    showFilePicker = true
+                }
 
-                    sourceOptionCard(
-                        title: "Pick from Library",
-                        subtitle: "Choose videos from your camera roll",
-                        systemImage: "photo.on.rectangle"
-                    ) {
-                        showPhotoPicker = true
-                    }
+                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
+                    showPhotoPicker = true
                 }
             }
         }
     }
 
-    private func sourceOptionCard(title: String, subtitle: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button {
-            HapticsManager.shared.selection()
+            HapticsManager.shared.pulse()
             action()
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(theme.accentColor)
-                    .padding(12)
-                    .background(theme.buttonBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(theme.foreground)
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(theme.secondary)
-                }
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(primary)
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+                    .multilineTextAlignment(.center)
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(theme.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(theme.border, lineWidth: 1)
-                    )
-            )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
         }
         .buttonStyle(.plain)
     }
 
-    private var recentsSection: some View {
-        SurfaceCard(theme: theme) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Recent conversions")
-                            .font(.headline)
-                            .foregroundStyle(theme.foreground)
-                        Text("Access exported audio files")
-                            .font(.footnote)
-                            .foregroundStyle(theme.secondary)
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Recent conversions")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(primary)
+                .padding(.top, 16)
+                .padding(.horizontal, AppStyle.innerPadding)
+
+            VStack(spacing: 12) {
+                if recents.isEmpty {
+                    Text("No exports yet")
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .foregroundStyle(primary.opacity(0.7))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 40)
+                } else {
+                    ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
+                        RecentRow(item: item, onSave: handleRecentExport)
+                            .padding(.horizontal, 12)
                     }
 
-                    Spacer()
-
-                    if !recents.isEmpty {
-                        Button(showAllRecents ? "Show fewer" : "Show all") {
-                            HapticsManager.shared.selection()
-                            withAnimation(.easeInOut(duration: 0.2)) {
+                    if recents.count > 3 {
+                        Button {
+                            HapticsManager.shared.pulse()
+                            withAnimation(.easeInOut(duration: 0.25)) {
                                 showAllRecents.toggle()
                             }
+                        } label: {
+                            Text(showAllRecents ? "Show less" : "Show more")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(primary.opacity(0.75))
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(theme.accentColor)
-                    }
-                }
-
-                if recents.isEmpty {
-                    Text("Your conversions will appear here once you export audio.")
-                        .font(.callout)
-                        .foregroundStyle(theme.tertiary)
-                        .padding(.vertical, 8)
-                } else {
-                    VStack(spacing: 12) {
-                        ForEach(displayedRecents) { item in
-                            RecentRow(item: item, theme: theme, onSave: handleRecentExport)
-                        }
+                        .padding(.top, 6)
                     }
                 }
             }
+            .padding(.top, 12)
+            .padding(.bottom, 18)
         }
-    }
-
-    private var displayedRecents: [RecentItem] {
-        if showAllRecents {
-            return recents
-        }
-        return Array(recents.prefix(3))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                )
+        )
+        .appShadow(colorScheme: colorScheme, level: .medium)
     }
 
     private func reloadRecents() {
@@ -228,5 +201,4 @@ struct AudioExtractorView: View {
 
 #Preview {
     AudioExtractorView()
-        .preferredColorScheme(.light)
 }
