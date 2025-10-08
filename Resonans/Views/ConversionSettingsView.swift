@@ -41,76 +41,10 @@ struct ConversionSettingsView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 24) {
-                // Title and Done button at the top (like ConversionSuccessSheet)
-                HStack {
-                    Text("Extract audio")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(primary)
-                    Spacer()
-                    Button(action: {
-                        HapticsManager.shared.selection()
-                        dismiss()
-                    }) {
-                        Text("Done")
-                            .font(.system(size: 17, weight: .semibold, design: .rounded))
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 20)
-                            .background(primary.opacity(0.07))
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(primary.opacity(0.15), lineWidth: 1)
-                            )
-                            .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.3)
-                    }
-                }
-                .padding(.top, 18)
-                .padding(.bottom, 4)
-
-                previewSection
-
-                Spacer(minLength: 20)
-
-                settingsSection
-            }
-            .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.bottom, 160)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(LinearGradient(
-            colors: [accent.gradient, colorScheme == .dark ? .black : .white],
-            startPoint: .topLeading,
-            endPoint: .bottom
-        )
-            .ignoresSafeArea()
-        )
-        .safeAreaInset(edge: .bottom) {
-            VStack(alignment: .leading, spacing: 16) {
-                if isProcessing {
-                    progressIndicator
-                }
-                actionButtons
-            }
-            .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.top, 12)
-            .padding(.bottom, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.clear,                  // oben transparent – direkt hinter den Buttons
-                        colorScheme == .dark ? .black : .white.opacity(0.8),     // unten dunkler – Screenrand
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea(edges: .bottom)
-            )
-        }
+        mainScrollView
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(backgroundGradient)
+            .safeAreaInset(edge: .bottom) { footer }
         .sheet(isPresented: $showSuccessSheet) {
             if let exportURL = exportURL {
                 ConversionSuccessSheet(
@@ -141,132 +75,188 @@ struct ConversionSettingsView: View {
         .interactiveDismissDisabled(false)
     }
 
+    private var mainScrollView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                headerRow
+                previewSection
+                Spacer(minLength: 20)
+                settingsSection
+            }
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.bottom, 160)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var backgroundGradient: some View {
+        LinearGradient(
+            colors: [accent.gradient, colorScheme == .dark ? .black : .white],
+            startPoint: .topLeading,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+
+    private var headerRow: some View {
+        HStack {
+            Text("Extract audio")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundStyle(primary)
+
+            Spacer()
+
+            Button(action: {
+                HapticsManager.shared.selection()
+                dismiss()
+            }) {
+                Text("Done")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                    .background(primary.opacity(0.07))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(primary.opacity(0.15), lineWidth: 1)
+                    )
+                    .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.3)
+            }
+        }
+        .padding(.top, 18)
+        .padding(.bottom, 4)
+    }
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if isProcessing {
+                progressIndicator
+            }
+            actionButtons
+        }
+        .padding(.horizontal, AppStyle.horizontalPadding)
+        .padding(.top, 12)
+        .padding(.bottom, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(footerBackground)
+    }
+
+    private var footerBackground: some View {
+        LinearGradient(
+            colors: [
+                Color.clear,
+                colorScheme == .dark ? .black : .white.opacity(0.8)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea(edges: .bottom)
+    }
+
     // MARK: - Settings Section
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            // File Size
-            infoPanel {
-                Text("File Size")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                HStack(spacing: 16) {
-                    Text("Original: \(fileSizeString(for: videoURL))")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
-                    Text("Estimated: \(estimatedExportSizeString())")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
-                }
-            }
-
-            // Export Format
-            infoPanel {
-                Text("Format")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                Text("Original: \(originalFormatLabel)")
-                    .font(.system(size: 14))
-                    .foregroundStyle(primary.opacity(0.8))
-                HStack {
-                    Text("When Exported:")
-                        .font(.system(size: 14))
-                        .foregroundStyle(primary.opacity(0.8))
-                    Picker("", selection: $selectedFormat) {
-                        Text("mp3").tag(AudioFormat.mp3)
-                        Text("wav").tag(AudioFormat.wav)
-                        Text("m4a").tag(AudioFormat.m4a)
-                    }
-                    .pickerStyle(.menu)
-                }
-            }
-
-            // More… button
-            if !showAdvanced {
-                Button(action: {
-                    withAnimation(.spring()) { showAdvanced.toggle() }
-                }) {
-                    if showAdvanced {
-                        Text("Hide")
-                            .transition(.opacity)
-                    } else {
-                        Text("More")
-                            .transition(.opacity)
-                    }
-                }
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(accent.color)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .buttonStyle(.plain)
-                .animation(.spring(), value: showAdvanced)
-            }
-
-            // Advanced settings
-            Group {
-                if showAdvanced {
-                    VStack(spacing: 18) {
-                        // Bitrate setting
-                        infoPanel {
-                            HStack {
-                                Text("Bitrate")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(primary)
-                                Spacer()
-                                Text(bitrateLabel)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(primary.opacity(0.8))
-                                Button(action: {
-                                    withAnimation { showBitrateInfo.toggle() }
-                                }) {
-                                    Image(systemName: "info.circle")
-                                        .opacity(0.5)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            if showBitrateInfo {
-                                Text("Bitrate controls audio quality and file size.")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(primary.opacity(0.7))
-                                    .transition(.opacity)
-                            }
-                            if selectedFormat == .wav {
-                                Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(primary.opacity(0.7))
-                                    .transition(.opacity)
-                            } else {
-                                Slider(value: $bitrate, in: 64...320, step: 1)
-                                    .tint(accent.color)
-                            }
-                        }
-                        // Add more advanced settings here as needed
-
-                        Button(action: {
-                            withAnimation(.spring()) { showAdvanced.toggle() }
-                        }) {
-                            if showAdvanced {
-                                Text("Hide")
-                                    .transition(.opacity)
-                            } else {
-                                Text("More")
-                                    .transition(.opacity)
-                            }
-                        }
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(accent.color)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .buttonStyle(.plain)
-                        .animation(.spring(), value: showAdvanced)
-                    }
+            fileSizePanel
+            formatPanel
+            if showAdvanced {
+                advancedSettings
                     .transition(.scale.combined(with: .opacity))
-                }
             }
+            advancedToggleButton
         }
         .frame(maxWidth: .infinity)
     }
 
-    private func infoPanel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    private var fileSizePanel: some View {
+        settingsCard {
+            Text("File Size")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
+
+            HStack(spacing: 16) {
+                Text("Original: \(fileSizeString(for: videoURL))")
+                Text("Estimated: \(estimatedExportSizeString())")
+            }
+            .font(.system(size: 14))
+            .foregroundStyle(primary.opacity(0.8))
+        }
+    }
+
+    private var formatPanel: some View {
+        settingsCard {
+            Text("Format")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
+
+            Text("Original: \(originalFormatLabel)")
+                .font(.system(size: 14))
+                .foregroundStyle(primary.opacity(0.8))
+
+            HStack {
+                Text("When Exported:")
+                    .font(.system(size: 14))
+                    .foregroundStyle(primary.opacity(0.8))
+
+                Picker("", selection: $selectedFormat) {
+                    Text("mp3").tag(AudioFormat.mp3)
+                    Text("wav").tag(AudioFormat.wav)
+                    Text("m4a").tag(AudioFormat.m4a)
+                }
+                .pickerStyle(.menu)
+            }
+        }
+    }
+
+    private var advancedSettings: some View {
+        settingsCard {
+            HStack {
+                Text("Bitrate")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+                Spacer()
+                Text(bitrateLabel)
+                    .font(.system(size: 14))
+                    .foregroundStyle(primary.opacity(0.8))
+                Button(action: { withAnimation { showBitrateInfo.toggle() } }) {
+                    Image(systemName: "info.circle")
+                        .opacity(0.5)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if showBitrateInfo {
+                Text("Bitrate controls audio quality and file size.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(primary.opacity(0.7))
+                    .transition(.opacity)
+            }
+
+            if selectedFormat == .wav {
+                Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
+                    .font(.system(size: 13))
+                    .foregroundStyle(primary.opacity(0.7))
+                    .transition(.opacity)
+            } else {
+                Slider(value: $bitrate, in: 64...320, step: 1)
+                    .tint(accent.color)
+            }
+        }
+    }
+
+    private var advancedToggleButton: some View {
+        Button(action: toggleAdvanced) {
+            Text(showAdvanced ? "Hide" : "More")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .frame(maxWidth: .infinity)
+        }
+        .foregroundStyle(accent.color)
+        .padding(.vertical, 8)
+        .buttonStyle(.plain)
+        .animation(.spring(), value: showAdvanced)
+    }
+
+    private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             content()
         }
@@ -417,6 +407,15 @@ struct ConversionSettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func toggleAdvanced() {
+        withAnimation(.spring()) {
+            showAdvanced.toggle()
+        }
+        if !showAdvanced {
+            showBitrateInfo = false
+        }
+    }
+
     private func convert() {
         guard !isProcessing else { return }
         HapticsManager.shared.pulse()
@@ -519,136 +518,155 @@ private struct ConversionSuccessSheet: View {
 
     @State private var animateCheck = false
     @State private var showHalo = false
-    @State private var showExporter = false
     @State private var showCheckmark = false
 
     var body: some View {
-        VStack {
-            // Title and Done button at the top
-            HStack {
-                Text("Converted!")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(primaryColor)
-                Spacer()
-                Button(action: {
-                    HapticsManager.shared.selection()
-                    onDone()
-                }) {
-                    Text("Done")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 20)
-                        .background(primaryColor.opacity(0.07))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(primaryColor.opacity(0.15), lineWidth: 1)
-                        )
-                }
-            }
-            .padding(.top, 18)
-            .padding(.bottom, 4)
-            .padding(.horizontal, AppStyle.horizontalPadding)
-
+        VStack(spacing: 0) {
+            header
             Spacer()
-
-            VStack {
-                ZStack {
-                    Circle()
-                        .stroke(Color.green.opacity(0.25), lineWidth: 12)
-                        .scaleEffect(showHalo ? 1.35 : 0.65)
-                        .opacity(showHalo ? 0 : 1)
-                        .blur(radius: showHalo ? 10 : 0)
-
-                    Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle.fill")
-                        .contentTransition(.symbolEffect(.replace))
-                        .font(.system(size: 96, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.green)
-                        .scaleEffect(animateCheck ? 1 : 0.65)
-                        .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 12)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 150)
-                .onAppear {
-                    animateCheck = false
-                    showHalo = false
-                    showCheckmark = false
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) {
-                        animateCheck = true
-                    }
-                    withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
-                        showHalo = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        withAnimation(.spring(response: 0.45, dampingFraction: 9)) {
-                            showCheckmark = true
-                        }
-                    }
-                }
-
-                Text("Successfully converted.")
-                    .font(.system(size: 25, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primaryColor)
-                    .multilineTextAlignment(.center)
-            }
-
+            illustration
             Spacer()
-
-            VStack(spacing: 14) {
-                Button(action: {
-                    HapticsManager.shared.selection()
-                    showExporter = true
-                }) {
-                    HStack {
-                        Spacer()
-                        Label("Save to Files", systemImage: "tray.and.arrow.down")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundColor(colorScheme == .dark ? .black : .white )
-                        Spacer()
-                    }
-                    .padding(.vertical, 14)
-                    .background(accentColor.opacity(1))
-                    .clipShape(Capsule())
-                }
-                .disabled(false)
-                .opacity(1)
-                .sheet(isPresented: $showExporter) {
-                    ExportPicker(url: exportURL)
-                }
-
-                ShareLink(item: exportURL) {
-                    HStack {
-                        Spacer()
-                        Label("Share", systemImage: "square.and.arrow.up")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundColor(accentColor)
-                        Spacer()
-                    }
-                    .padding(.vertical, 14)
-                    .background(
-                        Capsule()
-                            .stroke(accentColor.opacity(0.35), lineWidth: 1)
-                            .fill(accentColor.opacity(0.07))
-                    )
-                }
-                .simultaneousGesture(TapGesture().onEnded {
-                    HapticsManager.shared.selection()
-                })
-            }
-            .padding(.horizontal, AppStyle.horizontalPadding)
-            .shadow(color: accentColor.opacity(0.35), radius: 14, x: 0, y: 8)
-            .padding(.bottom, 30)
+            actionButtons
         }
-        .background(LinearGradient(
+        .background(successBackground)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(false)
+    }
+
+    private var header: some View {
+        HStack {
+            Text("Converted!")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundStyle(primaryColor)
+
+            Spacer()
+
+            Button(action: {
+                HapticsManager.shared.selection()
+                onDone()
+            }) {
+                Text("Done")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                    .background(primaryColor.opacity(0.07))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(primaryColor.opacity(0.15), lineWidth: 1)
+                    )
+            }
+        }
+        .padding(.top, 18)
+        .padding(.bottom, 4)
+        .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private var illustration: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .stroke(Color.green.opacity(0.25), lineWidth: 12)
+                    .scaleEffect(showHalo ? 1.35 : 0.65)
+                    .opacity(showHalo ? 0 : 1)
+                    .blur(radius: showHalo ? 10 : 0)
+
+                Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle.fill")
+                    .contentTransition(.symbolEffect(.replace))
+                    .font(.system(size: 96, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.green)
+                    .scaleEffect(animateCheck ? 1 : 0.65)
+                    .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 12)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .onAppear(perform: startAnimation)
+
+            Text("Successfully converted.")
+                .font(.system(size: 25, weight: .semibold, design: .rounded))
+                .foregroundStyle(primaryColor)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 14) {
+            Button(action: handleSaveTapped) {
+                capsuleLabel(
+                    title: "Save to Files",
+                    systemImage: "tray.and.arrow.down",
+                    foreground: colorScheme == .dark ? .black : .white
+                )
+                .background(accentColor)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            ShareLink(item: exportURL) {
+                capsuleLabel(
+                    title: "Share",
+                    systemImage: "square.and.arrow.up",
+                    foreground: accentColor
+                )
+                .background(
+                    Capsule()
+                        .stroke(accentColor.opacity(0.35), lineWidth: 1)
+                        .fill(accentColor.opacity(0.07))
+                )
+            }
+            .simultaneousGesture(TapGesture().onEnded { HapticsManager.shared.selection() })
+        }
+        .padding(.horizontal, AppStyle.horizontalPadding)
+        .shadow(color: accentColor.opacity(0.35), radius: 14, x: 0, y: 8)
+        .padding(.bottom, 30)
+    }
+
+    private var successBackground: some View {
+        LinearGradient(
             colors: [.green.opacity(0.3), colorScheme == .dark ? .black : .white],
             startPoint: .topLeading,
             endPoint: .bottom
         )
-            .ignoresSafeArea())
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(false)
+        .ignoresSafeArea()
+    }
+
+    private func capsuleLabel(title: String, systemImage: String, foreground: Color) -> some View {
+        HStack {
+            Spacer()
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(foreground)
+            Spacer()
+        }
+        .padding(.vertical, 14)
+    }
+
+    private func startAnimation() {
+        animateCheck = false
+        showHalo = false
+        showCheckmark = false
+
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) {
+            animateCheck = true
+        }
+
+        withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
+            showHalo = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+                showCheckmark = true
+            }
+        }
+    }
+
+    private func handleSaveTapped() {
+        HapticsManager.shared.selection()
+        onSave()
     }
 }
 
