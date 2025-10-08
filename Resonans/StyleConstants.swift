@@ -66,6 +66,32 @@ enum AppStyle {
     }
 }
 
+/// A reusable SwiftUI `ViewModifier` that applies a consistent, theme-aware shadow style across the app.
+/// 
+/// This modifier:
+/// - Looks up a predefined shadow configuration based on the provided `AppStyle.ShadowLevel`.
+/// - Applies a primary drop shadow using the current `ColorScheme` (dark or light) to determine color and intensity.
+/// - Optionally overlays a subtle highlight shadow to enhance elevation and depth, depending on the configuration.
+/// - Supports overriding the default shadow opacity at call site.
+/// 
+/// Parameters:
+/// - colorScheme: The current `ColorScheme` (e.g., `.light`, `.dark`) used to select appropriate shadow colors.
+/// - level: The desired shadow intensity and geometry, defined by `AppStyle.ShadowLevel` (`.small`, `.medium`, `.large`, `.text`).
+/// - overrideOpacity: An optional value to override the default opacity from the shadow configuration.
+/// 
+/// Behavior:
+/// - Retrieves a `ShadowConfiguration` from `AppStyle.shadowConfiguration(for:)`.
+/// - Computes the effective opacity using `overrideOpacity` if provided; otherwise uses the configuration’s default.
+/// - Applies the main shadow with the configured radius and vertical offset.
+/// - Conditionally applies a highlight shadow (small, light-colored accent) when `includesHighlight` is true in the configuration.
+/// 
+/// Use cases:
+/// - Apply consistent elevation to cards, buttons, and other components using `.appShadow(colorScheme:level:opacity:)`.
+/// - Use `.text` level for subtle text shadows to improve readability on varying backgrounds.
+/// 
+/// Notes:
+/// - This modifier is intended to be used via the `View.appShadow(...)` convenience extension.
+/// - Shadow colors and highlight behavior are centralized in `AppStyle` for consistency and easy theming.
 private struct AppShadowModifier: ViewModifier {
     let colorScheme: ColorScheme
     let level: AppStyle.ShadowLevel
