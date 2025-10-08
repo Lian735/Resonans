@@ -178,74 +178,38 @@ final class VideoToAudioConverter {
             }
 
             do {
-                if FileManager.default.fileExists(atPath: outputURL.path) {
-                    try FileManager.default.removeItem(at: outputURL)
-                }
+                try removeFileIfNeeded(at: outputURL)
 
                 let asset = AVURLAsset(url: videoURL)
-                guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
-                    fail(NSError(domain: "export", code: -3))
-                    return
-                }
+                let track = try await fetchAudioTrack(from: asset, failureCode: -3)
+                let characteristics = try await audioCharacteristics(for: track)
+                let readerSettings = pcmSettings(sampleRate: characteristics.sampleRate, channels: characteristics.channels)
+                let writerSettings = aacSettings(
+                    sampleRate: characteristics.sampleRate,
+                    channels: characteristics.channels,
+                    bitrate: bitrate
+                )
 
-                let formatDescriptions = try await track.load(.formatDescriptions)
-                let cmDesc: CMFormatDescription? = formatDescriptions.first
-                let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                let sampleRate = asbd?.mSampleRate ?? 44_100
-                let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
-
-                let readerSettings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatLinearPCM,
-                    AVSampleRateKey: sampleRate,
-                    AVNumberOfChannelsKey: channels,
-                    AVLinearPCMBitDepthKey: 16,
-                    AVLinearPCMIsBigEndianKey: false,
-                    AVLinearPCMIsFloatKey: false,
-                    AVLinearPCMIsNonInterleaved: false
-                ]
-
-                let writerSettings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatMPEG4AAC,
-                    AVEncoderBitRateKey: max(bitrate, 64) * 1000,
-                    AVSampleRateKey: sampleRate,
-                    AVNumberOfChannelsKey: channels,
-                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-                ]
-
-                let reader = try AVAssetReader(asset: asset)
-                let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: readerSettings)
-                readerOutput.alwaysCopiesSampleData = false
-                readerOutput.audioTimePitchAlgorithm = .timeDomain
-                guard reader.canAdd(readerOutput) else {
-                    fail(NSError(domain: "export", code: -10))
-                    return
-                }
-                reader.add(readerOutput)
-
-                let writer = try AVAssetWriter(outputURL: outputURL, fileType: .m4a)
-                let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
-                writerInput.expectsMediaDataInRealTime = false
-                guard writer.canAdd(writerInput) else {
-                    fail(NSError(domain: "export", code: -11))
-                    return
-                }
-                writer.add(writerInput)
-
-                guard writer.startWriting() else {
-                    throw writer.error ?? NSError(domain: "export", code: -12)
-                }
-
-                let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
-                reader.startReading()
-                writer.startSession(atSourceTime: .zero)
-
-                let context = MediaExportContext(
+                let (reader, readerOutput) = try makeReader(
+                    for: asset,
+                    track: track,
+                    settings: readerSettings,
+                    failureCode: -10
+                )
+                let (writer, writerInput) = try makeWriter(
+                    outputURL: outputURL,
+                    fileType: .m4a,
+                    settings: writerSettings,
+                    failureCode: -11
+                )
+                let context = try await startSession(
+                    asset: asset,
                     reader: reader,
                     readerOutput: readerOutput,
                     writer: writer,
                     writerInput: writerInput,
                     outputURL: outputURL,
-                    durationSeconds: durationSeconds,
+                    startFailureCode: -12,
                     progress: progress,
                     completion: completion
                 )
@@ -276,66 +240,33 @@ final class VideoToAudioConverter {
             }
 
             do {
-                if FileManager.default.fileExists(atPath: outputURL.path) {
-                    try FileManager.default.removeItem(at: outputURL)
-                }
+                try removeFileIfNeeded(at: outputURL)
 
                 let asset = AVURLAsset(url: videoURL)
-                guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
-                    fail(NSError(domain: "export", code: -4))
-                    return
-                }
+                let track = try await fetchAudioTrack(from: asset, failureCode: -4)
+                let characteristics = try await audioCharacteristics(for: track)
+                let pcmSettings = pcmSettings(sampleRate: characteristics.sampleRate, channels: characteristics.channels)
 
-                let formatDescriptions = try await track.load(.formatDescriptions)
-                let cmDesc: CMFormatDescription? = formatDescriptions.first
-                let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                let sampleRate = asbd?.mSampleRate ?? 44_100
-                let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
-
-                let pcmSettings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatLinearPCM,
-                    AVSampleRateKey: sampleRate,
-                    AVNumberOfChannelsKey: channels,
-                    AVLinearPCMBitDepthKey: 16,
-                    AVLinearPCMIsBigEndianKey: false,
-                    AVLinearPCMIsFloatKey: false,
-                    AVLinearPCMIsNonInterleaved: false
-                ]
-
-                let reader = try AVAssetReader(asset: asset)
-                let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
-                readerOutput.alwaysCopiesSampleData = false
-                readerOutput.audioTimePitchAlgorithm = .timeDomain
-                guard reader.canAdd(readerOutput) else {
-                    fail(NSError(domain: "export", code: -5))
-                    return
-                }
-                reader.add(readerOutput)
-
-                let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
-                let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmSettings)
-                writerInput.expectsMediaDataInRealTime = false
-                guard writer.canAdd(writerInput) else {
-                    fail(NSError(domain: "export", code: -6))
-                    return
-                }
-                writer.add(writerInput)
-
-                guard writer.startWriting() else {
-                    throw writer.error ?? NSError(domain: "export", code: -7)
-                }
-
-                let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
-                reader.startReading()
-                writer.startSession(atSourceTime: .zero)
-
-                let context = MediaExportContext(
+                let (reader, readerOutput) = try makeReader(
+                    for: asset,
+                    track: track,
+                    settings: pcmSettings,
+                    failureCode: -5
+                )
+                let (writer, writerInput) = try makeWriter(
+                    outputURL: outputURL,
+                    fileType: .wav,
+                    settings: pcmSettings,
+                    failureCode: -6
+                )
+                let context = try await startSession(
+                    asset: asset,
                     reader: reader,
                     readerOutput: readerOutput,
                     writer: writer,
                     writerInput: writerInput,
                     outputURL: outputURL,
-                    durationSeconds: durationSeconds,
+                    startFailureCode: -7,
                     progress: progress,
                     completion: completion
                 )
@@ -350,6 +281,113 @@ final class VideoToAudioConverter {
                 fail(error)
             }
         }
+    }
+
+    private static func removeFileIfNeeded(at url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private static func fetchAudioTrack(from asset: AVURLAsset, failureCode: Int) async throws -> AVAssetTrack {
+        guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
+            throw NSError(domain: "export", code: failureCode)
+        }
+        return track
+    }
+
+    private static func audioCharacteristics(for track: AVAssetTrack) async throws -> (sampleRate: Double, channels: Int) {
+        let formatDescriptions = try await track.load(.formatDescriptions)
+        let cmDesc: CMFormatDescription? = formatDescriptions.first
+        let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+        let sampleRate = asbd?.mSampleRate ?? 44_100
+        let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
+        return (sampleRate, channels)
+    }
+
+    private static func pcmSettings(sampleRate: Double, channels: Int) -> [String: Any] {
+        [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: channels,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+    }
+
+    private static func aacSettings(sampleRate: Double, channels: Int, bitrate: Int) -> [String: Any] {
+        [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVEncoderBitRateKey: max(bitrate, 64) * 1000,
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: channels,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
+    }
+
+    private static func makeReader(
+        for asset: AVURLAsset,
+        track: AVAssetTrack,
+        settings: [String: Any],
+        failureCode: Int
+    ) throws -> (AVAssetReader, AVAssetReaderTrackOutput) {
+        let reader = try AVAssetReader(asset: asset)
+        let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: settings)
+        readerOutput.alwaysCopiesSampleData = false
+        readerOutput.audioTimePitchAlgorithm = .timeDomain
+        guard reader.canAdd(readerOutput) else {
+            throw NSError(domain: "export", code: failureCode)
+        }
+        reader.add(readerOutput)
+        return (reader, readerOutput)
+    }
+
+    private static func makeWriter(
+        outputURL: URL,
+        fileType: AVFileType,
+        settings: [String: Any],
+        failureCode: Int
+    ) throws -> (AVAssetWriter, AVAssetWriterInput) {
+        let writer = try AVAssetWriter(outputURL: outputURL, fileType: fileType)
+        let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
+        writerInput.expectsMediaDataInRealTime = false
+        guard writer.canAdd(writerInput) else {
+            throw NSError(domain: "export", code: failureCode)
+        }
+        writer.add(writerInput)
+        return (writer, writerInput)
+    }
+
+    private static func startSession(
+        asset: AVURLAsset,
+        reader: AVAssetReader,
+        readerOutput: AVAssetReaderTrackOutput,
+        writer: AVAssetWriter,
+        writerInput: AVAssetWriterInput,
+        outputURL: URL,
+        startFailureCode: Int,
+        progress: @escaping (Double) -> Void,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) async throws -> MediaExportContext {
+        guard writer.startWriting() else {
+            throw writer.error ?? NSError(domain: "export", code: startFailureCode)
+        }
+        let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
+        reader.startReading()
+        writer.startSession(atSourceTime: .zero)
+
+        return MediaExportContext(
+            reader: reader,
+            readerOutput: readerOutput,
+            writer: writer,
+            writerInput: writerInput,
+            outputURL: outputURL,
+            durationSeconds: durationSeconds,
+            progress: progress,
+            completion: completion
+        )
     }
 
     private static func wavToMp3(wavURL: URL, mp3URL: URL, bitrate: Int, progress: @escaping (Double) -> Void) throws {

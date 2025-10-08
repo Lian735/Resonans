@@ -38,10 +38,7 @@ struct SettingsView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 24) {
-                    Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .padding(.bottom, -24)
-                        .id("top")
+                    topSpacer
                     appearanceSection
                     otherSection
                     aboutSection
@@ -49,33 +46,46 @@ struct SettingsView: View {
                 }
                 .padding(.bottom, AppStyle.innerPadding)
                 .background(
-                    GeometryReader { geo -> Color in
-                        DispatchQueue.main.async {
-                            let show = geo.frame(in: .named("settingsScroll")).minY < -AppStyle.innerPadding
-                            if showTopBorder != show {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showTopBorder = show
-                                }
-                            }
-                        }
-                        return Color.clear
+                    GeometryReader { geometry in
+                        observeTopBorder(geometry)
                     }
                 )
             }
             .coordinateSpace(name: "settingsScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(height: 1)
-                    .opacity(showTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
-            }
+            .overlay(alignment: .top, content: topBorder)
             .onChange(of: scrollToTopTrigger) { _, _ in
                 withAnimation {
                     proxy.scrollTo("top", anchor: .top)
                 }
             }
         }
+    }
+
+    private var topSpacer: some View {
+        Color.clear
+            .frame(height: AppStyle.innerPadding)
+            .padding(.bottom, -24)
+            .id("top")
+    }
+
+    private func observeTopBorder(_ geometry: GeometryProxy) -> Color {
+        let offset = geometry.frame(in: .named("settingsScroll")).minY
+        let shouldShow = offset < -AppStyle.innerPadding
+        guard shouldShow != showTopBorder else { return .clear }
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showTopBorder = shouldShow
+            }
+        }
+        return .clear
+    }
+
+    private func topBorder() -> some View {
+        Rectangle()
+            .fill(Color.gray.opacity(0.5))
+            .frame(height: 1)
+            .opacity(showTopBorder ? 1 : 0)
+            .animation(.easeInOut(duration: 0.2), value: showTopBorder)
     }
 
     // MARK: - Sections
@@ -149,45 +159,15 @@ struct SettingsView: View {
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(primary)
 
-            Toggle(isOn: $hapticsEnabled) {
-                Text("Vibration")
-                    .foregroundStyle(primary.opacity(0.9))
-            }
-            .onChange(of: hapticsEnabled) { _, _ in
-                HapticsManager.shared.selection()
-            }
+            settingsToggle(title: "Vibration", isOn: $hapticsEnabled)
+            settingsToggle(title: "Sounds", isOn: $soundsEnabled)
+            settingsToggle(title: "Experimental Features", isOn: $experimentalEnabled)
 
-            Toggle(isOn: $soundsEnabled) {
-                Text("Sounds")
-                    .foregroundStyle(primary.opacity(0.9))
-            }
-            .onChange(of: soundsEnabled) { _, _ in
-                HapticsManager.shared.selection()
-            }
+            Divider().padding(.vertical, 4)
 
-            Toggle(isOn: $experimentalEnabled) {
-                Text("Experimental Features")
-                    .foregroundStyle(primary.opacity(0.9))
-            }
-            .onChange(of: experimentalEnabled) { _, _ in
-                HapticsManager.shared.selection()
-            }
-
-            Divider()
-                .padding(.vertical, 4)
-
-            Button {
+            settingsButton(title: "Clear Cache") {
                 CacheManager.shared.clear()
                 HapticsManager.shared.notify(.success)
-            } label: {
-                Text("Clear Cache")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(accent.color.opacity(0.25))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
             }
             .padding(.top, 4)
         }
@@ -206,20 +186,11 @@ struct SettingsView: View {
             }
             .foregroundStyle(primary.opacity(0.8))
 
-            Button {
+            settingsButton(title: "Send Feedback") {
                 HapticsManager.shared.pulse()
                 if let url = URL(string: "mailto:feedback.lian@gmail.com") {
                     openURL(url)
                 }
-            } label: {
-                Text("Send Feedback")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(accent.color.opacity(0.25))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
             }
             .padding(.top, 12)
         }
@@ -249,6 +220,30 @@ struct SettingsView: View {
                 .cornerRadius(12)
                 .transition(.opacity)
         }
+    }
+
+    private func settingsToggle(title: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(title)
+                .foregroundStyle(primary.opacity(0.9))
+        }
+        .onChange(of: isOn.wrappedValue) { _, _ in
+            HapticsManager.shared.selection()
+        }
+    }
+
+    private func settingsButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(accent.color.opacity(0.25))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.35)
+        }
+        .buttonStyle(.plain)
     }
 
     private func settingsBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
