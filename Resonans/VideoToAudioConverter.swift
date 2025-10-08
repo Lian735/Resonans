@@ -73,43 +73,47 @@ final class VideoToAudioConverter {
         let queue = DispatchQueue(label: queueLabel)
         context.writerInput.requestMediaDataWhenReady(on: queue) { [context] in
             while context.writerInput.isReadyForMoreMediaData {
-                if context.reader.status == .reading,
-                   let sampleBuffer = context.readerOutput.copyNextSampleBuffer() {
-                    if !context.writerInput.append(sampleBuffer) {
-                        context.reader.cancelReading()
-                        context.writerInput.markAsFinished()
-                        context.writer.cancelWriting()
-                        let error = context.writer.error ?? NSError(domain: "export", code: appendFailureCode)
-                        context.finish(with: .failure(error))
-                        return
-                    }
-
-                    if context.durationSeconds > 0 {
-                        let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
-                        context.reportProgress(time / context.durationSeconds)
-                    }
-                } else {
-                    context.writerInput.markAsFinished()
-                    switch context.reader.status {
-                    case .completed:
-                        context.writer.finishWriting {
-                            if let error = context.writer.error {
-                                context.finish(with: .failure(error))
-                            } else {
-                                context.reportProgress(1)
-                                context.finish(with: .success(context.outputURL))
-                            }
-                        }
-                    case .failed, .cancelled:
-                        let error = context.reader.error ?? context.writer.error ?? NSError(domain: "export", code: readerFailureCode)
-                        context.writer.cancelWriting()
-                        context.finish(with: .failure(error))
-                    default:
-                        break
-                    }
+                guard context.reader.status == .reading,
+                      let sampleBuffer = context.readerOutput.copyNextSampleBuffer() else {
+                    finalize(context: context, readerFailureCode: readerFailureCode)
                     return
                 }
+
+                guard context.writerInput.append(sampleBuffer) else {
+                    context.reader.cancelReading()
+                    context.writerInput.markAsFinished()
+                    context.writer.cancelWriting()
+                    let error = context.writer.error ?? NSError(domain: "export", code: appendFailureCode)
+                    context.finish(with: .failure(error))
+                    return
+                }
+
+                if context.durationSeconds > 0 {
+                    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+                    context.reportProgress(time / context.durationSeconds)
+                }
             }
+        }
+    }
+
+    private static func finalize(context: MediaExportContext, readerFailureCode: Int) {
+        context.writerInput.markAsFinished()
+        switch context.reader.status {
+        case .completed:
+            context.writer.finishWriting {
+                if let error = context.writer.error {
+                    context.finish(with: .failure(error))
+                } else {
+                    context.reportProgress(1)
+                    context.finish(with: .success(context.outputURL))
+                }
+            }
+        case .failed, .cancelled:
+            let error = context.reader.error ?? context.writer.error ?? NSError(domain: "export", code: readerFailureCode)
+            context.writer.cancelWriting()
+            context.finish(with: .failure(error))
+        default:
+            break
         }
     }
 
@@ -121,43 +125,58 @@ final class VideoToAudioConverter {
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
         let baseName = videoURL.deletingPathExtension().lastPathComponent + "_out"
-        let tmp = FileManager.default.temporaryDirectory
         progress(0)
+
         switch format {
         case .m4a:
-            let out = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
-            exportToM4A(videoURL: videoURL, outputURL: out, bitrate: bitrate, progress: progress, completion: completion)
+            let output = temporaryURL(for: baseName, format: .m4a)
+            exportToM4A(videoURL: videoURL, outputURL: output, bitrate: bitrate, progress: progress, completion: completion)
         case .wav:
-            let out = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
-            exportToWAV(videoURL: videoURL, outputURL: out, progress: progress, completion: completion)
+            let output = temporaryURL(for: baseName, format: .wav)
+            exportToWAV(videoURL: videoURL, outputURL: output, progress: progress, completion: completion)
         case .mp3:
-            let wavURL = tmp.appendingPathComponent(baseName).appendingPathExtension(AudioFormat.wav.fileExtension)
-            exportToWAV(videoURL: videoURL, outputURL: wavURL, progress: { value in
-                progress(value * 0.85)
-            }) { result in
-                switch result {
-                case .failure(let err):
-                    DispatchQueue.main.async {
-                        completion(.failure(err))
+            convertToMP3(
+                baseName: baseName,
+                videoURL: videoURL,
+                bitrate: bitrate,
+                progress: progress,
+                completion: completion
+            )
+        }
+    }
+
+    private static func temporaryURL(for baseName: String, format: AudioFormat) -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent(baseName)
+            .appendingPathExtension(format.fileExtension)
+    }
+
+    private static func convertToMP3(
+        baseName: String,
+        videoURL: URL,
+        bitrate: Int,
+        progress: @escaping (Double) -> Void,
+        completion: @escaping (Result<URL, Error>) -> Void
+    ) {
+        let wavURL = temporaryURL(for: baseName, format: .wav)
+        let mp3URL = temporaryURL(for: baseName, format: .mp3)
+
+        exportToWAV(videoURL: videoURL, outputURL: wavURL, progress: { value in
+            progress(value * 0.85)
+        }) { result in
+            switch result {
+            case .failure(let error):
+                completion(.failure(error))
+            case .success:
+                do {
+                    try wavToMp3(wavURL: wavURL, mp3URL: mp3URL, bitrate: bitrate) { encodeProgress in
+                        let mapped = min(max(0.85 + (encodeProgress * 0.15), 0), 1)
+                        progress(mapped)
                     }
-                case .success:
-                    do {
-                        let mp3URL = tmp.appendingPathComponent(baseName).appendingPathExtension(format.fileExtension)
-                        try wavToMp3(wavURL: wavURL, mp3URL: mp3URL, bitrate: bitrate) { encodeProgress in
-                            let mapped = 0.85 + (encodeProgress * 0.15)
-                            progress(min(max(mapped, 0), 1))
-                        }
-                        DispatchQueue.main.async {
-                            progress(1)
-                        }
-                        DispatchQueue.main.async {
-                            completion(.success(mp3URL))
-                        }
-                    } catch {
-                        DispatchQueue.main.async {
-                            completion(.failure(error))
-                        }
-                    }
+                    progress(1)
+                    completion(.success(mp3URL))
+                } catch {
+                    completion(.failure(error))
                 }
             }
         }
@@ -171,28 +190,12 @@ final class VideoToAudioConverter {
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
         Task {
-            func fail(_ error: Error) {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-            }
-
             do {
-                if FileManager.default.fileExists(atPath: outputURL.path) {
-                    try FileManager.default.removeItem(at: outputURL)
-                }
+                try removeExistingFile(at: outputURL)
 
                 let asset = AVURLAsset(url: videoURL)
-                guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
-                    fail(NSError(domain: "export", code: -3))
-                    return
-                }
-
-                let formatDescriptions = try await track.load(.formatDescriptions)
-                let cmDesc: CMFormatDescription? = formatDescriptions.first
-                let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                let sampleRate = asbd?.mSampleRate ?? 44_100
-                let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
+                let track = try await audioTrack(from: asset, failureCode: -3)
+                let (sampleRate, channels) = try await audioProperties(for: track)
 
                 let readerSettings: [String: Any] = [
                     AVFormatIDKey: kAudioFormatLinearPCM,
@@ -216,24 +219,16 @@ final class VideoToAudioConverter {
                 let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: readerSettings)
                 readerOutput.alwaysCopiesSampleData = false
                 readerOutput.audioTimePitchAlgorithm = .timeDomain
-                guard reader.canAdd(readerOutput) else {
-                    fail(NSError(domain: "export", code: -10))
-                    return
-                }
+                try ensure(reader.canAdd(readerOutput), code: -10)
                 reader.add(readerOutput)
 
                 let writer = try AVAssetWriter(outputURL: outputURL, fileType: .m4a)
                 let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: writerSettings)
                 writerInput.expectsMediaDataInRealTime = false
-                guard writer.canAdd(writerInput) else {
-                    fail(NSError(domain: "export", code: -11))
-                    return
-                }
+                try ensure(writer.canAdd(writerInput), code: -11)
                 writer.add(writerInput)
 
-                guard writer.startWriting() else {
-                    throw writer.error ?? NSError(domain: "export", code: -12)
-                }
+                try startWriting(writer, code: -12)
 
                 let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
                 reader.startReading()
@@ -257,7 +252,7 @@ final class VideoToAudioConverter {
                     readerFailureCode: -14
                 )
             } catch {
-                fail(error)
+                deliverFailure(completion, error: error)
             }
         }
     }
@@ -269,28 +264,12 @@ final class VideoToAudioConverter {
         completion: @escaping (Result<URL, Error>) -> Void
     ) {
         Task {
-            func fail(_ error: Error) {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-            }
-
             do {
-                if FileManager.default.fileExists(atPath: outputURL.path) {
-                    try FileManager.default.removeItem(at: outputURL)
-                }
+                try removeExistingFile(at: outputURL)
 
                 let asset = AVURLAsset(url: videoURL)
-                guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
-                    fail(NSError(domain: "export", code: -4))
-                    return
-                }
-
-                let formatDescriptions = try await track.load(.formatDescriptions)
-                let cmDesc: CMFormatDescription? = formatDescriptions.first
-                let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                let sampleRate = asbd?.mSampleRate ?? 44_100
-                let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
+                let track = try await audioTrack(from: asset, failureCode: -4)
+                let (sampleRate, channels) = try await audioProperties(for: track)
 
                 let pcmSettings: [String: Any] = [
                     AVFormatIDKey: kAudioFormatLinearPCM,
@@ -306,24 +285,16 @@ final class VideoToAudioConverter {
                 let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: pcmSettings)
                 readerOutput.alwaysCopiesSampleData = false
                 readerOutput.audioTimePitchAlgorithm = .timeDomain
-                guard reader.canAdd(readerOutput) else {
-                    fail(NSError(domain: "export", code: -5))
-                    return
-                }
+                try ensure(reader.canAdd(readerOutput), code: -5)
                 reader.add(readerOutput)
 
                 let writer = try AVAssetWriter(outputURL: outputURL, fileType: .wav)
                 let writerInput = AVAssetWriterInput(mediaType: .audio, outputSettings: pcmSettings)
                 writerInput.expectsMediaDataInRealTime = false
-                guard writer.canAdd(writerInput) else {
-                    fail(NSError(domain: "export", code: -6))
-                    return
-                }
+                try ensure(writer.canAdd(writerInput), code: -6)
                 writer.add(writerInput)
 
-                guard writer.startWriting() else {
-                    throw writer.error ?? NSError(domain: "export", code: -7)
-                }
+                try startWriting(writer, code: -7)
 
                 let durationSeconds = (try? await asset.load(.duration).seconds) ?? 0
                 reader.startReading()
@@ -347,8 +318,49 @@ final class VideoToAudioConverter {
                     readerFailureCode: -9
                 )
             } catch {
-                fail(error)
+                deliverFailure(completion, error: error)
             }
+        }
+    }
+
+    private static func ensure(_ condition: Bool, code: Int) throws {
+        guard condition else { throw NSError(domain: "export", code: code) }
+    }
+
+    private static func removeExistingFile(at url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private static func startWriting(_ writer: AVAssetWriter, code: Int) throws {
+        guard writer.startWriting() else {
+            throw writer.error ?? NSError(domain: "export", code: code)
+        }
+    }
+
+    private static func audioTrack(from asset: AVAsset, failureCode: Int) async throws -> AVAssetTrack {
+        guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
+            throw NSError(domain: "export", code: failureCode)
+        }
+        return track
+    }
+
+    private static func audioProperties(for track: AVAssetTrack) async throws -> (sampleRate: Double, channels: Int) {
+        let formatDescriptions = try await track.load(.formatDescriptions)
+        let cmDesc: CMFormatDescription? = formatDescriptions.first
+        let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+        let sampleRate = asbd?.mSampleRate ?? 44_100
+        let channels = Int(max(asbd?.mChannelsPerFrame ?? 2, 1))
+        return (sampleRate, channels)
+    }
+
+    private static func deliverFailure(
+        _ completion: @escaping (Result<URL, Error>) -> Void,
+        error: Error
+    ) {
+        DispatchQueue.main.async {
+            completion(.failure(error))
         }
     }
 

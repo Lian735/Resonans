@@ -39,67 +39,8 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            background.ignoresSafeArea()
-                .overlay(
-                    LinearGradient(
-                        colors: [accent.gradient, .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
-                )
-
-            VStack(spacing: 0) {
-                header
-                ZStack {
-                    TabView(selection: $selectedTab) {
-                        homeTab.tag(TabSelection.home)
-                        toolsTab.tag(TabSelection.tools)
-
-                        if let activeToolID, let tool = tools.first(where: { $0.id == activeToolID }) {
-                            toolView(for: tool)
-                                .tag(TabSelection.tool(activeToolID))
-                        }
-
-                        SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
-                            .tag(TabSelection.settings)
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                    .animation(.easeInOut(duration: 0.3), value: selectedTab)
-
-                    VStack {
-                        Spacer()
-                        ZStack {
-                            LinearGradient(
-                                gradient: Gradient(colors: [background, background.opacity(0.0)]),
-                                startPoint: .bottom,
-                                endPoint: .top
-                            )
-                            .frame(height: 80)
-                            .ignoresSafeArea(edges: .bottom)
-
-                            HStack {
-                                Spacer()
-                                HStack(spacing: 32) {
-                                    bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
-                                    bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
-                                    if let activeToolID {
-                                        toolIconButton(for: activeToolID)
-                                            .transition(.scale.combined(with: .opacity))
-                                    }
-                                    bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $settingsScrollTrigger)
-                                }
-                                .padding(.horizontal, 8)
-                                .animation(.spring(response: 0.45, dampingFraction: 0.8), value: activeToolID)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 40)
-                            .padding(.vertical, 12)
-                        }
-                    }
-                }
-            }
-
+            backgroundView
+            mainContent
         }
         .tint(accent.color)
         .animation(.easeInOut(duration: 0.4), value: colorScheme)
@@ -125,13 +66,9 @@ struct ContentView: View {
             }
         }
         .onChange(of: selectedTab) { _, newValue in
-            if case .tool = newValue {
+            guard case .tool = newValue else {
+                hideToolCloseIcon()
                 return
-            }
-            if showToolCloseIcon {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                    showToolCloseIcon = false
-                }
             }
         }
         .onChange(of: activeToolID) { _, newValue in
@@ -146,11 +83,80 @@ struct ContentView: View {
                     shouldSkipCloseReset = false
                     return
                 }
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                    showToolCloseIcon = false
-                }
+                hideToolCloseIcon()
             }
         )
+    }
+
+    private var backgroundView: some View {
+        background
+            .ignoresSafeArea()
+            .overlay(
+                LinearGradient(
+                    colors: [accent.gradient, .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
+    }
+
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            header
+            ZStack {
+                tabs
+                tabBarOverlay
+            }
+        }
+    }
+
+    private var tabs: some View {
+        TabView(selection: $selectedTab) {
+            homeTab.tag(TabSelection.home)
+            toolsTab.tag(TabSelection.tools)
+
+            if let activeToolID, let tool = tools.first(where: { $0.id == activeToolID }) {
+                toolView(for: tool)
+                    .tag(TabSelection.tool(activeToolID))
+            }
+
+            SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
+                .tag(TabSelection.settings)
+        }
+        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+    }
+
+    private var tabBarOverlay: some View {
+        VStack {
+            Spacer()
+            LinearGradient(
+                gradient: Gradient(colors: [background, background.opacity(0)]),
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .frame(height: 80)
+            .ignoresSafeArea(edges: .bottom)
+            .overlay(alignment: .center) { tabBar }
+        }
+    }
+
+    private var tabBar: some View {
+        HStack(spacing: 32) {
+            bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
+            bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
+            if let activeToolID {
+                toolIconButton(for: activeToolID)
+                    .transition(.scale.combined(with: .opacity))
+            }
+            bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $settingsScrollTrigger)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 40)
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: activeToolID)
     }
 
     private var header: some View {
@@ -362,6 +368,13 @@ struct ContentView: View {
         }
         showToolCloseIcon = false
         shouldSkipCloseReset = false
+    }
+
+    private func hideToolCloseIcon() {
+        guard showToolCloseIcon else { return }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+            showToolCloseIcon = false
+        }
     }
 
     private func closeActiveTool() {
