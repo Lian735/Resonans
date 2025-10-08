@@ -26,34 +26,53 @@ struct AudioExtractorView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 28) {
-                topSpacer
+                Color.clear
+                    .frame(height: AppStyle.innerPadding)
+                    .padding(.bottom, -24)
+
                 headerSection
+
                 sourceOptionsSection
+
                 recentSection
+
                 Spacer(minLength: 60)
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
         }
-        .background(Color.clear)
-        .modifier(VideoSourceSheets(
-            showPhotoPicker: $showPhotoPicker,
-            showFilePicker: $showFilePicker,
-            showConversionSheet: $showConversionSheet,
-            videoURL: $videoURL
-        ))
+        .background(.clear)
+        .sheet(isPresented: $showPhotoPicker) {
+            VideoPicker { url in
+                videoURL = url
+                showConversionSheet = true
+            }
+        }
+        .sheet(isPresented: $showFilePicker) {
+            FilePicker { url in
+                videoURL = url
+                showConversionSheet = true
+            }
+        }
+        .sheet(
+            isPresented: $showConversionSheet,
+            onDismiss: { videoURL = nil }
+        ) {
+            if let url = videoURL {
+                ConversionSettingsView(videoURL: url)
+            }
+        }
         .sheet(isPresented: $showRecentExporter, onDismiss: { exportURLForRecent = nil }) {
             if let url = exportURLForRecent {
                 ExportPicker(url: url)
             }
         }
         .onAppear(perform: reloadRecents)
-        .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate), perform: handleRecentUpdate)
-    }
-
-    private var topSpacer: some View {
-        Color.clear
-            .frame(height: AppStyle.innerPadding)
-            .padding(.bottom, -24)
+        .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate)) { notification in
+            guard let items = notification.object as? [RecentItem] else { return }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                recents = items
+            }
+        }
     }
 
     private var headerSection: some View {
@@ -94,13 +113,24 @@ struct AudioExtractorView: View {
     }
 
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        SourceOptionButton(
-            icon: icon,
-            title: title,
-            primary: primary,
-            colorScheme: colorScheme,
-            action: action
-        )
+        Button {
+            HapticsManager.shared.pulse()
+            action()
+        } label: {
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(primary)
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(primary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
+        }
+        .buttonStyle(.plain)
     }
 
     private var recentSection: some View {
@@ -158,13 +188,6 @@ struct AudioExtractorView: View {
         recents = CacheManager.shared.loadRecentConversions()
     }
 
-    private func handleRecentUpdate(_ notification: Notification) {
-        guard let items = notification.object as? [RecentItem] else { return }
-        withAnimation(.easeInOut(duration: 0.25)) {
-            recents = items
-        }
-    }
-
     private func handleRecentExport(_ item: RecentItem) {
         let url = item.fileURL
         guard FileManager.default.fileExists(atPath: url.path) else {
@@ -173,65 +196,6 @@ struct AudioExtractorView: View {
         }
         exportURLForRecent = url
         showRecentExporter = true
-    }
-}
-
-private struct VideoSourceSheets: ViewModifier {
-    @Binding var showPhotoPicker: Bool
-    @Binding var showFilePicker: Bool
-    @Binding var showConversionSheet: Bool
-    @Binding var videoURL: URL?
-
-    func body(content: Content) -> some View {
-        content
-            .sheet(isPresented: $showPhotoPicker) {
-                VideoPicker { url in
-                    videoURL = url
-                    showConversionSheet = true
-                }
-            }
-            .sheet(isPresented: $showFilePicker) {
-                FilePicker { url in
-                    videoURL = url
-                    showConversionSheet = true
-                }
-            }
-            .sheet(isPresented: $showConversionSheet, onDismiss: { videoURL = nil }) {
-                if let url = videoURL {
-                    ConversionSettingsView(videoURL: url)
-                }
-            }
-    }
-}
-
-private struct SourceOptionButton: View {
-    let icon: String
-    let title: String
-    let primary: Color
-    let colorScheme: ColorScheme
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: performAction) {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundStyle(primary)
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func performAction() {
-        HapticsManager.shared.pulse()
-        action()
     }
 }
 

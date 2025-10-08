@@ -18,52 +18,46 @@ struct HomeDashboardView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 28) {
-                    topSpacer
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .padding(.bottom, -24)
+                        .id("homeTop")
+
                     heroCard
                         .background(
-                            GeometryReader { geometry in
-                                observeTopBorder(geometry)
+                            GeometryReader { geo -> Color in
+                                DispatchQueue.main.async {
+                                    let shouldShow = geo.frame(in: .named("homeScroll")).minY < 0
+                                    if showTopBorder != shouldShow {
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            showTopBorder = shouldShow
+                                        }
+                                    }
+                                }
+                                return Color.clear
                             }
                         )
                         .padding(.horizontal, AppStyle.horizontalPadding)
+
                     recentsSection
+
                     Spacer(minLength: 60)
                 }
             }
             .coordinateSpace(name: "homeScroll")
-            .overlay(alignment: .top, content: topBorder)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.45))
+                    .frame(height: 1)
+                    .opacity(showTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
+            }
             .onChange(of: scrollToTopTrigger) { _, _ in
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                     proxy.scrollTo("homeTop", anchor: .top)
                 }
             }
         }
-    }
-
-    private var topSpacer: some View {
-        Color.clear
-            .frame(height: AppStyle.innerPadding)
-            .padding(.bottom, -24)
-            .id("homeTop")
-    }
-
-    private func observeTopBorder(_ geometry: GeometryProxy) -> Color {
-        let shouldShow = geometry.frame(in: .named("homeScroll")).minY < 0
-        guard shouldShow != showTopBorder else { return .clear }
-        DispatchQueue.main.async {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                showTopBorder = shouldShow
-            }
-        }
-        return .clear
-    }
-
-    private func topBorder() -> some View {
-        Rectangle()
-            .fill(Color.gray.opacity(0.45))
-            .frame(height: 1)
-            .opacity(showTopBorder ? 1 : 0)
-            .animation(.easeInOut(duration: 0.2), value: showTopBorder)
     }
 
     private var heroCard: some View {
@@ -118,62 +112,46 @@ struct HomeDashboardView: View {
 
     private var recentsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            recentsHeader
-            recentsContent
-        }
-    }
-
-    private var recentsHeader: some View {
-        HStack {
-            Text("Recently used")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
-            Spacer()
-        }
-        .padding(.horizontal, AppStyle.horizontalPadding)
-    }
-
-    @ViewBuilder
-    private var recentsContent: some View {
-        if recentTools.isEmpty {
-            recentsPlaceholder
-        } else {
-            recentToolsList
-        }
-    }
-
-    private var recentsPlaceholder: some View {
-        Text("Jump back into tools and your history will live here.")
-            .font(.system(size: 15, weight: .medium, design: .rounded))
-            .foregroundStyle(primary.opacity(0.65))
+            HStack {
+                Text("Recently used")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(primary)
+                Spacer()
+            }
             .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                    .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
-                    .overlay(
+
+            if recentTools.isEmpty {
+                Text("Jump back into tools and your history will live here.")
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(primary.opacity(0.65))
+                    .padding(.horizontal, AppStyle.horizontalPadding)
+                    .padding(.vertical, 28)
+                    .frame(maxWidth: .infinity)
+                    .background(
                         RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                            .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                    .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
+                            )
                     )
-            )
-            .appShadow(colorScheme: colorScheme, level: .medium)
-            .padding(.horizontal, AppStyle.horizontalPadding)
-    }
-
-    private var recentToolsList: some View {
-        VStack(spacing: 12) {
-            ForEach(recentTools) { tool in
-                Button {
-                    HapticsManager.shared.selection()
-                    onOpenTool(tool)
-                } label: {
-                    ToolHistoryRow(tool: tool, primary: primary, colorScheme: colorScheme)
+                    .appShadow(colorScheme: colorScheme, level: .medium)
+                    .padding(.horizontal, AppStyle.horizontalPadding)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(recentTools) { tool in
+                        Button {
+                            HapticsManager.shared.selection()
+                            onOpenTool(tool)
+                        } label: {
+                            ToolHistoryRow(tool: tool, primary: primary, colorScheme: colorScheme)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, AppStyle.horizontalPadding)
             }
         }
-        .padding(.horizontal, AppStyle.horizontalPadding)
     }
 }
 
