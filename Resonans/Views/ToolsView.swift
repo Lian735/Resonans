@@ -18,90 +18,75 @@ struct ToolsView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 VStack(spacing: 18) {
-                    topSpacer
-                    toolRows
+                    Color.clear
+                        .frame(height: AppStyle.innerPadding)
+                        .id("toolsTop")
+
+                    ForEach(tools) { tool in
+                        ToolListRow(
+                            tool: tool,
+                            primary: primary,
+                            colorScheme: colorScheme,
+                            accent: accent.color,
+                            isSelected: tool.id == selectedTool,
+                            isOpen: activeTool == tool.id,
+                            onTap: {
+                                if selectedTool != tool.id {
+                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                                        selectedTool = tool.id
+                                    }
+                                }
+                                onOpen(tool)
+                            },
+                            onToggleOpenState: {
+                                if activeTool == tool.id {
+                                    onClose(tool.id)
+                                } else {
+                                    if selectedTool != tool.id {
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                                            selectedTool = tool.id
+                                        }
+                                    }
+                                    onOpen(tool)
+                                }
+                            }
+                        )
+                        .background(
+                            GeometryReader { geo -> Color in
+                                DispatchQueue.main.async {
+                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
+                                    if showTopBorder != shouldShow {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            showTopBorder = shouldShow
+                                        }
+                                    }
+                                }
+                                return Color.clear
+                            }
+                        )
+                    }
+
                     Spacer(minLength: 80)
                 }
                 .padding(.horizontal, AppStyle.horizontalPadding)
             }
             .coordinateSpace(name: "toolsScroll")
-            .overlay(alignment: .top, content: topBorder)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.45))
+                    .frame(height: 1)
+                    .opacity(showTopBorder ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
+            }
             .onChange(of: scrollToTopTrigger) { _, _ in
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                     proxy.scrollTo("toolsTop", anchor: .top)
                 }
             }
         }
-        .background(Color.clear)
-    }
-
-    private var topSpacer: some View {
-        Color.clear
-            .frame(height: AppStyle.innerPadding)
-            .id("toolsTop")
-    }
-
-    private var toolRows: some View {
-        ForEach(tools) { tool in
-            ToolListRow(
-                tool: tool,
-                primary: primary,
-                colorScheme: colorScheme,
-                accent: accent.color,
-                isSelected: tool.id == selectedTool,
-                isOpen: activeTool == tool.id,
-                onTap: { handleSelection(for: tool) },
-                onToggleOpenState: { handleToggle(for: tool) }
-            )
-            .background(
-                GeometryReader { geometry in
-                    observeTopBorder(geometry)
-                }
-            )
-        }
-    }
-
-    private func handleSelection(for tool: ToolItem) {
-        guard selectedTool != tool.id else {
-            onOpen(tool)
-            return
-        }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-            selectedTool = tool.id
-        }
-        onOpen(tool)
-    }
-
-    private func handleToggle(for tool: ToolItem) {
-        if activeTool == tool.id {
-            onClose(tool.id)
-            return
-        }
-        if selectedTool != tool.id {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                selectedTool = tool.id
-            }
-        }
-        onOpen(tool)
-    }
-
-    private func observeTopBorder(_ geometry: GeometryProxy) -> Color {
-        let shouldShow = geometry.frame(in: .named("toolsScroll")).minY < -24
-        guard shouldShow != showTopBorder else { return .clear }
-        DispatchQueue.main.async {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showTopBorder = shouldShow
-            }
-        }
-        return .clear
-    }
-
-    private func topBorder() -> some View {
-        Rectangle()
-            .fill(Color.gray.opacity(0.45))
-            .frame(height: 1)
-            .opacity(showTopBorder ? 1 : 0)
-            .animation(.easeInOut(duration: 0.2), value: showTopBorder)
+        .background(
+            .clear
+        )
     }
 }
 
