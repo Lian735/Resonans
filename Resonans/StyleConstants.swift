@@ -36,6 +36,7 @@ enum AppStyle {
         let includesHighlight: Bool
     }
 
+    @available(*, deprecated, message: "Use DefaultShadowConfiguration instead.")
     static func shadowConfiguration(for level: ShadowLevel) -> ShadowConfiguration {
         switch level {
         case .large:
@@ -92,6 +93,7 @@ enum AppStyle {
 /// Notes:
 /// - This modifier is intended to be used via the `View.appShadow(...)` convenience extension.
 /// - Shadow colors and highlight behavior are centralized in `AppStyle` for consistency and easy theming.
+@available(*, deprecated, message: "Use .shadow(_:) instead.")
 private struct AppShadowModifier: ViewModifier {
     let colorScheme: ColorScheme
     let level: AppStyle.ShadowLevel
@@ -120,6 +122,7 @@ private struct AppShadowModifier: ViewModifier {
     }
 }
 
+@available(*, deprecated, message: "Use .shadow(_:)-Architecture instead.")
 private struct ConditionalShadowModifier: ViewModifier {
     let enabled: Bool
     let color: Color
@@ -167,10 +170,12 @@ private struct AppCardStyleModifier: ViewModifier {
 }
 
 extension View {
+    @available(*, deprecated, message: "Use .shadow(_:) instead")
     func appShadow(colorScheme: ColorScheme, level: AppStyle.ShadowLevel, opacity: Double? = nil) -> some View {
         modifier(AppShadowModifier(colorScheme: colorScheme, level: level, overrideOpacity: opacity))
     }
 
+    @available(*, deprecated, message: "Use .shadow(_:) instead")
     func appTextShadow(colorScheme: ColorScheme) -> some View {
         appShadow(colorScheme: colorScheme, level: .text)
     }
