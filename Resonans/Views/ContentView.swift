@@ -165,7 +165,7 @@ struct ContentView: View {
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
                 .foregroundStyle(primary)
-                .appTextShadow(colorScheme: colorScheme)
+                .shadow(DefaultShadowConfiguration.text.configuration(with: colorScheme))
                 .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
             Spacer()
