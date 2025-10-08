@@ -72,7 +72,7 @@ enum DefaultShadowConfiguration {
         case .small:
             return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 18, offset: CGSize(width: 0, height: 10))
         case .text:
-            return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 4, offset: CGSize(width: 0, height: 1))
+            return ShadowConfiguration(color: colorScheme == .light ? Color(.sRGBLinear, white: 0.0, opacity: 0.5) : .black, radius: 4, offset: CGSize(width: 0, height: 1))
         }
     }
 }
