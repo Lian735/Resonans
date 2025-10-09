@@ -106,7 +106,7 @@ struct OnboardingFlowView: View {
                         RoundedRectangle(cornerRadius: 36, style: .continuous)
                             .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
                     )
-                    .appShadow(colorScheme: colorScheme, level: .large)
+                    .shadow(DefaultShadowConfiguration.large.configuration(for: colorScheme))
 
                 VStack(spacing: 18) {
                     Image(systemName: "waveform.circle.fill")
@@ -228,8 +228,7 @@ struct OnboardingFlowView: View {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
             )
-            .appShadow(colorScheme: colorScheme, level: .medium)
-
+            .shadow(DefaultShadowConfiguration.medium.configuration(for: colorScheme))
             Spacer()
         }
     }
@@ -347,7 +346,7 @@ private struct FavoriteSelectionCard: View {
                             .stroke(primary.opacity(isSelected ? 0.35 : AppStyle.strokeOpacity), lineWidth: isSelected ? 2 : 1)
                     )
             )
-            .appShadow(colorScheme: colorScheme, level: .medium, opacity: isSelected ? 0.55 : 0.35)
+            .shadow(DefaultShadowConfiguration.medium.configuration(for: colorScheme))
         }
         .buttonStyle(.plain)
     }

@@ -21,7 +21,7 @@ struct RecentRow: View {
                     RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
                         .stroke(primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
                 )
-                .appShadow(colorScheme: colorScheme, level: .small, opacity: 0.45)
+                .shadow(DefaultShadowConfiguration.small.configuration(for: colorScheme))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
