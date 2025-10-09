@@ -63,14 +63,14 @@ enum DefaultShadowConfiguration {
     ///
     /// - Important: If you need different shadow colors for light and dark modes,
     ///   modify the color selection logic here or build a costum ``ShadowConfiguration``.
-    func configuration(with colorScheme: ColorScheme) -> ShadowConfiguration {
+    func configuration(for colorScheme: ColorScheme) -> ShadowConfiguration {
         switch self {
             case .large:
             return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 26, offset: CGSize(width: 0, height: 20))
         case .medium:
             return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 22, offset: CGSize(width: 0, height: 14))
         case .small:
-            return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 18, offset: CGSize(width: 0, height: 10))
+            return ShadowConfiguration(color: colorScheme == .light ? Color(.sRGBLinear, white: 0.0, opacity: 0.5) : .black, radius: 14, offset: CGSize(width: 0, height: 0))
         case .text:
             return ShadowConfiguration(color: colorScheme == .light ? Color(.sRGBLinear, white: 0.0, opacity: 0.5) : .black, radius: 4, offset: CGSize(width: 0, height: 1))
         }

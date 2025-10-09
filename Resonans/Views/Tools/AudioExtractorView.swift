@@ -181,7 +181,7 @@ struct AudioExtractorView: View {
                         .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
                 )
         )
-        .appShadow(colorScheme: colorScheme, level: .medium)
+        .shadow(DefaultShadowConfiguration.medium.configuration(for: colorScheme))
     }
 
     private func reloadRecents() {
