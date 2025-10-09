@@ -4,10 +4,33 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>Resonans.xcscheme_^#shared#^_</key>
+		<key>Resonans Debug.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>Resonans.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>8CF4CB382E6CF5D5000409DA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8CF4CB452E6CF5D7000409DA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8CF4CB4F2E6CF5D7000409DA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>
