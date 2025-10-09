@@ -385,6 +385,9 @@ struct ContentView: View {
                 selectedTab = .tools
             }
         }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+            activeToolID = nil
+        }
     }
 
     private func updateRecents(with identifier: ToolItem.Identifier) {
@@ -401,6 +404,8 @@ struct ContentView: View {
         switch tool.id {
         case .audioExtractor:
             AudioExtractorView(onClose: { closeActiveTool() })
+        case .dummy:
+            DummyToolView(onClose: { closeActiveTool() })
         }
     }
 }

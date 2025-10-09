@@ -3,6 +3,7 @@ import SwiftUI
 struct ToolItem: Identifiable {
     enum Identifier: String, Hashable {
         case audioExtractor
+        case dummy
     }
 
     let id: Identifier
@@ -24,7 +25,20 @@ struct ToolItem: Identifiable {
         destination: { onClose in AnyView(AudioExtractorView(onClose: onClose)) }
     )
 
+    static let dummy = ToolItem(
+        id: .dummy,
+        title: "Dummy Tool",
+        subtitle: "A placeholder tool to experiment with multiple tool layouts.",
+        iconName: "puzzlepiece.extension",
+        gradientColors: [
+            Color(red: 0.22, green: 0.72, blue: 0.99),
+            Color(red: 0.30, green: 0.52, blue: 0.94)
+        ],
+        destination: { onClose in AnyView(DummyToolView(onClose: onClose)) }
+    )
+
     static let all: [ToolItem] = [
-        .audioExtractor
+        .audioExtractor,
+        .dummy
     ]
 }
