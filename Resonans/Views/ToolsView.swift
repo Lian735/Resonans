@@ -120,9 +120,9 @@ private struct ToolListRow: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .strokeBorder(
+                .stroke(
                     accent.opacity(isOpen ? 0.65 : (isSelected ? 0.45 : 0)),
-                    lineWidth: isOpen ? 2 : (isSelected ? 1.5 : 0)
+                    lineWidth: isOpen ? 3 : (isSelected ? 2 : 0)
                 )
         )
         .contentShape(Rectangle())
