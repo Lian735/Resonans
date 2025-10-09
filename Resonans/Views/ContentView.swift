@@ -162,7 +162,7 @@ struct ContentView: View {
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
                 .foregroundStyle(primary)
-                .shadow(DefaultShadowConfiguration.text.configuration(for: colorScheme))
+                .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
                 .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
             Spacer()
@@ -184,7 +184,7 @@ struct ContentView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 26, weight: .semibold))
                         .foregroundStyle(primary)
-                        .shadow(DefaultShadowConfiguration.text.configuration(for: colorScheme))
+                        .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
                 }
                 .buttonStyle(.plain)
             }
@@ -196,7 +196,7 @@ struct ContentView: View {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(primary)
-                    .shadow(DefaultShadowConfiguration.text.configuration(for: colorScheme))
+                    .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
             }
             .buttonStyle(.plain)
         default:
