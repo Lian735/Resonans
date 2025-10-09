@@ -6,7 +6,7 @@ struct ToolRowCard<Accessory: View>: View {
     let colorScheme: ColorScheme
     let subtitleSpacing: CGFloat
     let subtitleColor: Color
-    let shadowLevel: DefaultShadowConfiguration
+    let shadowLevel: ShadowConfiguration.Configuration
     let shadowOpacity: Double?
     private let accessory: Accessory
 
@@ -16,7 +16,7 @@ struct ToolRowCard<Accessory: View>: View {
         colorScheme: ColorScheme,
         subtitleSpacing: CGFloat = 4,
         subtitleColor: Color? = nil,
-        shadowLevel: DefaultShadowConfiguration = .medium,
+        shadowLevel: ShadowConfiguration.Configuration = .medium,
         shadowOpacity: Double? = nil,
         @ViewBuilder accessory: () -> Accessory
     ) {
@@ -36,7 +36,7 @@ struct ToolRowCard<Accessory: View>: View {
         colorScheme: ColorScheme,
         subtitleSpacing: CGFloat = 4,
         subtitleColor: Color? = nil,
-        shadowLevel: DefaultShadowConfiguration = .medium,
+        shadowLevel: ShadowConfiguration.Configuration = .medium,
         shadowOpacity: Double? = nil
     ) where Accessory == EmptyView {
         self.init(
@@ -105,6 +105,6 @@ struct ToolIconView: View {
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(Color.white)
             )
-            .shadow(DefaultShadowConfiguration.small.configuration(for: colorScheme))
+            .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
     }
 }
