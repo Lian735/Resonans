@@ -71,11 +71,6 @@ struct ContentView: View {
                 return
             }
         }
-        .onChange(of: activeToolID) { _, newValue in
-            if newValue == nil, case .tool = selectedTab {
-                selectedTab = .tools
-            }
-        }
         .simultaneousGesture(
             TapGesture().onEnded {
                 guard showToolCloseIcon else { return }
@@ -113,8 +108,10 @@ struct ContentView: View {
 
     private var tabs: some View {
         TabView(selection: $selectedTab) {
-            homeTab.tag(TabSelection.home)
-            toolsTab.tag(TabSelection.tools)
+            homeTab
+                .tag(TabSelection.home)
+            toolsTab
+                .tag(TabSelection.tools)
 
             if let activeToolID, let tool = tools.first(where: { $0.id == activeToolID }) {
                 toolView(for: tool)
@@ -387,9 +384,6 @@ struct ContentView: View {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                 selectedTab = .tools
             }
-        }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
-            activeToolID = nil
         }
     }
 
