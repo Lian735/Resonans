@@ -34,6 +34,8 @@ struct SettingsView: View {
         return "—"
     }
 
+    @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -45,6 +47,10 @@ struct SettingsView: View {
                     appearanceSection
                     otherSection
                     aboutSection
+                    AppCard{
+                        Toggle("Glass Effect", isOn: $glassEffectActivated)
+                    }
+                    .padding()
                     Spacer(minLength: 120)
                 }
                 .padding(.bottom, AppStyle.innerPadding)

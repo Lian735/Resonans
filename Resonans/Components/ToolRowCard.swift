@@ -54,7 +54,7 @@ struct ToolRowCard<Accessory: View>: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            ToolIconView(tool: tool, colorScheme: colorScheme)
+            ToolIconView(tool: tool)
 
             VStack(alignment: .leading, spacing: subtitleSpacing) {
                 Text(tool.title)
@@ -84,7 +84,8 @@ struct ToolRowCard<Accessory: View>: View {
 
 struct ToolIconView: View {
     let tool: ToolItem
-    let colorScheme: ColorScheme
+    
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
