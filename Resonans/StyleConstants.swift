@@ -54,6 +54,7 @@ enum AppStyle {
         colorScheme == .dark ? .black : .white
     }
 
+    @available(*, deprecated, message: "Use colorScheme-Environment directly")
     static func primary(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark ? .white : .black
     }

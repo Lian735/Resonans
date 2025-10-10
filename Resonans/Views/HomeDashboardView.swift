@@ -61,53 +61,54 @@ struct HomeDashboardView: View {
     }
 
     private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Welcome back")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.7))
-                    Text("Craft something brilliant today")
-                        .font(.system(size: 30, weight: .heavy, design: .rounded))
-                        .foregroundStyle(primary)
+        AppCard{
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Welcome back")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(primary.opacity(0.7))
+                        Text("Craft something brilliant today")
+                            .font(.system(size: 30, weight: .heavy, design: .rounded))
+                            .foregroundStyle(primary)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundStyle(accent.color)
+                        Text("v1.2")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(primary.opacity(0.6))
+                    }
                 }
-
-                Spacer()
-
-                VStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(accent.color)
-                    Text("v1.2")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.6))
+                
+                Button {
+                    HapticsManager.shared.selection()
+                    onShowTools()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Browse tools")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundStyle(accent.color)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(accent.color.opacity(colorScheme == .dark ? 0.28 : 0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
             }
-
-            Button {
-                HapticsManager.shared.selection()
-                onShowTools()
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "wrench.and.screwdriver")
-                        .font(.system(size: 18, weight: .semibold))
-                    Text("Browse tools")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                }
-                .foregroundStyle(accent.color)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(accent.color.opacity(colorScheme == .dark ? 0.28 : 0.18))
-                .clipShape(RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                        .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
+            .padding(AppStyle.innerPadding)
         }
-        .padding(AppStyle.innerPadding)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .large)
     }
 
     private var recentsSection: some View {
@@ -144,7 +145,7 @@ struct HomeDashboardView: View {
                             HapticsManager.shared.selection()
                             onOpenTool(tool)
                         } label: {
-                            ToolHistoryRow(tool: tool, primary: primary, colorScheme: colorScheme)
+                            ToolOverview(tool: tool)
                         }
                         .buttonStyle(.plain)
                     }
