@@ -145,7 +145,7 @@ private struct AppCardStyleModifier: ViewModifier {
     let cornerRadius: CGFloat
     let fillOpacity: Double
     let strokeOpacity: Double
-    let shadowLevel: DefaultShadowConfiguration
+    let shadowLevel: ShadowConfiguration.Configuration
     let shadowOpacity: Double?
 
     func body(content: Content) -> some View {
@@ -170,7 +170,7 @@ extension View {
         cornerRadius: CGFloat = AppStyle.cornerRadius,
         fillOpacity: Double = AppStyle.cardFillOpacity,
         strokeOpacity: Double = AppStyle.strokeOpacity,
-        shadowLevel: DefaultShadowConfiguration = .medium,
+        shadowLevel: ShadowConfiguration.Configuration = .medium,
         shadowOpacity: Double? = nil
     ) -> some View {
         modifier(

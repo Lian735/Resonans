@@ -135,7 +135,7 @@ struct HomeDashboardView: View {
                                     .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
                             )
                     )
-                    .shadow(DefaultShadowConfiguration.medium.configuration(for: colorScheme))
+                    .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
                     .padding(.horizontal, AppStyle.horizontalPadding)
             } else {
                 VStack(spacing: 12) {

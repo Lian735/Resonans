@@ -187,7 +187,7 @@ struct SettingsView: View {
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .shadow(DefaultShadowConfiguration.small.configuration(for: colorScheme))
+                    .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             }
             .padding(.top, 4)
         }
@@ -219,7 +219,7 @@ struct SettingsView: View {
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .shadow(DefaultShadowConfiguration.small.configuration(for: colorScheme))
+                    .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             }
             .padding(.top, 12)
         }

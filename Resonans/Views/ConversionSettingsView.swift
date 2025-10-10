@@ -121,7 +121,7 @@ struct ConversionSettingsView: View {
                         Capsule()
                             .stroke(primary.opacity(0.15), lineWidth: 1)
                     )
-                    .shadow(DefaultShadowConfiguration.small.configuration(for: colorScheme))
+                    .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             }
         }
         .padding(.top, 18)
@@ -733,7 +733,7 @@ private struct VideoPreviewCard: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-        .shadow(DefaultShadowConfiguration.medium.configuration(for: colorScheme))
+        .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
         .onTapGesture {
             showControls = true
             resetHideControlsTimer()
@@ -913,7 +913,7 @@ private struct AudioPreviewCard: View {
         }
 
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-        .shadow(DefaultShadowConfiguration.medium.configuration(for: colorScheme))
+        .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
         .onAppear {
             if let url = audioURL {
                 loadMetadata(for: url)
