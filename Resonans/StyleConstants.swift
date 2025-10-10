@@ -140,6 +140,7 @@ private struct ConditionalShadowModifier: ViewModifier {
     }
 }
 
+@available(*, deprecated, message: "Use AppCard(content:) instead")
 private struct AppCardStyleModifier: ViewModifier {
     let primary: Color
     let colorScheme: ColorScheme
@@ -165,6 +166,7 @@ private struct AppCardStyleModifier: ViewModifier {
 }
 
 extension View {
+    @available(*, deprecated, message: "Use AppCard(content:) instead")
     func appCardStyle(
         primary: Color,
         colorScheme: ColorScheme,
