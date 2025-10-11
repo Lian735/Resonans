@@ -31,7 +31,7 @@ struct ContentView: View {
             OnboardingFlowView(
                 tools: viewModel.tools,
                 accent: accent.color,
-                primary: primary,
+                primary: .primary,
                 colorScheme: colorScheme
             ) { favorites, tips in
                 viewModel.favoriteToolIds = favorites
@@ -139,7 +139,7 @@ struct ContentView: View {
             Text(headerTitle)
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
                 .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
                 .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
 
@@ -161,7 +161,7 @@ struct ContentView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(primary)
+                        .foregroundStyle(.primary)
                         .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
                 }
                 .buttonStyle(.plain)
@@ -173,7 +173,7 @@ struct ContentView: View {
             }) {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(.primary)
                     .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
             }
             .buttonStyle(.plain)
@@ -201,7 +201,7 @@ struct ContentView: View {
             recentTools: viewModel.recentTools,
             scrollToTopTrigger: $viewModel.homeScrollTrigger,
             accent: accent,
-            primary: primary,
+            primary: .primary,
             colorScheme: colorScheme,
             onOpenTool: { viewModel.launchTool($0) },
             onShowTools: {
@@ -218,7 +218,7 @@ struct ContentView: View {
             selectedTool: $viewModel.selectedTool,
             scrollToTopTrigger: $viewModel.toolsScrollTrigger,
             accent: accent,
-            primary: primary,
+            primary: .primary,
             colorScheme: colorScheme,
             activeTool: viewModel.selectedTool,
             onOpen: { tool in

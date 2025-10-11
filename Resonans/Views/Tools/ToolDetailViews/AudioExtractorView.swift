@@ -17,8 +17,6 @@ struct AudioExtractorView: View {
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-    @available(*, deprecated)
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
@@ -72,10 +70,10 @@ struct AudioExtractorView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Extractor")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.7))
+                    .foregroundStyle(.primary.opacity(0.7))
                 Text("Pull crisp audio from your videos")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(.primary)
             }
 
             Spacer()
@@ -90,7 +88,7 @@ struct AudioExtractorView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Choose a source")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             HStack(spacing: 16) {
                 sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
@@ -109,71 +107,65 @@ struct AudioExtractorView: View {
             HapticsManager.shared.pulse()
             action()
         } label: {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundStyle(primary)
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
-                    .multilineTextAlignment(.center)
+            AppCard{
+                VStack(spacing: 12) {
+                    Image(systemName: icon)
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-            .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
         }
         .buttonStyle(.plain)
     }
 
     private var recentSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Recent conversions")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
-                .padding(.top, 16)
-                .padding(.horizontal, AppStyle.innerPadding)
-
-            VStack(spacing: 12) {
-                if recents.isEmpty {
-                    Text("No exports yet")
-                        .font(.system(size: 17, weight: .medium, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.7))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 40)
-                } else {
-                    ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
-                        RecentRow(item: item, onSave: handleRecentExport)
-                            .padding(.horizontal, 12)
-                    }
-
-                    if recents.count > 3 {
-                        Button {
-                            HapticsManager.shared.pulse()
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                showAllRecents.toggle()
-                            }
-                        } label: {
-                            Text(showAllRecents ? "Show less" : "Show more")
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(primary.opacity(0.75))
+        AppCard{
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Recent conversions")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.top, 16)
+                    .padding(.horizontal, AppStyle.innerPadding)
+                
+                VStack(spacing: 12) {
+                    if recents.isEmpty {
+                        Text("No exports yet")
+                            .font(.system(size: 17, weight: .medium, design: .rounded))
+                            .foregroundStyle(.primary.opacity(0.7))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                    } else {
+                        ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
+                            RecentRow(item: item, onSave: handleRecentExport)
+                                .padding(.horizontal, 12)
                         }
-                        .padding(.top, 6)
+                        
+                        if recents.count > 3 {
+                            Button {
+                                HapticsManager.shared.pulse()
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    showAllRecents.toggle()
+                                }
+                            } label: {
+                                Text(showAllRecents ? "Show less" : "Show more")
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary.opacity(0.75))
+                            }
+                            .padding(.top, 6)
+                        }
                     }
                 }
+                .padding(.top, 12)
+                .padding(.bottom, 18)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 18)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                )
-        )
-        .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
     }
 
     private func reloadRecents() {

@@ -251,14 +251,15 @@ struct ConversionSettingsView: View {
         .animation(.spring(), value: showAdvanced)
     }
 
-    private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            content()
+    private func settingsCard<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
+        AppCard{
+            VStack(alignment: .leading, spacing: 8) {
+                content()
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(primary: primary, colorScheme: colorScheme, shadowLevel: .medium)
     }
 
     // MARK: - Helpers
