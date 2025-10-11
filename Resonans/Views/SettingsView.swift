@@ -50,7 +50,6 @@ struct SettingsView: View {
                             settingsBox{
                                 Toggle("Glass Effect", isOn: $glassEffectActivated)
                             }
-                            .padding()
                         }
                     }
                     Spacer(minLength: 120)
@@ -264,7 +263,6 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 content()
             }
-            .padding(AppStyle.innerPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
