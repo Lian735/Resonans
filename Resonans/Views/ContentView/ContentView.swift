@@ -9,6 +9,7 @@ struct ContentView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
+    @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
