@@ -23,7 +23,6 @@ import SwiftUI
 /// Behavior:
 /// - Uses @AppStorage("Glass Effect activated") to persist and read whether the glass effect is enabled.
 /// - Uses @Environment(\.colorScheme) to choose an appropriate shadow configuration for light/dark appearance.
-/// - Measures width and height via GeometryReader and PreferenceKeys to size the overlay spacer.
 ///
 /// Platform notes:
 /// - The glass effect path is gated by `#available(iOS 26, *)`. On earlier versions, the non-glass style is used.
@@ -67,9 +66,9 @@ struct AppCard<Content: View>: View {
                 nonGlassView
             }
         }
-        .frame(minWidth: UIScreen().bounds.width)
     }
     
+    @available(iOS 26, *)
     private var glassView: some View {
         content()
             .padding()
