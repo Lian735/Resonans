@@ -122,22 +122,13 @@ struct HomeDashboardView: View {
             .padding(.horizontal, AppStyle.horizontalPadding)
 
             if recentTools.isEmpty {
-                Text("Jump back into tools and your history will live here.")
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.65))
-                    .padding(.horizontal, AppStyle.horizontalPadding)
-                    .padding(.vertical, 28)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .fill(primary.opacity(AppStyle.subtleCardFillOpacity))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                                    .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                            )
-                    )
-                    .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
-                    .padding(.horizontal, AppStyle.horizontalPadding)
+                AppCard{
+                    Text("Jump back into tools and your history will live here.")
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(primary.opacity(0.65))
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(.horizontal, AppStyle.horizontalPadding)
             } else {
                 VStack(spacing: 12) {
                     ForEach(recentTools) { tool in
