@@ -1,24 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    private enum TabSelection: Hashable {
-        case home
-        case tools
-        case settings
-        case tool(ToolItem.Identifier)
-    }
-
-    @State private var selectedTab: TabSelection = .home
-
-    @State private var homeScrollTrigger = false
-    @State private var toolsScrollTrigger = false
-    @State private var settingsScrollTrigger = false
-
-    private let tools = ToolItem.all
-    @State private var selectedTool: ToolItem.Identifier = .audioExtractor
-    @State private var favoriteToolIDs: Set<ToolItem.Identifier> = [.audioExtractor]
-    @State private var recentToolIDs: [ToolItem.Identifier] = CacheManager.shared.loadRecentTools()
-    @State private var activeToolID: ToolItem.Identifier?
+    @StateObject var viewModel: ContentViewModel
     @State private var showToolCloseIcon = false
     @State private var shouldSkipCloseReset = false
 
@@ -27,15 +10,10 @@ struct ContentView: View {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("showGuidedTips") private var showGuidedTips = true
-    @State private var showOnboarding = false
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
-
-    private var recentTools: [ToolItem] {
-        recentToolIDs.compactMap { id in tools.first(where: { $0.id == id }) }
-    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -48,28 +26,29 @@ struct ContentView: View {
         .contentShape(Rectangle())
         .onAppear {
             if !hasCompletedOnboarding {
-                showOnboarding = true
+                viewModel.showOnboarding = true
             }
         }
-        .fullScreenCover(isPresented: $showOnboarding) {
+        .fullScreenCover(isPresented: $viewModel.showOnboarding) {
             OnboardingFlowView(
-                tools: tools,
+                tools: viewModel.tools,
                 accent: accent.color,
                 primary: primary,
                 colorScheme: colorScheme
             ) { favorites, tips in
-                favoriteToolIDs = favorites
+                viewModel.favoriteToolIds = favorites
                 showGuidedTips = tips
                 hasCompletedOnboarding = true
-                showOnboarding = false
+                viewModel.showOnboarding = false
                 HapticsManager.shared.notify(.success)
             }
         }
-        .onChange(of: selectedTab) { _, newValue in
+        .onChange(of: viewModel.selectedTab) { oldValue , newValue in
             guard case .tool = newValue else {
                 hideToolCloseIcon()
                 return
             }
+            viewModel.previousSelectedTab = oldValue
         }
         .simultaneousGesture(
             TapGesture().onEnded {
@@ -107,22 +86,23 @@ struct ContentView: View {
     }
 
     private var tabs: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $viewModel.selectedTab) {
             homeTab
                 .tag(TabSelection.home)
             toolsTab
                 .tag(TabSelection.tools)
 
-            if let activeToolID, let tool = tools.first(where: { $0.id == activeToolID }) {
+            if let activeToolID = viewModel.selectedTool,
+                let tool = viewModel.tools.first(where: { $0.id == activeToolID }) {
                 toolView(for: tool)
                     .tag(TabSelection.tool(activeToolID))
             }
 
-            SettingsView(scrollToTopTrigger: $settingsScrollTrigger)
+            SettingsView(scrollToTopTrigger: $viewModel.settingsScrollTrigger)
                 .tag(TabSelection.settings)
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-        .animation(.easeInOut(duration: 0.3), value: selectedTab)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.selectedTab)
     }
 
     private var tabBarOverlay: some View {
@@ -141,19 +121,19 @@ struct ContentView: View {
 
     private var tabBar: some View {
         HStack(spacing: 32) {
-            bottomTabButton(systemName: "house.fill", tab: .home, trigger: $homeScrollTrigger)
-            bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $toolsScrollTrigger)
-            if let activeToolID {
+            bottomTabButton(systemName: "house.fill", tab: .home, trigger: $viewModel.homeScrollTrigger)
+            bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $viewModel.toolsScrollTrigger)
+            if let activeToolID = viewModel.selectedTool {
                 toolIconButton(for: activeToolID)
                     .transition(.scale.combined(with: .opacity))
             }
-            bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $settingsScrollTrigger)
+            bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $viewModel.settingsScrollTrigger)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 40)
-        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: activeToolID)
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: viewModel.selectedTool)
     }
 
     private var header: some View {
@@ -163,7 +143,7 @@ struct ContentView: View {
                 .tracking(0.5)
                 .foregroundStyle(primary)
                 .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
-                .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
 
             Spacer()
 
@@ -174,9 +154,9 @@ struct ContentView: View {
 
     @ViewBuilder
     private var headerActionButton: some View {
-        switch selectedTab {
+        switch viewModel.selectedTab {
         case .tool:
-            if activeToolID != nil {
+            if viewModel.selectedTool != nil {
                 Button(action: {
                     HapticsManager.shared.selection()
                     closeActiveTool()
@@ -191,7 +171,7 @@ struct ContentView: View {
         case .settings:
             Button(action: {
                 HapticsManager.shared.pulse()
-                showOnboarding = true
+                viewModel.showOnboarding = true
             }) {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
@@ -205,7 +185,7 @@ struct ContentView: View {
     }
 
     private var headerTitle: String {
-        switch selectedTab {
+        switch viewModel.selectedTab {
         case .home:
             return "Home"
         case .tools:
@@ -213,22 +193,22 @@ struct ContentView: View {
         case .settings:
             return "Settings"
         case let .tool(identifier):
-            return tools.first(where: { $0.id == identifier })?.title ?? "Tool"
+            return viewModel.tools.first(where: { $0.id == identifier })?.title ?? "Tool"
         }
     }
 
     private var homeTab: some View {
         HomeDashboardView(
-            tools: tools,
-            recentTools: recentTools,
-            scrollToTopTrigger: $homeScrollTrigger,
+            tools: viewModel.tools,
+            recentTools: viewModel.recentTools,
+            scrollToTopTrigger: $viewModel.homeScrollTrigger,
             accent: accent,
             primary: primary,
             colorScheme: colorScheme,
             onOpenTool: { launchTool($0) },
             onShowTools: {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    selectedTab = .tools
+                    viewModel.selectedTab = .tools
                 }
             }
         )
@@ -236,18 +216,18 @@ struct ContentView: View {
 
     private var toolsTab: some View {
         ToolsView(
-            tools: tools,
-            selectedTool: $selectedTool,
-            scrollToTopTrigger: $toolsScrollTrigger,
+            tools: viewModel.tools,
+            selectedTool: $viewModel.selectedTool,
+            scrollToTopTrigger: $viewModel.toolsScrollTrigger,
             accent: accent,
             primary: primary,
             colorScheme: colorScheme,
-            activeTool: activeToolID,
+            activeTool: viewModel.selectedTool,
             onOpen: { tool in
                 launchTool(tool)
             },
             onClose: { identifier in
-                if activeToolID == identifier {
+                if viewModel.selectedTool == identifier {
                     closeActiveTool()
                 }
             }
@@ -273,11 +253,11 @@ struct ContentView: View {
     private func bottomTabButton(systemName: String, tab: TabSelection, trigger: Binding<Bool>) -> some View {
         Button(action: {
             HapticsManager.shared.pulse()
-            if selectedTab == tab {
+            if viewModel.selectedTab == tab {
                 trigger.wrappedValue.toggle()
             } else {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    selectedTab = tab
+                    viewModel.selectedTab = tab
                 }
                 DispatchQueue.main.async {
                     trigger.wrappedValue.toggle()
@@ -294,15 +274,15 @@ struct ContentView: View {
                 name: systemName,
                 size: 24,
                 weight: .semibold,
-                color: selectedTab == tab ? accent.color : primary.opacity(0.5)
+                color: viewModel.selectedTab == tab ? accent.color : primary.opacity(0.5)
             )
-            .animation(.easeInOut(duration: 0.25), value: selectedTab)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
         }
     }
 
     private func toolIconButton(for identifier: ToolItem.Identifier) -> some View {
         let isSelected: Bool
-        if case let .tool(current) = selectedTab, current == identifier {
+        if case let .tool(current) = viewModel.selectedTab, current == identifier {
             isSelected = true
         } else {
             isSelected = false
@@ -317,7 +297,7 @@ struct ContentView: View {
                     shouldSkipCloseReset = true
                 } else {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                        selectedTab = .tool(identifier)
+                        viewModel.selectedTab = .tool(identifier)
                     }
                     if showToolCloseIcon {
                         showToolCloseIcon = false
@@ -336,7 +316,7 @@ struct ContentView: View {
             .scaleEffect(showToolCloseIcon && isSelected ? 0.01 : 1)
             .opacity(showToolCloseIcon && isSelected ? 0 : 1)
             .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
-            .animation(.easeInOut(duration: 0.25), value: selectedTab)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
 
             Button {
                 HapticsManager.shared.pulse()
@@ -357,11 +337,11 @@ struct ContentView: View {
     }
 
     private func launchTool(_ tool: ToolItem) {
-        selectedTool = tool.id
+        viewModel.selectedTool = tool.id
         updateRecents(with: tool.id)
         withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
-            activeToolID = tool.id
-            selectedTab = .tool(tool.id)
+            viewModel.selectedTool = tool.id
+            viewModel.selectedTab = .tool(tool.id)
         }
         showToolCloseIcon = false
         shouldSkipCloseReset = false
@@ -375,28 +355,28 @@ struct ContentView: View {
     }
 
     private func closeActiveTool() {
-        guard let identifier = activeToolID else { return }
+        guard let identifier = viewModel.selectedTool else { return }
         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
             showToolCloseIcon = false
         }
         shouldSkipCloseReset = false
-        if case let .tool(current) = selectedTab, current == identifier {
+        if case let .tool(current) = viewModel.selectedTab, current == identifier {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                selectedTab = .tools
+                viewModel.selectedTab = viewModel.previousSelectedTab ?? .home
             }
         }
         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-            activeToolID = nil
+            viewModel.selectedTool = nil
         }
     }
 
     private func updateRecents(with identifier: ToolItem.Identifier) {
-        recentToolIDs.removeAll(where: { $0 == identifier })
-        recentToolIDs.insert(identifier, at: 0)
-        if recentToolIDs.count > 6 {
-            recentToolIDs = Array(recentToolIDs.prefix(6))
+        viewModel.recentToolIDs.removeAll(where: { $0 == identifier })
+        viewModel.recentToolIDs.insert(identifier, at: 0)
+        if viewModel.recentToolIDs.count > 6 {
+            viewModel.recentToolIDs = Array(viewModel.recentToolIDs.prefix(6))
         }
-        CacheManager.shared.saveRecentTools(recentToolIDs)
+        CacheManager.shared.saveRecentTools(viewModel.recentToolIDs)
     }
 
     @ViewBuilder
@@ -410,5 +390,5 @@ struct ContentView: View {
     }
 }
 
-#Preview { ContentView() }
+#Preview { ContentView(viewModel: ContentViewModel()) }
 

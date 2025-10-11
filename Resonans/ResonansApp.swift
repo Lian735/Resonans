@@ -14,7 +14,7 @@ struct ResonansApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: ContentViewModel())
                 .preferredColorScheme(appearance.colorScheme)
                 .animation(.easeInOut(duration: 0.4), value: appearanceRaw)
         }

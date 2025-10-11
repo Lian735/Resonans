@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ToolsView: View {
     let tools: [ToolItem]
-    @Binding var selectedTool: ToolItem.Identifier
+    @Binding var selectedTool: ToolItem.Identifier?
     @Binding var scrollToTopTrigger: Bool
 
     let accent: AccentColorOption
@@ -138,7 +138,7 @@ private struct ToolListRow: View {
 
 #Preview {
     struct PreviewWrapper: View {
-        @State private var selected = ToolItem.Identifier.audioExtractor
+        @State private var selected: ToolItem.Identifier? = ToolItem.Identifier.audioExtractor
         @State private var trigger = false
 
         var body: some View {
