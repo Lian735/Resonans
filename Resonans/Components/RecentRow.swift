@@ -5,6 +5,7 @@ struct RecentRow: View {
     let onSave: (RecentItem) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     var body: some View {
@@ -19,7 +20,7 @@ struct RecentRow: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                        .stroke(primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
+                        .stroke(.primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
                 )
                 .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
 

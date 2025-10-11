@@ -20,6 +20,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
 
+    @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     private var versionDisplayString: String {

@@ -11,6 +11,7 @@ struct ConversionSettingsView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
+    @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     @State private var selectedFormat: AudioFormat = .mp3

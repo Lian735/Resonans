@@ -17,6 +17,7 @@ struct AudioExtractorView: View {
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+    @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     init(onClose: @escaping () -> Void = {}) {
