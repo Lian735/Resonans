@@ -45,11 +45,13 @@ struct SettingsView: View {
                     appearanceSection
                     otherSection
                     aboutSection
-                    if experimentalEnabled{
-                        AppCard{
-                            Toggle("Glass Effect", isOn: $glassEffectActivated)
+                    if #available(iOS 26, *){
+                        if experimentalEnabled{
+                            settingsBox{
+                                Toggle("Glass Effect", isOn: $glassEffectActivated)
+                            }
+                            .padding()
                         }
-                        .padding()
                     }
                     Spacer(minLength: 120)
                 }
