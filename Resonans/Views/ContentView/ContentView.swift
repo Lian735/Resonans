@@ -2,18 +2,15 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject var viewModel: ContentViewModel
-    @State private var showToolCloseIcon = false
-    @State private var shouldSkipCloseReset = false
-
+    
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
-    private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("showGuidedTips") private var showGuidedTips = true
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
     private var primary: Color { AppStyle.primary(for: colorScheme) }
+    private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -43,21 +40,21 @@ struct ContentView: View {
                 HapticsManager.shared.notify(.success)
             }
         }
-        .onChange(of: viewModel.selectedTab) { oldValue , newValue in
+        .onChange(of: viewModel.selectedTab) { oldValue, newValue in
             guard case .tool = newValue else {
-                hideToolCloseIcon()
+                viewModel.hideToolCloseIcon()
                 return
             }
             viewModel.previousSelectedTab = oldValue
         }
         .simultaneousGesture(
             TapGesture().onEnded {
-                guard showToolCloseIcon else { return }
-                if shouldSkipCloseReset {
-                    shouldSkipCloseReset = false
+                guard viewModel.showToolCloseIcon else { return }
+                if viewModel.shouldSkipCloseReset {
+                    viewModel.shouldSkipCloseReset = false
                     return
                 }
-                hideToolCloseIcon()
+                viewModel.hideToolCloseIcon()
             }
         )
     }
@@ -159,7 +156,7 @@ struct ContentView: View {
             if viewModel.selectedTool != nil {
                 Button(action: {
                     HapticsManager.shared.selection()
-                    closeActiveTool()
+                    viewModel.closeActiveTool()
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 26, weight: .semibold))
@@ -205,7 +202,7 @@ struct ContentView: View {
             accent: accent,
             primary: primary,
             colorScheme: colorScheme,
-            onOpenTool: { launchTool($0) },
+            onOpenTool: { viewModel.launchTool($0) },
             onShowTools: {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                     viewModel.selectedTab = .tools
@@ -224,11 +221,11 @@ struct ContentView: View {
             colorScheme: colorScheme,
             activeTool: viewModel.selectedTool,
             onOpen: { tool in
-                launchTool(tool)
+                viewModel.launchTool(tool)
             },
             onClose: { identifier in
                 if viewModel.selectedTool == identifier {
-                    closeActiveTool()
+                    viewModel.closeActiveTool()
                 }
             }
         )
@@ -253,22 +250,7 @@ struct ContentView: View {
     private func bottomTabButton(systemName: String, tab: TabSelection, trigger: Binding<Bool>) -> some View {
         Button(action: {
             HapticsManager.shared.pulse()
-            if viewModel.selectedTab == tab {
-                trigger.wrappedValue.toggle()
-            } else {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    viewModel.selectedTab = tab
-                }
-                DispatchQueue.main.async {
-                    trigger.wrappedValue.toggle()
-                }
-            }
-            if showToolCloseIcon {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                    showToolCloseIcon = false
-                }
-            }
-            shouldSkipCloseReset = false
+            viewModel.tabBarButtonAction(tab: tab, trigger: trigger)
         }) {
             symbolIcon(
                 name: systemName,
@@ -287,105 +269,47 @@ struct ContentView: View {
         } else {
             isSelected = false
         }
-        return ZStack {
-            Button {
-                HapticsManager.shared.pulse()
-                if isSelected {
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
-                        showToolCloseIcon = true
-                    }
-                    shouldSkipCloseReset = true
-                } else {
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                        viewModel.selectedTab = .tool(identifier)
-                    }
-                    if showToolCloseIcon {
-                        showToolCloseIcon = false
-                    }
-                    shouldSkipCloseReset = false
+        return Group {
+            if viewModel.showToolCloseIcon {
+                Button {
+                    HapticsManager.shared.pulse()
+                    viewModel.closeActiveTool()
+                } label: {
+                    symbolIcon(
+                        name: "xmark.square.fill",
+                        size: 24,
+                        weight: .semibold,
+                        color: accent.color
+                    )
                 }
-            } label: {
-                symbolIcon(
-                    name: "arrow.up.right.square.fill",
-                    size: 24,
-                    weight: .semibold,
-                    color: isSelected ? accent.color : primary.opacity(0.5)
-                )
-            }
-            .buttonStyle(.plain)
-            .scaleEffect(showToolCloseIcon && isSelected ? 0.01 : 1)
-            .opacity(showToolCloseIcon && isSelected ? 0 : 1)
-            .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
-            .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
-
-            Button {
-                HapticsManager.shared.pulse()
-                closeActiveTool()
-            } label: {
-                symbolIcon(
-                    name: "xmark.square.fill",
-                    size: 24,
-                    weight: .semibold,
-                    color: accent.color
-                )
-            }
-            .buttonStyle(.plain)
-            .scaleEffect(showToolCloseIcon && isSelected ? 1 : 0.01)
-            .opacity(showToolCloseIcon && isSelected ? 1 : 0)
-            .animation(.spring(response: 0.45, dampingFraction: 0.75), value: showToolCloseIcon)
-        }
-    }
-
-    private func launchTool(_ tool: ToolItem) {
-        viewModel.selectedTool = tool.id
-        updateRecents(with: tool.id)
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) {
-            viewModel.selectedTool = tool.id
-            viewModel.selectedTab = .tool(tool.id)
-        }
-        showToolCloseIcon = false
-        shouldSkipCloseReset = false
-    }
-
-    private func hideToolCloseIcon() {
-        guard showToolCloseIcon else { return }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-            showToolCloseIcon = false
-        }
-    }
-
-    private func closeActiveTool() {
-        guard let identifier = viewModel.selectedTool else { return }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-            showToolCloseIcon = false
-        }
-        shouldSkipCloseReset = false
-        if case let .tool(current) = viewModel.selectedTab, current == identifier {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                viewModel.selectedTab = viewModel.previousSelectedTab ?? .home
+                .buttonStyle(.plain)
+                .animation(.spring(response: 0.45, dampingFraction: 0.75), value: viewModel.showToolCloseIcon)
+            } else {
+                Button {
+                    HapticsManager.shared.pulse()
+                    viewModel.toolButtonAction(isSelected: isSelected, identifier: identifier)
+                } label: {
+                    symbolIcon(
+                        name: "arrow.up.right.square.fill",
+                        size: 24,
+                        weight: .semibold,
+                        color: isSelected ? accent.color : primary.opacity(0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .animation(.spring(response: 0.45, dampingFraction: 0.75), value: viewModel.showToolCloseIcon)
+                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
             }
         }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-            viewModel.selectedTool = nil
-        }
-    }
-
-    private func updateRecents(with identifier: ToolItem.Identifier) {
-        viewModel.recentToolIDs.removeAll(where: { $0 == identifier })
-        viewModel.recentToolIDs.insert(identifier, at: 0)
-        if viewModel.recentToolIDs.count > 6 {
-            viewModel.recentToolIDs = Array(viewModel.recentToolIDs.prefix(6))
-        }
-        CacheManager.shared.saveRecentTools(viewModel.recentToolIDs)
     }
 
     @ViewBuilder
     private func toolView(for tool: ToolItem) -> some View {
         switch tool.id {
         case .audioExtractor:
-            AudioExtractorView(onClose: { closeActiveTool() })
+            AudioExtractorView(onClose: { viewModel.closeActiveTool() })
         case .dummy:
-            DummyToolView(onClose: { closeActiveTool() })
+            DummyToolView(onClose: { viewModel.closeActiveTool() })
         }
     }
 }
