@@ -23,34 +23,17 @@ struct ToolsView: View {
                         .id("toolsTop")
 
                     ForEach(tools) { tool in
-                        ToolListRow(
-                            tool: tool,
-                            primary: primary,
-                            colorScheme: colorScheme,
-                            accent: accent.color,
-                            isSelected: tool.id == selectedTool,
-                            isOpen: activeTool == tool.id,
-                            onTap: {
-                                if selectedTool != tool.id {
-                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                                        selectedTool = tool.id
-                                    }
-                                }
-                                onOpen(tool)
-                            },
-                            onToggleOpenState: {
-                                if activeTool == tool.id {
-                                    onClose(tool.id)
-                                } else {
-                                    if selectedTool != tool.id {
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                                            selectedTool = tool.id
-                                        }
-                                    }
-                                    onOpen(tool)
+                        Button{
+                            if selectedTool != tool.id {
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+                                    selectedTool = tool.id
                                 }
                             }
-                        )
+                            onOpen(tool)
+                        } label: {
+                            ToolOverview(tool: tool)
+                        }
+                        .buttonStyle(.plain)
                         .background(
                             GeometryReader { geo -> Color in
                                 DispatchQueue.main.async {
@@ -87,52 +70,6 @@ struct ToolsView: View {
         .background(
             .clear
         )
-    }
-}
-
-private struct ToolListRow: View {
-    let tool: ToolItem
-    let primary: Color
-    let colorScheme: ColorScheme
-    let accent: Color
-    let isSelected: Bool
-    let isOpen: Bool
-    let onTap: () -> Void
-    let onToggleOpenState: () -> Void
-
-    var body: some View {
-        ToolRowCard(
-            tool: tool,
-            primary: primary,
-            colorScheme: colorScheme,
-            subtitleSpacing: 6,
-            shadowOpacity: (isOpen || isSelected) ? 0.6 : 0.4
-        ) {
-            Button(action: {
-                HapticsManager.shared.pulse()
-                onToggleOpenState()
-            }) {
-                Image(systemName: isOpen ? "xmark" : "chevron.right")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(accent)
-            }
-            .buttonStyle(.plain)
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                .strokeBorder(
-                    primary.opacity(
-                        isOpen ? AppStyle.strokeOpacity * 1.8 : (isSelected ? AppStyle.strokeOpacity * 1.4 : AppStyle.strokeOpacity)
-                    ),
-                    lineWidth: isOpen ? 2 : 1
-                )
-                .opacity(isOpen || isSelected ? 1 : 0)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            HapticsManager.shared.selection()
-            onTap()
-        }
     }
 }
 

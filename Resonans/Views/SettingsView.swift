@@ -20,8 +20,6 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
 
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
-
     private var versionDisplayString: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
@@ -34,6 +32,8 @@ struct SettingsView: View {
         return "—"
     }
 
+    @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -45,6 +45,12 @@ struct SettingsView: View {
                     appearanceSection
                     otherSection
                     aboutSection
+                    if experimentalEnabled{
+                        AppCard{
+                            Toggle("Glass Effect", isOn: $glassEffectActivated)
+                        }
+                        .padding()
+                    }
                     Spacer(minLength: 120)
                 }
                 .padding(.bottom, AppStyle.innerPadding)
@@ -84,7 +90,7 @@ struct SettingsView: View {
         settingsBox {
             Text("Appearance")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             HStack(spacing: 12) {
                 ForEach(Appearance.allCases) { mode in
@@ -107,7 +113,7 @@ struct SettingsView: View {
                         }
                         Text(mode.label)
                             .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(primary.opacity(0.8))
+                            .foregroundStyle(.primary.opacity(0.8))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -116,14 +122,14 @@ struct SettingsView: View {
 
             Text("Accent color")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
                 .padding(.top, 20)
 
             HStack(spacing: 16) {
                 ForEach(AccentColorOption.allCases) { option in
                     ZStack {
                         Circle()
-                            .stroke(primary, lineWidth: option == accent ? 3 : 0)
+                            .stroke(.primary, lineWidth: option == accent ? 3 : 0)
                             .frame(width: 28, height: 28)
                             .scaleEffect(option == accent ? 1.3 : 1.0)
                             .animation(.easeInOut(duration: 0.25), value: accent)
@@ -147,11 +153,11 @@ struct SettingsView: View {
         settingsBox {
             Text("Other")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             Toggle(isOn: $hapticsEnabled) {
                 Text("Vibration")
-                    .foregroundStyle(primary.opacity(0.9))
+                    .foregroundStyle(.primary.opacity(0.9))
             }
             .onChange(of: hapticsEnabled) { _, _ in
                 HapticsManager.shared.selection()
@@ -159,7 +165,7 @@ struct SettingsView: View {
 
             Toggle(isOn: $soundsEnabled) {
                 Text("Sounds")
-                    .foregroundStyle(primary.opacity(0.9))
+                    .foregroundStyle(.primary.opacity(0.9))
             }
             .onChange(of: soundsEnabled) { _, _ in
                 HapticsManager.shared.selection()
@@ -167,7 +173,7 @@ struct SettingsView: View {
 
             Toggle(isOn: $experimentalEnabled) {
                 Text("Experimental Features")
-                    .foregroundStyle(primary.opacity(0.9))
+                    .foregroundStyle(.primary.opacity(0.9))
             }
             .onChange(of: experimentalEnabled) { _, _ in
                 HapticsManager.shared.selection()
@@ -182,7 +188,7 @@ struct SettingsView: View {
             } label: {
                 Text("Clear Cache")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
@@ -197,14 +203,14 @@ struct SettingsView: View {
         settingsBox {
             Text("About")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             HStack {
                 Text("Version")
                 Spacer()
                 Text(versionDisplayString)
             }
-            .foregroundStyle(primary.opacity(0.8))
+            .foregroundStyle(.primary.opacity(0.8))
 
             Button {
                 HapticsManager.shared.pulse()
@@ -214,7 +220,7 @@ struct SettingsView: View {
             } label: {
                 Text("Send Feedback")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))
@@ -251,18 +257,14 @@ struct SettingsView: View {
         }
     }
 
-    private func settingsBox<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            content()
+    private func settingsBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
+        AppCard{
+            VStack(alignment: .leading, spacing: 16) {
+                content()
+            }
+            .padding(AppStyle.innerPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(AppStyle.innerPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCardStyle(
-            primary: primary,
-            colorScheme: colorScheme,
-            fillOpacity: AppStyle.subtleCardFillOpacity,
-            shadowLevel: .medium
-        )
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
 }
