@@ -156,26 +156,6 @@ struct HomeDashboardView: View {
     }
 }
 
-private struct ToolHistoryRow: View {
-    let tool: ToolItem
-    let primary: Color
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        ToolRowCard(
-            tool: tool,
-            primary: primary,
-            colorScheme: colorScheme,
-            subtitleSpacing: 4,
-            shadowLevel: .small
-        ) {
-            Image(systemName: "chevron.right")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(primary.opacity(0.4))
-        }
-    }
-}
-
 #Preview {
     struct PreviewWrapper: View {
         @State private var trigger = false

@@ -31,8 +31,6 @@ struct ContentView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
-    @available(*, deprecated)
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
 
     private var recentTools: [ToolItem] {
         recentToolIDs.compactMap { id in tools.first(where: { $0.id == id }) }
@@ -56,7 +54,7 @@ struct ContentView: View {
             OnboardingFlowView(
                 tools: tools,
                 accent: accent.color,
-                primary: primary,
+                primary: .primary,
                 colorScheme: colorScheme
             ) { favorites, tips in
                 favoriteToolIDs = favorites
@@ -162,7 +160,7 @@ struct ContentView: View {
             Text(headerTitle)
                 .font(.system(size: 46, weight: .heavy, design: .rounded))
                 .tracking(0.5)
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
                 .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
                 .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
@@ -184,7 +182,7 @@ struct ContentView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(primary)
+                        .foregroundStyle(.primary)
                         .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
                 }
                 .buttonStyle(.plain)
@@ -196,7 +194,7 @@ struct ContentView: View {
             }) {
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(.primary)
                     .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
             }
             .buttonStyle(.plain)
@@ -224,7 +222,7 @@ struct ContentView: View {
             recentTools: recentTools,
             scrollToTopTrigger: $homeScrollTrigger,
             accent: accent,
-            primary: primary,
+            primary: .primary,
             colorScheme: colorScheme,
             onOpenTool: { launchTool($0) },
             onShowTools: {
@@ -241,7 +239,7 @@ struct ContentView: View {
             selectedTool: $selectedTool,
             scrollToTopTrigger: $toolsScrollTrigger,
             accent: accent,
-            primary: primary,
+            primary: .primary,
             colorScheme: colorScheme,
             activeTool: activeToolID,
             onOpen: { tool in
@@ -295,7 +293,7 @@ struct ContentView: View {
                 name: systemName,
                 size: 24,
                 weight: .semibold,
-                color: selectedTab == tab ? accent.color : primary.opacity(0.5)
+                color: selectedTab == tab ? accent.color : .primary.opacity(0.5)
             )
             .animation(.easeInOut(duration: 0.25), value: selectedTab)
         }
@@ -330,7 +328,7 @@ struct ContentView: View {
                     name: "arrow.up.right.square.fill",
                     size: 24,
                     weight: .semibold,
-                    color: isSelected ? accent.color : primary.opacity(0.5)
+                    color: isSelected ? accent.color : .primary.opacity(0.5)
                 )
             }
             .buttonStyle(.plain)
