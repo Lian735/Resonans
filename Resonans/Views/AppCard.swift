@@ -57,9 +57,6 @@ struct AppCard<Content: View>: View {
     
     var body: some View {
         HStack{
-            Spacer()
-                .frame(height: measuredHeight)
-        }.overlay{
             if #available(iOS 26, *) {
                 if glassEffectActivated{
                     glassView
@@ -70,6 +67,7 @@ struct AppCard<Content: View>: View {
                 nonGlassView
             }
         }
+        .frame(minWidth: UIScreen().bounds.width)
     }
     
     private var glassView: some View {
