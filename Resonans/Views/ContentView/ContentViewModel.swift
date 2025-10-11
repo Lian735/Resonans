@@ -50,12 +50,9 @@ final class ContentViewModel: ObservableObject {
     }
     
     func launchTool(_ tool: ToolItem) {
-        let spring = Animation.spring(response: 0.5, dampingFraction: 0.78)
         updateRecentTools(with: tool.id)
-        withAnimation(spring) {
-            selectedTool = tool.id
-            selectedTab = .tool(tool.id)
-        }
+        selectedTool = tool.id
+        selectedTab = .tool(tool.id)
         showToolCloseIcon = false
         shouldSkipCloseReset = false
     }
@@ -74,9 +71,7 @@ final class ContentViewModel: ObservableObject {
         if selectedTab == tab {
             trigger.wrappedValue.toggle()
         } else {
-            withAnimation(spring) {
-                selectedTab = tab
-            }
+            selectedTab = tab
         }
         if showToolCloseIcon {
             withAnimation(spring) {
@@ -94,9 +89,7 @@ final class ContentViewModel: ObservableObject {
             }
             shouldSkipCloseReset = true
         } else {
-            withAnimation(spring) {
-                selectedTab = .tool(identifier)
-            }
+            selectedTab = .tool(identifier)
             if showToolCloseIcon {
                 hideToolCloseIcon()
             }
