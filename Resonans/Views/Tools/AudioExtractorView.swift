@@ -3,7 +3,6 @@ import SwiftUI
 struct AudioExtractorView: View {
     let onClose: () -> Void
 
-    @State private var videoURL: URL?
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
     @State private var showConversionSheet = false
@@ -12,6 +11,7 @@ struct AudioExtractorView: View {
     @State private var showAllRecents = false
     @State private var exportURLForRecent: URL?
     @State private var showRecentExporter = false
+    @State private var activeSheet: ActiveSheet?
 
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
@@ -41,28 +41,19 @@ struct AudioExtractorView: View {
             .padding(.horizontal, AppStyle.horizontalPadding)
         }
         .background(.clear)
-        .sheet(isPresented: $showPhotoPicker) {
-            VideoPicker { url in
-                videoURL = url
-                showConversionSheet = true
-            }
-        }
-        .sheet(isPresented: $showFilePicker) {
-            FilePicker { url in
-                videoURL = url
-                showConversionSheet = true
-            }
-        }
-        .sheet(
-            isPresented: $showConversionSheet,
-            onDismiss: { videoURL = nil }
-        ) {
-            if let url = videoURL {
+        .sheet(item: $activeSheet) { sheetType in
+            switch sheetType {
+            case .filePicker:
+                FilePicker { url in
+                    activeSheet = .conversion(url)
+                }
+            case .photoPicker:
+                VideoPicker { url in
+                    activeSheet = .conversion(url)
+                }
+            case .conversion(let url):
                 ConversionSettingsView(videoURL: url)
-            }
-        }
-        .sheet(isPresented: $showRecentExporter, onDismiss: { exportURLForRecent = nil }) {
-            if let url = exportURLForRecent {
+            case .recents(let url):
                 ExportPicker(url: url)
             }
         }
@@ -102,11 +93,11 @@ struct AudioExtractorView: View {
 
             HStack(spacing: 16) {
                 sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
-                    showFilePicker = true
+                    activeSheet = .filePicker
                 }
 
                 sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
-                    showPhotoPicker = true
+                    activeSheet = .photoPicker
                 }
             }
         }
@@ -194,8 +185,15 @@ struct AudioExtractorView: View {
             reloadRecents()
             return
         }
-        exportURLForRecent = url
-        showRecentExporter = true
+        activeSheet = .recents(url)
+    }
+}
+
+// MARK: - Sheet Handler
+extension AudioExtractorView {
+    enum ActiveSheet: Identifiable {
+        case photoPicker, filePicker, recents(URL), conversion(URL)
+        var id: String { String(describing: self) }
     }
 }
 

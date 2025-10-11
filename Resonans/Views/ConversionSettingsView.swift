@@ -17,8 +17,6 @@ struct ConversionSettingsView: View {
     @State private var isProcessing = false
     @State private var progressValue: Double = 0
     @State private var exportURL: URL?
-    @State private var showExporter = false
-    @State private var showSuccessSheet = false
     @State private var showAdvanced = false
     // Example advanced settings state
     @State private var bitrate: Double = 192 // kbps
@@ -27,6 +25,7 @@ struct ConversionSettingsView: View {
     @State private var audioSampleRate: Double = 44_100
     @State private var audioChannelCount: Int = 2
     @State private var hasLoadedAudioMetadata = false
+    @State private var activeSheet: ActiveSheet?
 
     private let idealPreviewSize: CGFloat = 140
     @State private var resolvedPreviewSize: CGFloat = 140
@@ -45,25 +44,20 @@ struct ConversionSettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(backgroundGradient)
             .safeAreaInset(edge: .bottom) { footer }
-        .sheet(isPresented: $showSuccessSheet) {
-            if let exportURL = exportURL {
-                ConversionSuccessSheet(
-                    exportURL: exportURL,
-                    accentColor: accent.color,
-                    primaryColor: primary,
-                    onSave: { showExporter = true },
-                    onDone: {
-                        showSuccessSheet = false
-                    }
-                )
-                .presentationBackground(.regularMaterial)
+            .sheet(item: $activeSheet) { sheetType in
+                switch sheetType {
+                case .success(let exportUrl):
+                    ConversionSuccessSheet(
+                        exportURL: exportUrl,
+                        accentColor: accent.color,
+                        primaryColor: primary,
+                        onSave: { activeSheet = .exporter(exportUrl) },
+                        onDone: { activeSheet = nil }
+                    )
+                case .exporter(let exportUrl):
+                    ExportPicker(url: exportUrl)
+                }
             }
-        }
-        .sheet(isPresented: $showExporter) {
-            if let exportURL = exportURL {
-                ExportPicker(url: exportURL)
-            }
-        }
         .onAppear {
             if !hasLoadedAudioMetadata {
                 hasLoadedAudioMetadata = true
@@ -422,8 +416,7 @@ struct ConversionSettingsView: View {
         exportURL = nil
         progressValue = 0
         isProcessing = true
-        showExporter = false
-        showSuccessSheet = false
+        activeSheet = nil
         let targetBitrate = Int(max(min(bitrate, 320), 64))
         VideoToAudioConverter.convert(
             videoURL: videoURL,
@@ -452,7 +445,7 @@ struct ConversionSettingsView: View {
                         exportURL = url
                     }
                     HapticsManager.shared.notify(.success)
-                    showSuccessSheet = true
+                    activeSheet = .success(url)
                 case .failure:
                     dismiss()
                 }
@@ -504,6 +497,12 @@ struct ConversionSettingsView: View {
                 audioChannelCount = max(channels, 1)
             }
         }
+    }
+    
+    enum ActiveSheet: Identifiable {
+        case success(URL)
+        case exporter(URL)
+        var id: String { String(describing: self) }
     }
 }
 
