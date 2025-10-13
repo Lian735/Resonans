@@ -5,10 +5,13 @@ import SwiftUI
 
 struct ToolOverview: View {
     private let tool: ToolItem
-    init(tool:  ToolItem){
+    private let morphProgress: CGFloat
+
+    init(tool:  ToolItem, morphProgress: CGFloat = 0){
         self.tool = tool
+        self.morphProgress = morphProgress
     }
-    
+
     var body: some View {
         AppCard{
             HStack{
@@ -17,11 +20,15 @@ struct ToolOverview: View {
                     Text(tool.title)
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
+                        .blur(radius: morphProgress * 6)
+                        .opacity(max(0, 1 - morphProgress))
 
                     Text(tool.subtitle)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+                        .blur(radius: morphProgress * 6)
+                        .opacity(max(0, 1 - morphProgress))
                 }
             }
         }

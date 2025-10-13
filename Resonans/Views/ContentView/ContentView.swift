@@ -13,10 +13,36 @@ struct ContentView: View {
     private var primary: Color { AppStyle.primary(for: colorScheme) }
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
+    @Namespace private var toolMorphNamespace
+    @State private var toolOverlayProgress: CGFloat = 0
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             backgroundView
             mainContent
+                .blur(radius: toolOverlayProgress * 12)
+                .scaleEffect(1 - toolOverlayProgress * 0.02)
+                .animation(.interactiveSpring(response: 0.6, dampingFraction: 0.85), value: toolOverlayProgress)
+                .allowsHitTesting(toolOverlayProgress < 0.01)
+
+            if let activeToolID = viewModel.selectedTool,
+               let tool = viewModel.tools.first(where: { $0.id == activeToolID }) {
+                ToolMorphOverlay(
+                    tool: tool,
+                    namespace: toolMorphNamespace,
+                    onProgressChange: { progress in
+                        toolOverlayProgress = progress
+                    },
+                    onClose: {
+                        viewModel.closeActiveTool()
+                    },
+                    content: {
+                        toolView(for: tool)
+                    }
+                )
+                .transition(.identity)
+                .zIndex(10)
+            }
         }
         .tint(accent.color)
         .animation(.easeInOut(duration: 0.4), value: colorScheme)
@@ -41,23 +67,13 @@ struct ContentView: View {
                 HapticsManager.shared.notify(.success)
             }
         }
-        .onChange(of: viewModel.selectedTab) { oldValue, newValue in
-            guard case .tool = newValue else {
-                viewModel.hideToolCloseIcon()
-                return
-            }
-            viewModel.previousSelectedTab = oldValue
-        }
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                guard viewModel.showToolCloseIcon else { return }
-                if viewModel.shouldSkipCloseReset {
-                    viewModel.shouldSkipCloseReset = false
-                    return
+        .onChange(of: viewModel.selectedTool) { _, newValue in
+            if newValue == nil {
+                withAnimation(.interactiveSpring(response: 0.6, dampingFraction: 0.85)) {
+                    toolOverlayProgress = 0
                 }
-                viewModel.hideToolCloseIcon()
             }
-        )
+        }
     }
 
     private var backgroundView: some View {
@@ -89,13 +105,6 @@ struct ContentView: View {
                 .tag(TabSelection.home)
             toolsTab
                 .tag(TabSelection.tools)
-
-            if let activeToolID = viewModel.selectedTool,
-                let tool = viewModel.tools.first(where: { $0.id == activeToolID }) {
-                toolView(for: tool)
-                    .tag(TabSelection.tool(activeToolID))
-            }
-
             SettingsView(scrollToTopTrigger: $viewModel.settingsScrollTrigger)
                 .tag(TabSelection.settings)
         }
@@ -121,17 +130,12 @@ struct ContentView: View {
         HStack(spacing: 32) {
             bottomTabButton(systemName: "house.fill", tab: .home, trigger: $viewModel.homeScrollTrigger)
             bottomTabButton(systemName: "wrench.and.screwdriver.fill", tab: .tools, trigger: $viewModel.toolsScrollTrigger)
-            if let activeToolID = viewModel.selectedTool {
-                toolIconButton(for: activeToolID)
-                    .transition(.scale.combined(with: .opacity))
-            }
             bottomTabButton(systemName: "gearshape.fill", tab: .settings, trigger: $viewModel.settingsScrollTrigger)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 40)
-        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: viewModel.selectedTool)
     }
 
     private var header: some View {
@@ -153,19 +157,6 @@ struct ContentView: View {
     @ViewBuilder
     private var headerActionButton: some View {
         switch viewModel.selectedTab {
-        case .tool:
-            if viewModel.selectedTool != nil {
-                Button(action: {
-                    HapticsManager.shared.selection()
-                    viewModel.closeActiveTool()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
-                }
-                .buttonStyle(.plain)
-            }
         case .settings:
             Button(action: {
                 HapticsManager.shared.pulse()
@@ -190,8 +181,6 @@ struct ContentView: View {
             return "Tools"
         case .settings:
             return "Settings"
-        case let .tool(identifier):
-            return viewModel.tools.first(where: { $0.id == identifier })?.title ?? "Tool"
         }
     }
 
@@ -220,14 +209,10 @@ struct ContentView: View {
             accent: accent,
             primary: .primary,
             colorScheme: colorScheme,
-            activeTool: viewModel.selectedTool,
+            morphNamespace: toolMorphNamespace,
+            overlayProgress: toolOverlayProgress,
             onOpen: { tool in
                 viewModel.launchTool(tool)
-            },
-            onClose: { identifier in
-                if viewModel.selectedTool == identifier {
-                    viewModel.closeActiveTool()
-                }
             }
         )
     }
@@ -260,47 +245,6 @@ struct ContentView: View {
                 color: viewModel.selectedTab == tab ? accent.color : primary.opacity(0.5)
             )
             .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
-        }
-    }
-
-    private func toolIconButton(for identifier: ToolItem.Identifier) -> some View {
-        let isSelected: Bool
-        if case let .tool(current) = viewModel.selectedTab, current == identifier {
-            isSelected = true
-        } else {
-            isSelected = false
-        }
-        return Group {
-            if viewModel.showToolCloseIcon {
-                Button {
-                    HapticsManager.shared.pulse()
-                    viewModel.closeActiveTool()
-                } label: {
-                    symbolIcon(
-                        name: "xmark.square.fill",
-                        size: 24,
-                        weight: .semibold,
-                        color: accent.color
-                    )
-                }
-                .buttonStyle(.plain)
-                .animation(.spring(response: 0.45, dampingFraction: 0.75), value: viewModel.showToolCloseIcon)
-            } else {
-                Button {
-                    HapticsManager.shared.pulse()
-                    viewModel.toolButtonAction(isSelected: isSelected, identifier: identifier)
-                } label: {
-                    symbolIcon(
-                        name: "arrow.up.right.square.fill",
-                        size: 24,
-                        weight: .semibold,
-                        color: isSelected ? accent.color : primary.opacity(0.5)
-                    )
-                }
-                .buttonStyle(.plain)
-                .animation(.spring(response: 0.45, dampingFraction: 0.75), value: viewModel.showToolCloseIcon)
-                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
-            }
         }
     }
 
