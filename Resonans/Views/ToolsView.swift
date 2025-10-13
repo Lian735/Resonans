@@ -8,9 +8,9 @@ struct ToolsView: View {
     let accent: AccentColorOption
     let primary: Color
     let colorScheme: ColorScheme
-    let activeTool: ToolItem.Identifier?
+    let morphNamespace: Namespace.ID
+    let overlayProgress: CGFloat
     let onOpen: (ToolItem) -> Void
-    let onClose: (ToolItem.Identifier) -> Void
 
     @State private var showTopBorder = false
 
@@ -31,7 +31,11 @@ struct ToolsView: View {
                             }
                             onOpen(tool)
                         } label: {
-                            ToolOverview(tool: tool)
+                            let isActive = selectedTool == tool.id
+                            ToolOverview(tool: tool, morphProgress: isActive ? overlayProgress : 0)
+                                .opacity(isActive ? max(0.0001, 1 - overlayProgress) : 1)
+                                .matchedGeometryEffect(id: ToolMorphID.card(tool.id), in: morphNamespace)
+                                .allowsHitTesting(!isActive)
                         }
                         .buttonStyle(.plain)
                         .background(
@@ -77,6 +81,7 @@ struct ToolsView: View {
     struct PreviewWrapper: View {
         @State private var selected: ToolItem.Identifier? = ToolItem.Identifier.audioExtractor
         @State private var trigger = false
+        @Namespace private var previewNamespace
 
         var body: some View {
             ToolsView(
@@ -86,9 +91,9 @@ struct ToolsView: View {
                 accent: .purple,
                 primary: .black,
                 colorScheme: .light,
-                activeTool: nil,
-                onOpen: { _ in },
-                onClose: { _ in }
+                morphNamespace: previewNamespace,
+                overlayProgress: 0,
+                onOpen: { _ in }
             )
         }
     }
