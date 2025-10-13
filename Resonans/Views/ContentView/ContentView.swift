@@ -12,11 +12,6 @@ struct ContentView: View {
     @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-    @State private var morphContext: ToolMorphContext?
-    @State private var morphProgress: CGFloat = 0
-    @State private var isMorphClosing = false
-
-    private var morphingToolID: ToolItem.Identifier? { morphContext?.tool.id }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -53,11 +48,6 @@ struct ContentView: View {
             }
             viewModel.previousSelectedTab = oldValue
         }
-        .onChange(of: viewModel.selectedTool) { _, newValue in
-            if newValue == nil {
-                dismissMorph(triggerToolClose: false)
-            }
-        }
         .simultaneousGesture(
             TapGesture().onEnded {
                 guard viewModel.showToolCloseIcon else { return }
@@ -84,24 +74,11 @@ struct ContentView: View {
     }
 
     private var mainContent: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                header
-                ZStack {
-                    tabs
-                    tabBarOverlay
-                }
-            }
-
-            if let context = morphContext {
-                ToolMorphOverlay(
-                    context: context,
-                    progress: $morphProgress,
-                    detail: { toolView(for: context.tool) },
-                    onClose: { _ in dismissMorph() }
-                )
-                .zIndex(1)
-                .allowsHitTesting(true)
+        VStack(spacing: 0) {
+            header
+            ZStack {
+                tabs
+                tabBarOverlay
             }
         }
     }
@@ -124,8 +101,6 @@ struct ContentView: View {
         }
         .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         .animation(.easeInOut(duration: 0.3), value: viewModel.selectedTab)
-        .allowsHitTesting(morphContext == nil)
-        .blur(radius: morphProgress * 6)
     }
 
     private var tabBarOverlay: some View {
@@ -155,20 +130,8 @@ struct ContentView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color.black.opacity(0.18 * morphProgress))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 32, style: .continuous)
-                        .stroke(Color.white.opacity(0.08 * morphProgress), lineWidth: morphProgress > 0 ? 1 : 0)
-                )
-                .opacity(morphProgress)
-        )
         .padding(.horizontal, 40)
-        .blur(radius: morphProgress * 9)
-        .opacity(1 - 0.12 * morphProgress)
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: viewModel.selectedTool)
-        .animation(.easeInOut(duration: 0.2), value: morphProgress)
     }
 
     private var header: some View {
@@ -191,7 +154,18 @@ struct ContentView: View {
     private var headerActionButton: some View {
         switch viewModel.selectedTab {
         case .tool:
-            EmptyView()
+            if viewModel.selectedTool != nil {
+                Button(action: {
+                    HapticsManager.shared.selection()
+                    viewModel.closeActiveTool()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .shadow(ShadowConfiguration.textConfiguration(for: colorScheme))
+                }
+                .buttonStyle(.plain)
+            }
         case .settings:
             Button(action: {
                 HapticsManager.shared.pulse()
@@ -252,12 +226,9 @@ struct ContentView: View {
             },
             onClose: { identifier in
                 if viewModel.selectedTool == identifier {
-                    dismissMorph()
+                    viewModel.closeActiveTool()
                 }
-            },
-            morphingToolID: morphingToolID,
-            morphProgress: morphProgress,
-            onRequestMorph: handleMorphRequest
+            }
         )
     }
 
@@ -299,19 +270,38 @@ struct ContentView: View {
         } else {
             isSelected = false
         }
-        return Button {
-            HapticsManager.shared.pulse()
-            viewModel.toolButtonAction(isSelected: isSelected, identifier: identifier)
-        } label: {
-            symbolIcon(
-                name: "arrow.up.right.square.fill",
-                size: 24,
-                weight: .semibold,
-                color: isSelected ? accent.color : primary.opacity(0.5)
-            )
+        return Group {
+            if viewModel.showToolCloseIcon {
+                Button {
+                    HapticsManager.shared.pulse()
+                    viewModel.closeActiveTool()
+                } label: {
+                    symbolIcon(
+                        name: "xmark.square.fill",
+                        size: 24,
+                        weight: .semibold,
+                        color: accent.color
+                    )
+                }
+                .buttonStyle(.plain)
+                .animation(.spring(response: 0.45, dampingFraction: 0.75), value: viewModel.showToolCloseIcon)
+            } else {
+                Button {
+                    HapticsManager.shared.pulse()
+                    viewModel.toolButtonAction(isSelected: isSelected, identifier: identifier)
+                } label: {
+                    symbolIcon(
+                        name: "arrow.up.right.square.fill",
+                        size: 24,
+                        weight: .semibold,
+                        color: isSelected ? accent.color : primary.opacity(0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .animation(.spring(response: 0.45, dampingFraction: 0.75), value: viewModel.showToolCloseIcon)
+                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
+            }
         }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
     }
 
     @ViewBuilder
@@ -321,45 +311,6 @@ struct ContentView: View {
             AudioExtractorView(onClose: { viewModel.closeActiveTool() })
         case .dummy:
             DummyToolView(onClose: { viewModel.closeActiveTool() })
-        }
-    }
-}
-
-private extension ContentView {
-    func handleMorphRequest(for tool: ToolItem, frame: CGRect) -> Bool {
-        guard morphContext == nil, !isMorphClosing else { return false }
-        morphContext = ToolMorphContext(tool: tool, originFrame: frame)
-        morphProgress = 0
-        isMorphClosing = false
-
-        DispatchQueue.main.async {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.78, blendDuration: 0.2)) {
-                morphProgress = 1
-            }
-        }
-        return true
-    }
-
-    func dismissMorph(triggerToolClose: Bool = true) {
-        guard let context = morphContext, !isMorphClosing else { return }
-        isMorphClosing = true
-
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.8, blendDuration: 0.2)) {
-            morphProgress = 0
-        }
-
-        let activeTool = context.tool
-        let closeDelay = 0.55
-        DispatchQueue.main.asyncAfter(deadline: .now() + closeDelay) {
-            if triggerToolClose {
-                viewModel.closeActiveTool()
-            }
-
-            if morphContext?.tool.id == activeTool.id {
-                morphContext = nil
-            }
-
-            isMorphClosing = false
         }
     }
 }
