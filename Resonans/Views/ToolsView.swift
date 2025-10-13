@@ -11,8 +11,12 @@ struct ToolsView: View {
     let activeTool: ToolItem.Identifier?
     let onOpen: (ToolItem) -> Void
     let onClose: (ToolItem.Identifier) -> Void
+    let morphingToolID: ToolItem.Identifier?
+    let morphProgress: CGFloat
+    let onRequestMorph: (ToolItem, CGRect) -> Bool
 
     @State private var showTopBorder = false
+    @State private var cardFrames: [ToolItem.Identifier: CGRect] = [:]
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -23,7 +27,18 @@ struct ToolsView: View {
                         .id("toolsTop")
 
                     ForEach(tools) { tool in
-                        Button{
+                        let isMorphing = morphingToolID == tool.id
+                        Button {
+                            guard morphingToolID == nil else { return }
+                            let didStartMorph: Bool
+                            if let frame = cardFrames[tool.id] {
+                                didStartMorph = onRequestMorph(tool, frame)
+                            } else {
+                                didStartMorph = onRequestMorph(tool, .zero)
+                            }
+
+                            guard didStartMorph else { return }
+
                             if selectedTool != tool.id {
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
                                     selectedTool = tool.id
@@ -31,18 +46,22 @@ struct ToolsView: View {
                             }
                             onOpen(tool)
                         } label: {
-                            ToolOverview(tool: tool)
+                            ToolOverview(tool: tool, morphProgress: isMorphing ? morphProgress : 0)
+                                .blur(radius: isMorphing ? morphProgress * 6 : 0)
                         }
                         .buttonStyle(.plain)
+                        .disabled(isMorphing && morphProgress > 0.05)
                         .background(
                             GeometryReader { geo -> Color in
                                 DispatchQueue.main.async {
-                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
+                                    let localFrame = geo.frame(in: .named("toolsScroll"))
+                                    let shouldShow = localFrame.minY < -24
                                     if showTopBorder != shouldShow {
                                         withAnimation(.easeInOut(duration: 0.2)) {
                                             showTopBorder = shouldShow
                                         }
                                     }
+                                    cardFrames[tool.id] = geo.frame(in: .global)
                                 }
                                 return Color.clear
                             }
@@ -88,7 +107,10 @@ struct ToolsView: View {
                 colorScheme: .light,
                 activeTool: nil,
                 onOpen: { _ in },
-                onClose: { _ in }
+                onClose: { _ in },
+                morphingToolID: nil,
+                morphProgress: 0,
+                onRequestMorph: { _, _ in true }
             )
         }
     }
