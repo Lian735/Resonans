@@ -9,22 +9,42 @@ struct ToolOverview: View {
         self.tool = tool
     }
     
+    @State private var showDetailView: Bool = false
+    
     var body: some View {
-        AppCard{
-            HStack{
-                ToolIconView(tool: tool)
-                VStack(alignment: .leading){
-                    Text(tool.title)
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-
-                    Text(tool.subtitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+        Button{
+            showDetailView.toggle()
+        }label:{
+            AppCard{
+                HStack{
+                    ToolIconView(tool: tool)
+                    VStack(alignment: .leading){
+                        Text(tool.title)
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        
+                        Text(tool.subtitle)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    .multilineTextAlignment(.leading)
                 }
             }
         }
+        .fullScreenCover(isPresented: $showDetailView, content: {
+            NavigationStack{
+                tool.destination
+                    .toolbar(content: {
+                        Button{
+                            showDetailView.toggle()
+                        }label:{
+                            Label("Close", systemImage: "xmark")
+                                .labelStyle(.iconOnly)
+                        }
+                    })
+            }
+        })
     }
 }
 

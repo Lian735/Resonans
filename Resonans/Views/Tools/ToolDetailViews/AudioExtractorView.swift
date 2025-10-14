@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct AudioExtractorView: View {
-    let onClose: () -> Void
-
     @State private var showPhotoPicker = false
     @State private var showFilePicker = false
     @State private var showConversionSheet = false
@@ -17,10 +15,6 @@ struct AudioExtractorView: View {
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-
-    init(onClose: @escaping () -> Void = {}) {
-        self.onClose = onClose
-    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {

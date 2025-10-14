@@ -1,16 +1,10 @@
 import SwiftUI
 
 struct DummyToolView: View {
-    let onClose: () -> Void
-
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-
-    init(onClose: @escaping () -> Void = {}) {
-        self.onClose = onClose
-    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {

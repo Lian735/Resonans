@@ -23,30 +23,20 @@ struct ToolsView: View {
                         .id("toolsTop")
 
                     ForEach(tools) { tool in
-                        Button{
-                            if selectedTool != tool.id {
-                                withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-                                    selectedTool = tool.id
-                                }
-                            }
-                            onOpen(tool)
-                        } label: {
-                            ToolOverview(tool: tool)
-                        }
-                        .buttonStyle(.plain)
-                        .background(
-                            GeometryReader { geo -> Color in
-                                DispatchQueue.main.async {
-                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
-                                    if showTopBorder != shouldShow {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            showTopBorder = shouldShow
-                                        }
-                                    }
-                                }
-                                return Color.clear
-                            }
-                        )
+                        ToolOverview(tool: tool)
+//                        .background(
+//                            GeometryReader { geo -> Color in
+//                                DispatchQueue.main.async {
+//                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
+//                                    if showTopBorder != shouldShow {
+//                                        withAnimation(.easeInOut(duration: 0.2)) {
+//                                            showTopBorder = shouldShow
+//                                        }
+//                                    }
+//                                }
+//                                return Color.clear
+//                            }
+//                        )
                     }
 
                     Spacer(minLength: 80)
