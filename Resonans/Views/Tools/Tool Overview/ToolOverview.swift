@@ -11,6 +11,8 @@ struct ToolOverview: View {
     
     @State private var showDetailView: Bool = false
     
+    @Namespace private var namespace
+    
     var body: some View {
         Button{
             showDetailView.toggle()
@@ -32,6 +34,7 @@ struct ToolOverview: View {
                 }
             }
         }
+        .matchedTransitionSource(id: "Button", in: namespace)
         .fullScreenCover(isPresented: $showDetailView, content: {
             NavigationStack{
                 tool.destination
@@ -44,6 +47,7 @@ struct ToolOverview: View {
                         }
                     })
             }
+            .navigationTransition(.zoom(sourceID: "Button", in: namespace))
         })
     }
 }
