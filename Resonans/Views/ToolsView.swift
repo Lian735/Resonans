@@ -24,24 +24,23 @@ struct ToolsView: View {
 
                     ForEach(tools) { tool in
                         ToolOverview(tool: tool)
-//                        .background(
-//                            GeometryReader { geo -> Color in
-//                                DispatchQueue.main.async {
-//                                    let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
-//                                    if showTopBorder != shouldShow {
-//                                        withAnimation(.easeInOut(duration: 0.2)) {
-//                                            showTopBorder = shouldShow
-//                                        }
-//                                    }
-//                                }
-//                                return Color.clear
-//                            }
-//                        )
+                            .background(
+                                GeometryReader { geo -> Color in
+                                    DispatchQueue.main.async {
+                                        let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
+                                        if showTopBorder != shouldShow {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                showTopBorder = shouldShow
+                                            }
+                                        }
+                                    }
+                                    return Color.clear
+                                }
+                            )
                     }
 
                     Spacer(minLength: 80)
                 }
-                .padding(.horizontal, AppStyle.horizontalPadding)
             }
             .coordinateSpace(name: "toolsScroll")
             .overlay(alignment: .top) {

@@ -33,6 +33,7 @@ struct ToolOverview: View {
                     .multilineTextAlignment(.leading)
                 }
             }
+            .foregroundStyle(.primary)
         }
         .matchedTransitionSource(id: "Button", in: namespace)
         .fullScreenCover(isPresented: $showDetailView, content: {

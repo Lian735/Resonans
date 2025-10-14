@@ -120,12 +120,12 @@ struct ShadowConfiguration: Equatable{
         ///   modify the color selection logic here or build a costum ``ShadowConfiguration``.
         func configuration(for colorScheme: ColorScheme) -> ShadowConfiguration {
             switch self {
-                case .large:
+            case .large:
                 return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 26, offset: CGSize(width: 0, height: 20))
             case .medium:
                 return ShadowConfiguration(color: colorScheme == .light ? .black : .black, radius: 22, offset: CGSize(width: 0, height: 14))
             case .small:
-                return ShadowConfiguration(color: colorScheme == .light ? Color(.sRGBLinear, white: 0.0, opacity: 0.5) : .black, radius: 14, offset: CGSize(width: 0, height: 0))
+                return ShadowConfiguration(color: colorScheme == .light ? Color(.sRGBLinear, white: 0.0, opacity: 0.5) : .black, radius: 8, offset: CGSize(width: 0, height: 0))
             case .text:
                 return ShadowConfiguration(color: colorScheme == .light ? Color(.sRGBLinear, white: 0.0, opacity: 0.5) : .black, radius: 4, offset: CGSize(width: 0, height: 1))
             }

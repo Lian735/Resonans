@@ -74,19 +74,6 @@ struct AppCard<Content: View>: View {
             .padding()
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
             .padding(5)
-            .background(
-                GeometryReader { innerProxy in
-                    Color.clear
-                        .preference(key: ViewHeightKey.self, value: innerProxy.size.height)
-                        .preference(key: ViewWidthKey.self, value: innerProxy.size.width)
-                }
-            )
-            .onPreferenceChange(ViewHeightKey.self) { height in
-                self.measuredHeight = height
-            }
-            .onPreferenceChange(ViewWidthKey.self) { width in
-                self.measuredWidth = width
-            }
     }
     
     private var nonGlassView: some View {
@@ -103,32 +90,5 @@ struct AppCard<Content: View>: View {
             .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             .padding(5)
-            .background(
-                GeometryReader { innerProxy in
-                    Color.clear
-                        .preference(key: ViewHeightKey.self, value: innerProxy.size.height)
-                        .preference(key: ViewWidthKey.self, value: innerProxy.size.width)
-                }
-            )
-            .onPreferenceChange(ViewHeightKey.self) { height in
-                self.measuredHeight = height
-            }
-            .onPreferenceChange(ViewWidthKey.self) { width in
-                self.measuredWidth = width
-            }
-    }
-}
-
-internal struct ViewHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
-internal struct ViewWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
     }
 }
