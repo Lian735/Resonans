@@ -16,7 +16,7 @@ struct ToolItem: Identifiable {
         VStack{
             switch id{
             case .audioExtractor:
-                AudioExtractorView()
+                AudioExtractorView(viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared))
             case .dummy:
                 DummyToolView()
             }

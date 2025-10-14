@@ -1,20 +1,19 @@
 import SwiftUI
 
 struct AudioExtractorView: View {
-    @State private var showPhotoPicker = false
-    @State private var showFilePicker = false
-    @State private var showConversionSheet = false
-
+    @StateObject var viewModel: AudioExtractorViewModel
     @State private var recents: [RecentItem] = CacheManager.shared.loadRecentConversions()
     @State private var showAllRecents = false
-    @State private var exportURLForRecent: URL?
-    @State private var showRecentExporter = false
     @State private var activeSheet: ActiveSheet?
 
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+
+    init(viewModel: AudioExtractorViewModel) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -45,12 +44,15 @@ struct AudioExtractorView: View {
                     activeSheet = .conversion(url)
                 }
             case .conversion(let url):
-                ConversionSettingsView(videoURL: url)
+                AudioConversionView(
+                    viewModel: AudioConversionViewModel(),
+                    videoUrl: url
+                )
             case .recents(let url):
                 ExportPicker(url: url)
             }
         }
-        .onAppear(perform: reloadRecents)
+        .onAppear(perform: viewModel.reloadRecents)
         .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate)) { notification in
             guard let items = notification.object as? [RecentItem] else { return }
             withAnimation(.easeInOut(duration: 0.25)) {
@@ -162,14 +164,10 @@ struct AudioExtractorView: View {
         }
     }
 
-    private func reloadRecents() {
-        recents = CacheManager.shared.loadRecentConversions()
-    }
-
     private func handleRecentExport(_ item: RecentItem) {
         let url = item.fileURL
         guard FileManager.default.fileExists(atPath: url.path) else {
-            reloadRecents()
+            viewModel.reloadRecents()
             return
         }
         activeSheet = .recents(url)
@@ -185,5 +183,7 @@ extension AudioExtractorView {
 }
 
 #Preview {
-    AudioExtractorView()
+    AudioExtractorView(
+        viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared)
+    )
 }

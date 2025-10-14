@@ -2,8 +2,7 @@ import SwiftUI
 import AVFoundation
 import UIKit
 
-struct ConversionSettingsView: View {
-    let videoURL: URL
+struct AudioConversionView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
@@ -13,26 +12,25 @@ struct ConversionSettingsView: View {
     private var background: Color { AppStyle.background(for: colorScheme) }
     @available(*, deprecated)
     private var primary: Color { AppStyle.primary(for: colorScheme) }
-
-    @State private var selectedFormat: AudioFormat = .mp3
+    
+    @StateObject var viewModel: AudioConversionViewModel
     @State private var isProcessing = false
     @State private var progressValue: Double = 0
-    @State private var exportURL: URL?
     @State private var showAdvanced = false
     // Example advanced settings state
-    @State private var bitrate: Double = 192 // kbps
     @State private var showBitrateInfo = false
-    @State private var audioDuration: Double = 0
-    @State private var audioSampleRate: Double = 44_100
-    @State private var audioChannelCount: Int = 2
-    @State private var hasLoadedAudioMetadata = false
     @State private var activeSheet: ActiveSheet?
 
     private let idealPreviewSize: CGFloat = 140
     @State private var resolvedPreviewSize: CGFloat = 140
+    
+    init(viewModel: AudioConversionViewModel, videoUrl: URL) {
+        viewModel.videoURL = videoUrl
+        self._viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     private var originalFormatLabel: String {
-        let ext = videoURL.pathExtension.uppercased()
+        let ext = viewModel.videoURL.pathExtension.uppercased()
         return ext.isEmpty ? "UNKNOWN" : ext
     }
 
@@ -53,7 +51,7 @@ struct ConversionSettingsView: View {
                         exportURL: exportUrl,
                         accentColor: accent.color,
                         primaryColor: primary,
-                        onSave: { activeSheet = .fail },
+                        onSave: { activeSheet = .exporter(exportUrl) },
                         onDone: { activeSheet = nil }
                     )
                 case .exporter(let exportUrl):
@@ -67,15 +65,36 @@ struct ConversionSettingsView: View {
                     )
                 }
             }
-        .onAppear {
-            if !hasLoadedAudioMetadata {
-                hasLoadedAudioMetadata = true
-                loadAudioProperties()
+            .onChange(
+                of: viewModel.audioStatus,
+                { oldStatus, newStatus in
+                    guard oldStatus != newStatus else { return }
+                    switch newStatus {
+                    case .initiate:
+                        break
+                    case .failed:
+                        isProcessing = false
+                        dismiss()
+                    case .inprogress(let progress):
+                        DispatchQueue.main.async {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                progressValue = progress
+                            }
+                        }
+                    case .completed(let url):
+                        isProcessing = false
+                        saveAudioToCache(tempUrl: url)
+                    }
+                }
+            )
+            .onAppear {
+                if !viewModel.isLoadedAudioMetadata {
+                    viewModel.loadAudioProperties()
+                }
             }
-        }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(false)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .interactiveDismissDisabled(false)
     }
 
     private var mainScrollView: some View {
@@ -178,8 +197,8 @@ struct ConversionSettingsView: View {
                 .foregroundStyle(primary)
 
             HStack(spacing: 16) {
-                Text("Original: \(fileSizeString(for: videoURL))")
-                Text("Estimated: \(estimatedExportSizeString())")
+                Text("Original: \(viewModel.getVideoFileSize())")
+                Text("Estimated: \(viewModel.getEstimateExportFileSize())")
             }
             .font(.system(size: 14))
             .foregroundStyle(primary.opacity(0.8))
@@ -201,7 +220,7 @@ struct ConversionSettingsView: View {
                     .font(.system(size: 14))
                     .foregroundStyle(primary.opacity(0.8))
 
-                Picker("", selection: $selectedFormat) {
+                Picker("", selection: $viewModel.selectedFormat) {
                     Text("mp3").tag(AudioFormat.mp3)
                     Text("wav").tag(AudioFormat.wav)
                     Text("m4a").tag(AudioFormat.m4a)
@@ -235,13 +254,13 @@ struct ConversionSettingsView: View {
                     .transition(.opacity)
             }
 
-            if selectedFormat == .wav {
-                Text("WAV exports keep the original quality (~\(wavBitrateKbps) kbps).")
+            if viewModel.selectedFormat == .wav {
+                Text("WAV exports keep the original quality (~\(viewModel.getWavBitrateKbps) kbps).")
                     .font(.system(size: 13))
                     .foregroundStyle(primary.opacity(0.7))
                     .transition(.opacity)
             } else {
-                Slider(value: $bitrate, in: 64...320, step: 1)
+                Slider(value: $viewModel.bitrate, in: 64...320, step: 1)
                     .tint(accent.color)
             }
         }
@@ -271,45 +290,15 @@ struct ConversionSettingsView: View {
     }
 
     // MARK: - Helpers
-    private func fileSizeString(for url: URL) -> String {
-        let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey])
-        if let fileSize = resourceValues?.fileSize {
-            return ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
-        }
-        return "—"
-    }
-
-    private func estimatedExportSizeString() -> String {
-        guard audioDuration.isFinite, audioDuration > 0 else { return "—" }
-        let bytes: Double
-        switch selectedFormat {
-        case .wav:
-            let channels = max(Double(audioChannelCount), 1)
-            let bitDepth = 16.0
-            let bitsPerSecond = max(audioSampleRate, 1) * channels * bitDepth
-            bytes = audioDuration * bitsPerSecond / 8
-        case .mp3, .m4a:
-            let clamped = max(min(bitrate, 320), 64)
-            bytes = audioDuration * clamped * 1000 / 8
-        }
-        guard bytes.isFinite, bytes > 0 else { return "—" }
-        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
-    }
 
     private var bitrateLabel: String {
-        switch selectedFormat {
+        switch viewModel.selectedFormat {
         case .wav:
-            return "~\(wavBitrateKbps) kbps"
+            return "~\(String(describing: viewModel.getWavBitrateKbps)) kbps"
         case .mp3, .m4a:
-            let clamped = Int(max(min(bitrate, 320), 64))
+            let clamped = Int(max(min(viewModel.bitrate, 320), 64))
             return "\(clamped) kbps"
         }
-    }
-
-    private var wavBitrateKbps: Int {
-        let channels = max(Double(audioChannelCount), 1)
-        let bitsPerSecond = max(audioSampleRate, 1) * channels * 16
-        return max(Int(bitsPerSecond / 1000), 1)
     }
 
     private var previewSection: some View {
@@ -338,7 +327,7 @@ struct ConversionSettingsView: View {
     private func videoColumn(size: CGFloat) -> some View {
         VStack(spacing: 12) {
             VideoPreviewCard(
-                url: videoURL,
+                url: viewModel.videoURL,
                 size: size,
                 primaryColor: primary
             )
@@ -356,7 +345,7 @@ struct ConversionSettingsView: View {
                 size: size,
                 primaryColor: primary,
                 accentColor: accent.color,
-                audioURL: $exportURL
+                audioURL: .constant(nil)
             )
             Text("Audio")
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -378,7 +367,7 @@ struct ConversionSettingsView: View {
     }
 
     private var exportButton: some View {
-        Button(action: convert) {
+        Button(action: convertToAudio) {
             HStack {
                 Spacer()
                 Text(isProcessing ? "Converting…" : "Convert")
@@ -420,49 +409,13 @@ struct ConversionSettingsView: View {
         }
     }
 
-    private func convert() {
+    private func convertToAudio() {
         guard !isProcessing else { return }
         HapticsManager.shared.pulse()
-        exportURL = nil
         progressValue = 0
         isProcessing = true
         activeSheet = nil
-        let targetBitrate = Int(max(min(bitrate, 320), 64))
-        VideoToAudioConverter.convert(
-            videoURL: videoURL,
-            format: selectedFormat,
-            bitrate: targetBitrate,
-            progress: { value in
-                DispatchQueue.main.async {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        progressValue = value
-                    }
-                }
-            },
-            completion: { result in
-                isProcessing = false
-                switch result {
-                case .success(let url):
-                    let durationLabel = formatTime(audioDuration)
-                    do {
-                        let item = try CacheManager.shared.recordConversion(
-                            title: videoURL.deletingPathExtension().lastPathComponent,
-                            duration: durationLabel,
-                            tempURL: url
-                        )
-                        exportURL = item.fileURL
-                    } catch {
-                        activeSheet = .fail
-                    }
-                    HapticsManager.shared.notify(.success)
-                    if let exportURL = exportURL {
-                        activeSheet = .success(exportURL)
-                    }
-                case .failure:
-                    dismiss()
-                }
-            }
-        )
+        viewModel.convertToAudio()
     }
 
     private func formatTime(_ seconds: Double) -> String {
@@ -477,37 +430,19 @@ struct ConversionSettingsView: View {
         HapticsManager.shared.selection()
         dismiss()
     }
-
-    private func loadAudioProperties() {
-        let sourceURL = videoURL
-        Task {
-            let asset = AVURLAsset(url: sourceURL)
-            let durationSeconds: Double
-            if let duration = try? await asset.load(.duration) {
-                durationSeconds = duration.seconds
-            } else {
-                durationSeconds = 0
-            }
-
-            var sampleRate: Double = 44_100
-            var channels: Int = 2
-
-            if let tracks = try? await asset.loadTracks(withMediaType: .audio),
-               let track = tracks.first {
-                if let formatDescriptions = try? await track.load(.formatDescriptions),
-                   let description = formatDescriptions.first,
-                   let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(description) {
-                    let asbd = asbdPtr.pointee
-                    sampleRate = asbd.mSampleRate
-                    channels = Int(asbd.mChannelsPerFrame)
-                }
-            }
-
-            await MainActor.run {
-                audioDuration = durationSeconds.isFinite ? max(durationSeconds, 0) : 0
-                audioSampleRate = sampleRate
-                audioChannelCount = max(channels, 1)
-            }
+    
+    private func saveAudioToCache(tempUrl: URL) {
+        let durationLabel = formatTime(viewModel.audioDuration)
+        do {
+            let item = try CacheManager.shared.recordConversion(
+                title: viewModel.videoURL.deletingPathExtension().lastPathComponent,
+                duration: durationLabel,
+                tempURL: tempUrl
+            )
+            HapticsManager.shared.notify(.success)
+            activeSheet = .success(item.fileURL)
+        } catch {
+            activeSheet = .fail
         }
     }
     
@@ -930,7 +865,10 @@ private struct AccessibilityHintIfNeeded: ViewModifier {
 }
 
  #Preview {
-     ConversionSettingsView(videoURL: URL(fileURLWithPath: "/tmp/test.mov"))
+     AudioConversionView(
+        viewModel: AudioConversionViewModel(),
+        videoUrl: URL(fileURLWithPath: "/tmp/test.mov")
+     )
          .background(Color.black)
          .preferredColorScheme(.dark)
  }

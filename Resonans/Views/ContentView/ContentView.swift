@@ -308,7 +308,7 @@ struct ContentView: View {
     private func toolView(for tool: ToolItem) -> some View {
         switch tool.id {
         case .audioExtractor:
-            AudioExtractorView()
+            AudioExtractorView(viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared))
         case .dummy:
             DummyToolView()
         }
