@@ -51,7 +51,7 @@ struct AudioConversionView: View {
                     ConversionSuccessSheet(
                         exportURL: exportUrl,
                         accentColor: accent.color,
-                        primaryColor: primary,
+                        primaryColor: .primary,
                         onSave: { activeSheet = .exporter(exportUrl) },
                         onDone: { activeSheet = nil }
                     )
@@ -60,7 +60,7 @@ struct AudioConversionView: View {
                 case .fail:
                     ConversionFailSheet(
                         accentColor: accent.color,
-                        primaryColor: primary,
+                        primaryColor: .primary,
                         onRetry: { },
                         onDone: { activeSheet = nil }
                     )
@@ -127,7 +127,7 @@ struct AudioConversionView: View {
         HStack {
             Text("Extract audio")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             Spacer()
 
@@ -140,11 +140,11 @@ struct AudioConversionView: View {
                     .foregroundColor(colorScheme == .dark ? .white : .black)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(primary.opacity(0.07))
+                    .background(.primary.opacity(0.07))
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(primary.opacity(0.15), lineWidth: 1)
+                            .stroke(.primary.opacity(0.15), lineWidth: 1)
                     )
                     .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             }
@@ -197,14 +197,14 @@ struct AudioConversionView: View {
         settingsCard {
             Text("File Size")
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             HStack(spacing: 16) {
                 Text("Original: \(viewModel.getVideoFileSize())")
                 Text("Estimated: \(viewModel.getEstimateExportFileSize())")
             }
             .font(.system(size: 14))
-            .foregroundStyle(primary.opacity(0.8))
+            .foregroundStyle(.primary.opacity(0.8))
         }
     }
 
@@ -212,16 +212,16 @@ struct AudioConversionView: View {
         settingsCard {
             Text("Format")
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
 
             Text("Original: \(originalFormatLabel)")
                 .font(.system(size: 14))
-                .foregroundStyle(primary.opacity(0.8))
+                .foregroundStyle(.primary.opacity(0.8))
 
             HStack {
                 Text("When Exported:")
                     .font(.system(size: 14))
-                    .foregroundStyle(primary.opacity(0.8))
+                    .foregroundStyle(.primary.opacity(0.8))
 
                 Picker("", selection: $viewModel.selectedFormat) {
                     Text("mp3").tag(AudioFormat.mp3)
@@ -238,11 +238,11 @@ struct AudioConversionView: View {
             HStack {
                 Text("Bitrate")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text(bitrateLabel)
                     .font(.system(size: 14))
-                    .foregroundStyle(primary.opacity(0.8))
+                    .foregroundStyle(.primary.opacity(0.8))
                 Button(action: { withAnimation { showBitrateInfo.toggle() } }) {
                     Image(systemName: "info.circle")
                         .opacity(0.5)
@@ -253,14 +253,14 @@ struct AudioConversionView: View {
             if showBitrateInfo {
                 Text("Bitrate controls audio quality and file size.")
                     .font(.system(size: 13))
-                    .foregroundStyle(primary.opacity(0.7))
+                    .foregroundStyle(.primary.opacity(0.7))
                     .transition(.opacity)
             }
 
             if viewModel.selectedFormat == .wav {
-                Text("WAV exports keep the original quality (~\(viewModel.getWavBitrateKbps) kbps).")
+                Text("WAV exports keep the original quality (~\(String(describing: viewModel.getWavBitrateKbps)) kbps).")
                     .font(.system(size: 13))
-                    .foregroundStyle(primary.opacity(0.7))
+                    .foregroundStyle(.primary.opacity(0.7))
                     .transition(.opacity)
             } else {
                 Slider(value: $viewModel.bitrate, in: 64...320, step: 1)
@@ -332,11 +332,11 @@ struct AudioConversionView: View {
             VideoPreviewCard(
                 url: viewModel.videoURL,
                 size: size,
-                primaryColor: primary
+                primaryColor: .primary
             )
             Text("Video")
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
         .frame(maxWidth: .infinity)
@@ -346,13 +346,13 @@ struct AudioConversionView: View {
         VStack(spacing: 12) {
             AudioPreviewCard(
                 size: size,
-                primaryColor: primary,
+                primaryColor: .primary,
                 accentColor: accent.color,
                 audioURL: .constant(nil)
             )
             Text("Audio")
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
         .frame(maxWidth: .infinity)
@@ -363,7 +363,7 @@ struct AudioConversionView: View {
             Spacer(minLength: 0)
             Image(systemName: "arrow.right")
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary.opacity(0.55))
+                .foregroundStyle(.primary.opacity(0.55))
             Spacer(minLength: 0)
         }
         .frame(width: width, height: height)
@@ -398,7 +398,7 @@ struct AudioConversionView: View {
                 .tint(accent.color)
             Text("\(Int(clampedProgress * 100))% complete")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(primary.opacity(0.7))
+                .foregroundStyle(.primary.opacity(0.7))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
