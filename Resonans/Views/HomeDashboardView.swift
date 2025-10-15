@@ -15,32 +15,14 @@ struct HomeDashboardView: View {
     @State private var showTopBorder = false
 
     var body: some View {
-        ScrollViewReader { proxy in
+        NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 28) {
-                    Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .padding(.bottom, -24)
-                        .id("homeTop")
-
                     heroCard
-                        .background(
-                            GeometryReader { geo -> Color in
-                                DispatchQueue.main.async {
-                                    let shouldShow = geo.frame(in: .named("homeScroll")).minY < 0
-                                    if showTopBorder != shouldShow {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            showTopBorder = shouldShow
-                                        }
-                                    }
-                                }
-                                return Color.clear
-                            }
-                        )
                         .padding(.horizontal, AppStyle.horizontalPadding)
-
+                    
                     recentsSection
-
+                    
                     Spacer(minLength: 60)
                 }
             }
@@ -52,11 +34,15 @@ struct HomeDashboardView: View {
                     .opacity(showTopBorder ? 1 : 0)
                     .animation(.easeInOut(duration: 0.2), value: showTopBorder)
             }
-            .onChange(of: scrollToTopTrigger) { _, _ in
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    proxy.scrollTo("homeTop", anchor: .top)
-                }
-            }
+            .background(
+                LinearGradient(
+                    colors: [accent.gradient, .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
+            .navigationTitle("Home")
         }
     }
 

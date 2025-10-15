@@ -14,8 +14,9 @@ struct ToolOverview: View {
     @Namespace private var namespace
     
     var body: some View {
-        Button{
-            showDetailView.toggle()
+        NavigationLink{
+                tool.destination
+                .navigationTransition(.zoom(sourceID: tool.id, in: namespace))
         }label:{
             AppCard{
                 HStack{
@@ -34,22 +35,8 @@ struct ToolOverview: View {
                 }
             }
             .foregroundStyle(.primary)
+            .matchedTransitionSource(id: tool.id, in: namespace)
         }
-        .matchedTransitionSource(id: "Button", in: namespace)
-        .fullScreenCover(isPresented: $showDetailView, content: {
-            NavigationStack{
-                tool.destination
-                    .toolbar(content: {
-                        Button{
-                            showDetailView.toggle()
-                        }label:{
-                            Label("Close", systemImage: "xmark")
-                                .labelStyle(.iconOnly)
-                        }
-                    })
-            }
-            .navigationTransition(.zoom(sourceID: "Button", in: namespace))
-        })
     }
 }
 

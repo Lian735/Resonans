@@ -11,10 +11,13 @@ import SwiftUI
 struct ResonansApp: App {
     @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
     private var appearance: Appearance { Appearance(rawValue: appearanceRaw) ?? .system }
+    
+    @StateObject private var viewModel = ContentViewModel()
 
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: ContentViewModel())
+            ContentView()
+                .environmentObject(viewModel)
                 .preferredColorScheme(appearance.colorScheme)
                 .animation(.easeInOut(duration: 0.4), value: appearanceRaw)
         }

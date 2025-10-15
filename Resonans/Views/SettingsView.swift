@@ -35,7 +35,7 @@ struct SettingsView: View {
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
     
     var body: some View {
-        ScrollViewReader { proxy in
+        NavigationStack{
             ScrollView {
                 VStack(spacing: 24) {
                     Color.clear
@@ -55,33 +55,17 @@ struct SettingsView: View {
                     Spacer(minLength: 120)
                 }
                 .padding(.bottom, AppStyle.innerPadding)
-                .background(
-                    GeometryReader { geo -> Color in
-                        DispatchQueue.main.async {
-                            let show = geo.frame(in: .named("settingsScroll")).minY < -AppStyle.innerPadding
-                            if showTopBorder != show {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showTopBorder = show
-                                }
-                            }
-                        }
-                        return Color.clear
-                    }
-                )
             }
-            .coordinateSpace(name: "settingsScroll")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(height: 1)
-                    .opacity(showTopBorder ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.2), value: showTopBorder)
-            }
-            .onChange(of: scrollToTopTrigger) { _, _ in
-                withAnimation {
-                    proxy.scrollTo("top", anchor: .top)
-                }
-            }
+            .background(
+                                    LinearGradient(
+                                        colors: [accent.gradient, .clear],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottom
+                                    )
+                                    .ignoresSafeArea()
+                                )
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 
