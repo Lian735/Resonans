@@ -21,24 +21,13 @@ struct ToolsView: View {
                     Color.clear
                         .frame(height: AppStyle.innerPadding)
                         .id("toolsTop")
-
-                    ForEach(tools) { tool in
-                        ToolOverview(tool: tool)
-                            .background(
-                                GeometryReader { geo -> Color in
-                                    DispatchQueue.main.async {
-                                        let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
-                                        if showTopBorder != shouldShow {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                showTopBorder = shouldShow
-                                            }
-                                        }
-                                    }
-                                    return Color.clear
-                                }
-                            )
+                    if #available(iOS 26, *) {
+                        GlassEffectContainer {
+                            toolsView(tools: tools)
+                        }
+                    } else {
+                        toolsView(tools: tools)
                     }
-
                     Spacer(minLength: 80)
                 }
             }
@@ -59,6 +48,26 @@ struct ToolsView: View {
         .background(
             .clear
         )
+    }
+    
+    @ViewBuilder
+    private func toolsView(tools: [ToolItem]) -> some View {
+        ForEach(tools) { tool in
+            ToolOverview(tool: tool)
+                .background(
+                    GeometryReader { geo -> Color in
+                        DispatchQueue.main.async {
+                            let shouldShow = geo.frame(in: .named("toolsScroll")).minY < -24
+                            if showTopBorder != shouldShow {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showTopBorder = shouldShow
+                                }
+                            }
+                        }
+                        return Color.clear
+                    }
+                )
+        }
     }
 }
 
