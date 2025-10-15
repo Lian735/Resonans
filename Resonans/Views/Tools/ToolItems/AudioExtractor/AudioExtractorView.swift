@@ -123,12 +123,12 @@ struct AudioExtractorView: View {
 
     private var recentSection: some View {
         AppCard{
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Recent conversions")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                     .padding(.top, 16)
-                    .padding(.horizontal, AppStyle.innerPadding)
+                    .padding(.horizontal, 12)
                 
                 VStack(spacing: 12) {
                     if viewModel.recents.isEmpty {
@@ -138,9 +138,20 @@ struct AudioExtractorView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 40)
                     } else {
-                        ForEach(viewModel.recents.prefix(showAllRecents ? viewModel.recents.count : 3)) { item in
-                            RecentRow(item: item, onSave: handleRecentExport)
-                                .padding(.horizontal, 12)
+                        let prefixCount = showAllRecents ? viewModel.recents.count : 3
+                        let recents = Array(viewModel.recents.prefix(prefixCount))
+
+                        ForEach(recents.indices, id: \.self) { index in
+                            let item = recents[index]
+                            VStack(spacing: 12) {
+                                RecentRow(item: item, onSave: handleRecentExport)
+                                    .padding(.horizontal, 12)
+                                
+                                if index < recents.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 12)
+                                }
+                            }
                         }
                         
                         if viewModel.recents.count > 3 {
@@ -186,7 +197,8 @@ extension AudioExtractorView {
 #Preview {
     let viewModel: AudioExtractorViewModel = AudioExtractorViewModel(cacheManager: CacheManager.shared)
     viewModel.recents = [
-        .init(title: "Hello", duration: "20200", fileURL: URL(string: "hello.com")!)
+        .init(title: "Conversion Hahahahahahha", duration: "20 Minutes", fileURL: URL(string: "hello.com")!),
+        .init(title: "Modar", duration: "29 Minutes", fileURL: URL(string: "hello.com")!)
     ]
     return AudioExtractorView(
         viewModel: viewModel
