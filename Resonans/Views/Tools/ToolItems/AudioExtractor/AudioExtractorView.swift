@@ -2,7 +2,6 @@ import SwiftUI
 
 struct AudioExtractorView: View {
     @StateObject var viewModel: AudioExtractorViewModel
-    @State private var recents: [RecentItem] = CacheManager.shared.loadRecentConversions()
     @State private var showAllRecents = false
     @State private var activeSheet: ActiveSheet?
 
@@ -45,7 +44,9 @@ struct AudioExtractorView: View {
                 }
             case .conversion(let url):
                 AudioConversionView(
-                    viewModel: AudioConversionViewModel(),
+                    viewModel: AudioConversionViewModel(
+                        videoConverter: VideoToAudioConverter()
+                    ),
                     videoUrl: url
                 )
             case .recents(let url):
@@ -56,7 +57,7 @@ struct AudioExtractorView: View {
         .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate)) { notification in
             guard let items = notification.object as? [RecentItem] else { return }
             withAnimation(.easeInOut(duration: 0.25)) {
-                recents = items
+                viewModel.recents = items
             }
         }
     }
@@ -103,7 +104,7 @@ struct AudioExtractorView: View {
             HapticsManager.shared.pulse()
             action()
         } label: {
-            AppCard{
+            AppCard {
                 VStack(spacing: 12) {
                     Image(systemName: icon)
                         .font(.system(size: 30, weight: .semibold))
@@ -130,19 +131,19 @@ struct AudioExtractorView: View {
                     .padding(.horizontal, AppStyle.innerPadding)
                 
                 VStack(spacing: 12) {
-                    if recents.isEmpty {
+                    if viewModel.recents.isEmpty {
                         Text("No exports yet")
                             .font(.system(size: 17, weight: .medium, design: .rounded))
                             .foregroundStyle(.primary.opacity(0.7))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 40)
                     } else {
-                        ForEach(recents.prefix(showAllRecents ? recents.count : 3)) { item in
+                        ForEach(viewModel.recents.prefix(showAllRecents ? viewModel.recents.count : 3)) { item in
                             RecentRow(item: item, onSave: handleRecentExport)
                                 .padding(.horizontal, 12)
                         }
                         
-                        if recents.count > 3 {
+                        if viewModel.recents.count > 3 {
                             Button {
                                 HapticsManager.shared.pulse()
                                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -183,7 +184,11 @@ extension AudioExtractorView {
 }
 
 #Preview {
-    AudioExtractorView(
-        viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared)
+    let viewModel: AudioExtractorViewModel = AudioExtractorViewModel(cacheManager: CacheManager.shared)
+    viewModel.recents = [
+        .init(title: "Hello", duration: "20200", fileURL: URL(string: "hello.com")!)
+    ]
+    return AudioExtractorView(
+        viewModel: viewModel
     )
 }

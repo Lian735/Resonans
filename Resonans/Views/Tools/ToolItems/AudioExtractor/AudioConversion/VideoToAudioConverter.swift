@@ -64,60 +64,9 @@ final class VideoToAudioConverter {
         }
     }
 
-    private static func runExportLoop(
-        context: MediaExportContext,
-        queueLabel: String,
-        appendFailureCode: Int,
-        readerFailureCode: Int
-    ) {
-        let queue = DispatchQueue(label: queueLabel)
-        context.writerInput.requestMediaDataWhenReady(on: queue) { [context] in
-            while context.writerInput.isReadyForMoreMediaData {
-                guard context.reader.status == .reading,
-                      let sampleBuffer = context.readerOutput.copyNextSampleBuffer() else {
-                    finalize(context: context, readerFailureCode: readerFailureCode)
-                    return
-                }
+    // MARK: - Public API
 
-                guard context.writerInput.append(sampleBuffer) else {
-                    context.reader.cancelReading()
-                    context.writerInput.markAsFinished()
-                    context.writer.cancelWriting()
-                    let error = context.writer.error ?? NSError(domain: "export", code: appendFailureCode)
-                    context.finish(with: .failure(error))
-                    return
-                }
-
-                if context.durationSeconds > 0 {
-                    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
-                    context.reportProgress(time / context.durationSeconds)
-                }
-            }
-        }
-    }
-
-    private static func finalize(context: MediaExportContext, readerFailureCode: Int) {
-        context.writerInput.markAsFinished()
-        switch context.reader.status {
-        case .completed:
-            context.writer.finishWriting {
-                if let error = context.writer.error {
-                    context.finish(with: .failure(error))
-                } else {
-                    context.reportProgress(1)
-                    context.finish(with: .success(context.outputURL))
-                }
-            }
-        case .failed, .cancelled:
-            let error = context.reader.error ?? context.writer.error ?? NSError(domain: "export", code: readerFailureCode)
-            context.writer.cancelWriting()
-            context.finish(with: .failure(error))
-        default:
-            break
-        }
-    }
-
-    static func convert(
+    func convert(
         videoURL: URL,
         format: AudioFormat,
         bitrate: Int,
@@ -145,13 +94,68 @@ final class VideoToAudioConverter {
         }
     }
 
-    private static func temporaryURL(for baseName: String, format: AudioFormat) -> URL {
+    // MARK: - Internal helpers
+
+    private func runExportLoop(
+        context: MediaExportContext,
+        queueLabel: String,
+        appendFailureCode: Int,
+        readerFailureCode: Int
+    ) {
+        let queue = DispatchQueue(label: queueLabel)
+        context.writerInput.requestMediaDataWhenReady(on: queue) { [context] in
+            while context.writerInput.isReadyForMoreMediaData {
+                guard context.reader.status == .reading,
+                      let sampleBuffer = context.readerOutput.copyNextSampleBuffer() else {
+                    self.finalize(context: context, readerFailureCode: readerFailureCode)
+                    return
+                }
+
+                guard context.writerInput.append(sampleBuffer) else {
+                    context.reader.cancelReading()
+                    context.writerInput.markAsFinished()
+                    context.writer.cancelWriting()
+                    let error = context.writer.error ?? NSError(domain: "export", code: appendFailureCode)
+                    context.finish(with: .failure(error))
+                    return
+                }
+
+                if context.durationSeconds > 0 {
+                    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+                    context.reportProgress(time / context.durationSeconds)
+                }
+            }
+        }
+    }
+
+    private func finalize(context: MediaExportContext, readerFailureCode: Int) {
+        context.writerInput.markAsFinished()
+        switch context.reader.status {
+        case .completed:
+            context.writer.finishWriting {
+                if let error = context.writer.error {
+                    context.finish(with: .failure(error))
+                } else {
+                    context.reportProgress(1)
+                    context.finish(with: .success(context.outputURL))
+                }
+            }
+        case .failed, .cancelled:
+            let error = context.reader.error ?? context.writer.error ?? NSError(domain: "export", code: readerFailureCode)
+            context.writer.cancelWriting()
+            context.finish(with: .failure(error))
+        default:
+            break
+        }
+    }
+
+    private func temporaryURL(for baseName: String, format: AudioFormat) -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent(baseName)
             .appendingPathExtension(format.fileExtension)
     }
 
-    private static func convertToMP3(
+    private func convertToMP3(
         baseName: String,
         videoURL: URL,
         bitrate: Int,
@@ -169,7 +173,7 @@ final class VideoToAudioConverter {
                 completion(.failure(error))
             case .success:
                 do {
-                    try wavToMp3(wavURL: wavURL, mp3URL: mp3URL, bitrate: bitrate) { encodeProgress in
+                    try self.wavToMp3(wavURL: wavURL, mp3URL: mp3URL, bitrate: bitrate) { encodeProgress in
                         let mapped = min(max(0.85 + (encodeProgress * 0.15), 0), 1)
                         progress(mapped)
                     }
@@ -182,7 +186,7 @@ final class VideoToAudioConverter {
         }
     }
 
-    private static func exportToM4A(
+    private func exportToM4A(
         videoURL: URL,
         outputURL: URL,
         bitrate: Int,
@@ -257,7 +261,7 @@ final class VideoToAudioConverter {
         }
     }
 
-    private static func exportToWAV(
+    private func exportToWAV(
         videoURL: URL,
         outputURL: URL,
         progress: @escaping (Double) -> Void,
@@ -323,30 +327,32 @@ final class VideoToAudioConverter {
         }
     }
 
-    private static func ensure(_ condition: Bool, code: Int) throws {
+    // MARK: - Utility
+
+    private func ensure(_ condition: Bool, code: Int) throws {
         guard condition else { throw NSError(domain: "export", code: code) }
     }
 
-    private static func removeExistingFile(at url: URL) throws {
+    private func removeExistingFile(at url: URL) throws {
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
         }
     }
 
-    private static func startWriting(_ writer: AVAssetWriter, code: Int) throws {
+    private func startWriting(_ writer: AVAssetWriter, code: Int) throws {
         guard writer.startWriting() else {
             throw writer.error ?? NSError(domain: "export", code: code)
         }
     }
 
-    private static func audioTrack(from asset: AVAsset, failureCode: Int) async throws -> AVAssetTrack {
+    private func audioTrack(from asset: AVAsset, failureCode: Int) async throws -> AVAssetTrack {
         guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
             throw NSError(domain: "export", code: failureCode)
         }
         return track
     }
 
-    private static func audioProperties(for track: AVAssetTrack) async throws -> (sampleRate: Double, channels: Int) {
+    private func audioProperties(for track: AVAssetTrack) async throws -> (sampleRate: Double, channels: Int) {
         let formatDescriptions = try await track.load(.formatDescriptions)
         let cmDesc: CMFormatDescription? = formatDescriptions.first
         let asbd = cmDesc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
@@ -355,21 +361,19 @@ final class VideoToAudioConverter {
         return (sampleRate, channels)
     }
 
-    private static func deliverFailure(
-        _ completion: @escaping (Result<URL, Error>) -> Void,
-        error: Error
-    ) {
+    private func deliverFailure(_ completion: @escaping (Result<URL, Error>) -> Void, error: Error) {
         DispatchQueue.main.async {
             completion(.failure(error))
         }
     }
 
-    private static func wavToMp3(wavURL: URL, mp3URL: URL, bitrate: Int, progress: @escaping (Double) -> Void) throws {
+    private func wavToMp3(wavURL: URL, mp3URL: URL, bitrate: Int, progress: @escaping (Double) -> Void) throws {
         guard let pcm = fopen(wavURL.path, "rb") else { throw NSError(domain: "lame", code: -1) }
         defer { fclose(pcm) }
         guard let mp3 = fopen(mp3URL.path, "wb") else { throw NSError(domain: "lame", code: -2) }
         defer { fclose(mp3) }
         guard let lame: OpaquePointer = lame_init() else { throw NSError(domain: "lame", code: -3) }
+
         var header = [UInt8](repeating: 0, count: 44)
         fread(&header, 1, header.count, pcm)
         let sampleRate = header.withUnsafeBytes { ptr -> UInt32 in
@@ -378,21 +382,26 @@ final class VideoToAudioConverter {
         let channels = header.withUnsafeBytes { ptr -> UInt16 in
             ptr.load(fromByteOffset: 22, as: UInt16.self).littleEndian
         }
+
         let resolvedSampleRate = sampleRate > 0 ? Int32(sampleRate) : 44_100
         let resolvedChannels = max(Int32(channels), 1)
+
         lame_set_in_samplerate(lame, resolvedSampleRate)
         lame_set_num_channels(lame, resolvedChannels)
         lame_set_VBR(lame, vbr_off)
         lame_set_brate(lame, Int32(max(bitrate, 64)))
         lame_set_quality(lame, 2)
         lame_init_params(lame)
+
         fseek(pcm, 44, SEEK_SET)
+
         let pcmBufferSize: Int32 = 8192
         var pcmBuffer = [Int16](repeating: 0, count: Int(pcmBufferSize))
         var mp3Buffer = [UInt8](repeating: 0, count: Int(8192))
         var read: Int32
         let totalBytes = max(((try? FileManager.default.attributesOfItem(atPath: wavURL.path)[.size] as? NSNumber)?.doubleValue ?? 0) - 44, 0)
         var processedBytes: Double = 0
+
         repeat {
             read = Int32(pcmBuffer.withUnsafeMutableBufferPointer { ptr in
                 fread(ptr.baseAddress, MemoryLayout<Int16>.size, Int(pcmBufferSize), pcm)
@@ -409,13 +418,13 @@ final class VideoToAudioConverter {
                 }
             }
         } while read != 0
+
         let flush = lame_encode_flush(lame, &mp3Buffer, 8192)
         _ = mp3Buffer.withUnsafeBufferPointer { ptr in
             fwrite(ptr.baseAddress, Int(flush), 1, mp3)
         }
-        DispatchQueue.main.async {
-            progress(1)
-        }
+
+        DispatchQueue.main.async { progress(1) }
         lame_close(lame)
         try? FileManager.default.removeItem(at: wavURL)
     }

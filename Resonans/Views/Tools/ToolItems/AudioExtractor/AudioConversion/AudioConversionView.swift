@@ -20,6 +20,7 @@ struct AudioConversionView: View {
     // Example advanced settings state
     @State private var showBitrateInfo = false
     @State private var activeSheet: ActiveSheet?
+    @State private var debounceTask: Task<Void, Never>?
 
     private let idealPreviewSize: CGFloat = 140
     @State private var resolvedPreviewSize: CGFloat = 140
@@ -76,7 +77,9 @@ struct AudioConversionView: View {
                         isProcessing = false
                         dismiss()
                     case .inprogress(let progress):
-                        DispatchQueue.main.async {
+                        debounceTask?.cancel()
+                        debounceTask = Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
                             withAnimation(.easeInOut(duration: 0.15)) {
                                 progressValue = progress
                             }
@@ -866,7 +869,7 @@ private struct AccessibilityHintIfNeeded: ViewModifier {
 
  #Preview {
      AudioConversionView(
-        viewModel: AudioConversionViewModel(),
+        viewModel: AudioConversionViewModel(videoConverter: VideoToAudioConverter()),
         videoUrl: URL(fileURLWithPath: "/tmp/test.mov")
      )
          .background(Color.black)

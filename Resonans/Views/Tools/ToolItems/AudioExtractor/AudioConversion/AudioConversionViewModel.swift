@@ -7,6 +7,7 @@
 
 import AVFoundation
 import Foundation
+import Combine
 
 final class AudioConversionViewModel: ObservableObject {
     @Published var selectedFormat: AudioFormat = .mp3
@@ -17,6 +18,11 @@ final class AudioConversionViewModel: ObservableObject {
     @Published var audioStatus: AudioStatus = .initiate
     var videoURL: URL = URL(fileURLWithPath: "")
     var exportUrl: String?
+    let videoConverter: VideoToAudioConverter
+    
+    init(videoConverter: VideoToAudioConverter) {
+        self.videoConverter = videoConverter
+    }
     
     var isLoadedAudioMetadata: Bool {
         audioDuration > 0 || audioSampleRate > 0 || audioChannelCount > 0
@@ -88,7 +94,7 @@ final class AudioConversionViewModel: ObservableObject {
     
     func convertToAudio() {
         let targetBitrate = Int(max(min(bitrate, 320), 64))
-        VideoToAudioConverter.convert(
+        videoConverter.convert(
             videoURL: videoURL,
             format: selectedFormat,
             bitrate: targetBitrate,
