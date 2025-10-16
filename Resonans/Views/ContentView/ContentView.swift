@@ -41,6 +41,7 @@ struct ContentView: View {
                 Label("Settings", systemImage: "gearshape.fill")
             }
         }
+        .labelStyle(.iconOnly)
         .onAppear {
             if !hasCompletedOnboarding {
                 viewModel.showOnboarding = true
