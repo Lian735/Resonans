@@ -20,11 +20,12 @@ struct OnboardingFlowView: View {
         }
     }
 
-    let tools: [ToolItem]
     let accent: Color
     let primary: Color
-    let colorScheme: ColorScheme
     let onComplete: (Set<ToolItem.Identifier>, Bool) -> Void
+    
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
 
     @State private var currentStep = 0
     @State private var selectedFavorites: Set<ToolItem.Identifier>
@@ -32,18 +33,14 @@ struct OnboardingFlowView: View {
     @State private var showTips = true
 
     init(
-        tools: [ToolItem],
         accent: Color,
         primary: Color,
-        colorScheme: ColorScheme,
         onComplete: @escaping (Set<ToolItem.Identifier>, Bool) -> Void
     ) {
-        self.tools = tools
         self.accent = accent
         self.primary = primary
-        self.colorScheme = colorScheme
         self.onComplete = onComplete
-        _selectedFavorites = State(initialValue: Set(tools.prefix(1).map { $0.id }))
+        _selectedFavorites = State(initialValue: Set(ToolItem.all.prefix(1).map { $0.id }))
     }
 
     var body: some View {
@@ -160,7 +157,7 @@ struct OnboardingFlowView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    ForEach(tools) { tool in
+                    ForEach(ToolItem.all) { tool in
                         FavoriteSelectionCard(
                             tool: tool,
                             isSelected: selectedFavorites.contains(tool.id),
@@ -292,8 +289,9 @@ struct OnboardingFlowView: View {
     }
 
     private func finish() {
-        let favorites = selectedFavorites.isEmpty ? Set(tools.prefix(1).map { $0.id }) : selectedFavorites
+        let favorites = selectedFavorites.isEmpty ? Set(ToolItem.all.prefix(1).map { $0.id }) : selectedFavorites
         onComplete(favorites, showTips)
+        dismiss()
     }
 }
 
@@ -354,9 +352,7 @@ private struct FavoriteSelectionCard: View {
 
 #Preview {
     OnboardingFlowView(
-        tools: ToolItem.all,
         accent: Color.purple,
         primary: .black,
-        colorScheme: .light
     ) { _, _ in }
 }

@@ -8,30 +8,35 @@ struct ContentView: View {
     @AppStorage("showGuidedTips") private var showGuidedTips = true
 
     @Environment(\.colorScheme) private var colorScheme
+    
     private var background: Color { AppStyle.background(for: colorScheme) }
     
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     var body: some View {
-        TabView {
-            Tab(content: {
-                homeTab
+        TabView(selection: $viewModel.selectedTab) {
+            Tab(value: .home, content: {
+                HomeDashboardView(accent: accent, primary: .primary)
+                    .environmentObject(viewModel)
             }, label: {
                 Label("Home", systemImage: "house")
             })
-            Tab(content: {
+            Tab(value: .tools, content: {
                 NavigationStack{
                     if #available(iOS 26, *){
-                        ToolsView(accent: accent, primary: .primary)
+                        GlassEffectContainer{
+                            ToolsView(accent: accent, primary: .primary)                    .environmentObject(viewModel)
+                        }
                     }else{
                         ToolsView(accent: accent, primary: .primary)
+                            .environmentObject(viewModel)
                     }
                 }
             }, label: {
                 Label("Tools", systemImage: "wrench.and.screwdriver.fill")
             })
-            Tab{
-                SettingsView(scrollToTopTrigger: $viewModel.settingsScrollTrigger)
+            Tab(value: .settings){
+                SettingsView()
             }label: {
                 Label("Settings", systemImage: "gearshape.fill")
             }
@@ -43,36 +48,16 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $viewModel.showOnboarding) {
             OnboardingFlowView(
-                tools: viewModel.tools,
                 accent: accent.color,
-                primary: .primary,
-                colorScheme: colorScheme
+                primary: .primary
             ) { favorites, tips in
                 viewModel.favoriteToolIds = favorites
                 showGuidedTips = tips
                 hasCompletedOnboarding = true
-                viewModel.showOnboarding = false
                 HapticsManager.shared.notify(.success)
             }
         }
         .tint(accent.color)
-    }
-
-    private var homeTab: some View {
-        HomeDashboardView(
-            tools: viewModel.tools,
-            recentTools: viewModel.recentTools,
-            scrollToTopTrigger: $viewModel.homeScrollTrigger,
-            accent: accent,
-            primary: .primary,
-            colorScheme: colorScheme,
-            onOpenTool: { viewModel.launchTool($0) },
-            onShowTools: {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    viewModel.selectedTab = .tools
-                }
-            }
-        )
     }
 }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Binding var scrollToTopTrigger: Bool
+    @EnvironmentObject private var viewModel: ContentViewModel
     @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
@@ -38,10 +38,6 @@ struct SettingsView: View {
         NavigationStack{
             ScrollView {
                 VStack(spacing: 24) {
-                    Color.clear
-                        .frame(height: AppStyle.innerPadding)
-                        .padding(.bottom, -24)
-                        .id("top")
                     appearanceSection
                     otherSection
                     aboutSection
@@ -66,6 +62,16 @@ struct SettingsView: View {
                                 )
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar(content: {
+                ToolbarItem(placement: .topBarTrailing, content: {
+                    Button(action: {
+                        HapticsManager.shared.pulse()
+                        viewModel.showOnboarding = true
+                    }) {
+                        Image(systemName: "questionmark")
+                    }
+                })
+            })
         }
     }
 
@@ -254,7 +260,7 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(scrollToTopTrigger: .constant(false))
+    SettingsView()
         .background(Color.black)
         .preferredColorScheme(.dark)
 }

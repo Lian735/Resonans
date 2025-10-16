@@ -5,12 +5,15 @@ struct ToolsView: View {
     let primary: Color
     @Environment(\.colorScheme) private var colorScheme
     
+    @EnvironmentObject private var viewModel: ContentViewModel
+    
     @Namespace private var namespace
-
+    
     var body: some View {
         ScrollView{
             ForEach(ToolItem.all) { tool in
                 ToolOverview(tool: tool)
+                    .environmentObject(viewModel)
             }
         }
         .background(
@@ -23,45 +26,6 @@ struct ToolsView: View {
             .scaledToFill()
         )
         .navigationTitle("Tools")
-    }
-    
-    private var displayedTools: some View {
-            ScrollView{
-                ForEach(ToolItem.all) { tool in
-                    NavigationLink{
-                            tool.destination
-                        .navigationTransition(.zoom(sourceID: "Button", in: namespace))
-                    }label:{
-                        AppCard{
-                            HStack{
-                                ToolIconView(tool: tool)
-                                VStack(alignment: .leading){
-                                    Text(tool.title)
-                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(.primary)
-                                    
-                                    Text(tool.subtitle)
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-                                .multilineTextAlignment(.leading)
-                            }
-                        }
-                        .foregroundStyle(.primary)
-                        .matchedTransitionSource(id: "Button", in: namespace)
-                    }
-                }
-            }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
-            .navigationTitle("Tools")
     }
 }
 

@@ -60,6 +60,14 @@ struct AudioExtractorView: View {
                 viewModel.recents = items
             }
         }
+        .background(
+            LinearGradient(
+                colors: [accent.gradient, .clear],
+                startPoint: .topLeading,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
     }
 
     private var headerSection: some View {

@@ -5,19 +5,23 @@ import SwiftUI
 
 struct ToolOverview: View {
     private let tool: ToolItem
-    init(tool:  ToolItem){
+    init(tool:  ToolItem, presentedInHomeboard atHome: Bool = false){
         self.tool = tool
+        isHomeboard = atHome
     }
     
+    private let isHomeboard: Bool
+    
     @State private var showDetailView: Bool = false
+    
+    @EnvironmentObject private var viewModel: ContentViewModel
     
     @Namespace private var namespace
     
     var body: some View {
-        NavigationLink{
-                tool.destination
-                .navigationTransition(.zoom(sourceID: tool.id, in: namespace))
-        }label:{
+        Button{
+            viewModel.selectedTool = tool.id
+        }label: {
             AppCard{
                 HStack{
                     ToolIconView(tool: tool)
@@ -34,9 +38,26 @@ struct ToolOverview: View {
                     .multilineTextAlignment(.leading)
                 }
             }
-            .foregroundStyle(.primary)
-            .matchedTransitionSource(id: tool.id, in: namespace)
         }
+        .navigationDestination(isPresented: Binding(get: {
+            if isHomeboard{
+                return false
+            }else{
+                return viewModel.selectedTool == tool.id
+            }
+        }, set: {
+            if $0 {
+                viewModel.selectedTool = tool.id
+            }else{
+                viewModel.selectedTool = nil
+            }
+        }), destination: {
+            tool.destination
+                .onAppear {
+                viewModel.recentToolIDs.removeAll(where: { $0 == tool.id })
+                viewModel.recentToolIDs.append(tool.id)
+            }
+        })
     }
 }
 
