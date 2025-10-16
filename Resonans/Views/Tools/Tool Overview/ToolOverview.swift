@@ -27,12 +27,10 @@ struct ToolOverview: View {
                     ToolIconView(tool: tool)
                     VStack(alignment: .leading){
                         Text(tool.title)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary)
+                            .typography(.titleMedium, color: .primary, design: .rounded)
                         
                         Text(tool.subtitle)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
+                            .typography(.caption, color: .secondary, design: .rounded)
                             .lineLimit(2)
                     }
                     .multilineTextAlignment(.leading)

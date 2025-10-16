@@ -37,8 +37,7 @@ struct ConversionFailSheet: View {
     private var header: some View {
         HStack {
             Text("Conversion Failed")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(primaryColor)
+                .typography(.displayMedium, color: primaryColor)
 
             Spacer()
 
@@ -47,8 +46,7 @@ struct ConversionFailSheet: View {
                 onDone()
             }) {
                 Text("Dismiss")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .typography(.titleSmall, color: colorScheme == .dark ? .white: .black)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
                     .background(primaryColor.opacity(0.07))
@@ -76,8 +74,7 @@ struct ConversionFailSheet: View {
 
                 Image(systemName: showXmark ? "xmark.circle.fill" : "circle.fill")
                     .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: 96, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.red)
+                    .typography(.custom(size: 96, weight: .bold), color: .red, design: .rounded)
                     .scaleEffect(animateError ? 1 : 0.65)
                     .shadow(color: Color.red.opacity(0.35), radius: 18, x: 0, y: 12)
             }
@@ -86,13 +83,11 @@ struct ConversionFailSheet: View {
             .onAppear(perform: startAnimation)
 
             Text("Something went wrong while saving.")
-                .font(.system(size: 25, weight: .semibold, design: .rounded))
-                .foregroundStyle(primaryColor)
+                .typography(.titleLarge, color: primaryColor)
                 .multilineTextAlignment(.center)
 
             Text("Please try again or check your storage permissions.")
-                .font(.system(size: 17, weight: .regular, design: .rounded))
-                .foregroundStyle(.secondary)
+                .typography(.titleSmall, color: .secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
         }
@@ -147,8 +142,7 @@ struct ConversionFailSheet: View {
         HStack {
             Spacer()
             Label(title, systemImage: systemImage)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundColor(foreground)
+                .typography(.titleSmall, color: foreground, design: .rounded)
             Spacer()
         }
         .padding(.vertical, 14)

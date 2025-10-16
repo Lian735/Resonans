@@ -77,18 +77,15 @@ struct OnboardingFlowView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Welcome to Resonans")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .typography(.titleLarge, color: primary, design: .rounded)
                 Text(stepSubtitle)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.7))
+                    .typography(.body, color: primary.opacity(0.7), design: .rounded)
             }
             Spacer()
             Button("Skip") {
                 finish()
             }
-            .font(.system(size: 15, weight: .semibold, design: .rounded))
-            .foregroundStyle(primary.opacity(0.8))
+            .typography(.captionBold, color: primary.opacity(0.8), design: .rounded)
         }
     }
 
@@ -107,15 +104,12 @@ struct OnboardingFlowView: View {
 
                 VStack(spacing: 18) {
                     Image(systemName: "waveform.circle.fill")
-                        .font(.system(size: 64, weight: .bold))
-                        .foregroundStyle(accent)
+                        .typography(.custom(size: 64, weight: .bold), color: accent)
                     Text("One workspace for every creative routine")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(primary)
+                        .typography(.titleLarge, color: primary, design: .rounded)
                         .multilineTextAlignment(.center)
                     Text("Resonans keeps all of your media tools organised. Pin favourites, pick up where you left off and stay in the loop with app news.")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(primary.opacity(0.75))
+                        .typography(.caption, color: primary.opacity(0.75), design: .rounded)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 12)
                 }
@@ -125,15 +119,13 @@ struct OnboardingFlowView: View {
 
             VStack(spacing: 18) {
                 Label("Tap the heart icon to favourite tools you love", systemImage: "heart.circle.fill")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .typography(.callout, color: primary, design: .rounded)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(primary.opacity(AppStyle.cardFillOpacity))
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 Label("Swipe through onboarding to learn the essentials", systemImage: "hand.draw.fill")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .typography(.callout, color: primary, design: .rounded)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(primary.opacity(AppStyle.cardFillOpacity))
@@ -147,12 +139,10 @@ struct OnboardingFlowView: View {
     private var favoritesStep: some View {
         VStack(spacing: 24) {
             Text("Choose your go-to tools")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
+                .typography(.titleLarge, color: primary, design: .rounded)
 
             Text("Tap to pin tools you use the most. We'll show them right on the home screen so they’re always ready.")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(primary.opacity(0.75))
+                .typography(.callout, color: primary.opacity(0.75), design: .rounded)
                 .multilineTextAlignment(.center)
 
             ScrollView(.vertical, showsIndicators: false) {
@@ -181,12 +171,10 @@ struct OnboardingFlowView: View {
     private var workflowStep: some View {
         VStack(spacing: 26) {
             Text("Plan your first session")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(primary)
+                .typography(.titleLarge, color: primary, design: .rounded)
 
             Text("Tell us what you’re working on and we'll highlight the best starting point.")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(primary.opacity(0.75))
+                .typography(.body, color: primary.opacity(0.75), design: .rounded)
                 .multilineTextAlignment(.center)
 
             Picker("Workflow", selection: $selectedWorkflow) {
@@ -198,20 +186,16 @@ struct OnboardingFlowView: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 Label(selectedWorkflow.rawValue, systemImage: "sparkles")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .typography(.titleSmall, color: primary, design: .rounded)
                 Text(selectedWorkflow.description)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.75))
+                    .typography(.callout, color: primary.opacity(0.75), design: .rounded)
 
                 Toggle(isOn: $showTips) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Show guided tips")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(primary)
+                            .typography(.callout, color: primary, design: .rounded)
                         Text("We'll highlight useful gestures and shortcuts while you explore.")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(primary.opacity(0.6))
+                            .typography(.caption, color: primary.opacity(0.6), design: .rounded)
                     }
                 }
                 .toggleStyle(SwitchToggleStyle(tint: accent))
@@ -249,7 +233,7 @@ struct OnboardingFlowView: View {
                     currentStep -= 1
                 } label: {
                     Label("Back", systemImage: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .typography(.callout, design: .rounded)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 18)
                         .background(primary.opacity(AppStyle.cardFillOpacity))
@@ -269,12 +253,11 @@ struct OnboardingFlowView: View {
                 }
             } label: {
                 Label(currentStep < 2 ? "Next" : "Let's go", systemImage: currentStep < 2 ? "chevron.right" : "checkmark.circle.fill")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .typography(.callout, color: accent, design: .rounded)
                     .padding(.vertical, 12)
                     .padding(.horizontal, 22)
                     .background(accent.opacity(colorScheme == .dark ? 0.3 : 0.18))
                     .clipShape(Capsule())
-                    .foregroundStyle(accent)
             }
             .buttonStyle(.plain)
         }
@@ -316,23 +299,19 @@ private struct FavoriteSelectionCard: View {
                                     .stroke(Color.white.opacity(0.18), lineWidth: 1)
                             )
                         Image(systemName: tool.iconName)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.white)
+                            .typography(.titleLarge, color: .white)
                     }
 
                     Spacer()
 
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(isSelected ? accent : primary.opacity(0.35))
+                        .typography(.custom(size: 24, weight: .semibold), color: isSelected ? accent : primary.opacity(0.35))
                 }
 
                 Text(tool.title)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                    .typography(.bodyBold, color: primary, design: .rounded)
                 Text(tool.subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(primary.opacity(0.7))
+                    .typography(.caption, color: primary.opacity(0.7), design: .rounded)
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -18,22 +18,19 @@ struct HomeDashboardView: View {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Welcome back")
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .typography(.custom(size: 16, weight: .semibold), color: primary.opacity(0.7), design: .rounded)
                                         .foregroundStyle(primary.opacity(0.7))
                                     Text("Craft something brilliant today")
-                                        .font(.system(size: 30, weight: .heavy, design: .rounded))
-                                        .foregroundStyle(primary)
+                                        .typography(.custom(size: 30, weight: .heavy), color: primary, design: .rounded)
                                 }
                                 
                                 Spacer()
                                 
                                 VStack(spacing: 8) {
                                     Image(systemName: "sparkles")
-                                        .font(.system(size: 26, weight: .bold))
-                                        .foregroundStyle(accent.color)
+                                        .typography(.custom(size: 26, weight: .bold), color: accent.color)
                                     Text("v1.2")
-                                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundStyle(primary.opacity(0.6))
+                                        .typography(.caption, color: primary.opacity(0.6), design: .rounded)
                                 }
                             }
                             
@@ -43,9 +40,9 @@ struct HomeDashboardView: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "wrench.and.screwdriver")
-                                        .font(.system(size: 18, weight: .semibold))
+                                        .typography(.custom(size: 18, weight: .semibold))
                                     Text("Browse tools")
-                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                        .typography(.titleSmall, design: .rounded)
                                 }
                                 .foregroundStyle(accent.color)
                                 .frame(maxWidth: .infinity)
@@ -66,8 +63,7 @@ struct HomeDashboardView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Recently used")
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundStyle(primary)
+                                .typography(.titleLarge, color: primary, design: .rounded)
                             Spacer()
                         }
                         .padding(.horizontal, AppStyle.horizontalPadding)
@@ -75,8 +71,7 @@ struct HomeDashboardView: View {
                         if viewModel.recentTools.isEmpty {
                             AppCard{
                                 Text("Jump back into tools and your history will live here.")
-                                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                                    .foregroundStyle(primary.opacity(0.65))
+                                    .typography(.body, color: primary.opacity(0.65), design: .rounded)
                                     .frame(maxWidth: .infinity)
                             }
                             .padding(.horizontal, AppStyle.horizontalPadding)

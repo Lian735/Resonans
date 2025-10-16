@@ -37,8 +37,7 @@ struct ConversionSuccessSheet: View {
     private var header: some View {
         HStack {
             Text("Converted!")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(primaryColor)
+                .typography(.displayMedium, color: primaryColor, design: .rounded)
 
             Spacer()
 
@@ -47,8 +46,11 @@ struct ConversionSuccessSheet: View {
                 onDone()
             }) {
                 Text("Done")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .typography(
+                        .titleSmall,
+                        color: colorScheme == .dark ? .white : .black,
+                        design: .rounded
+                    )
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
                     .background(primaryColor.opacity(0.07))
@@ -75,8 +77,7 @@ struct ConversionSuccessSheet: View {
 
                 Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle.fill")
                     .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: 96, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.green)
+                    .typography(.custom(size: 96, weight: .bold), color: .green, design: .rounded)
                     .scaleEffect(animateCheck ? 1 : 0.65)
                     .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 12)
             }
@@ -85,8 +86,7 @@ struct ConversionSuccessSheet: View {
             .onAppear(perform: startAnimation)
 
             Text("Successfully converted.")
-                .font(.system(size: 25, weight: .semibold, design: .rounded))
-                .foregroundStyle(primaryColor)
+                .typography(.titleMedium, color: primaryColor, design: .rounded)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
@@ -137,8 +137,7 @@ struct ConversionSuccessSheet: View {
         HStack {
             Spacer()
             Label(title, systemImage: systemImage)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundColor(foreground)
+                .typography(.titleSmall, color: foreground, design: .rounded)
             Spacer()
         }
         .padding(.vertical, 14)
