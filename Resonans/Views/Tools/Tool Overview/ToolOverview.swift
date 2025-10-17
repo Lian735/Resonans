@@ -19,7 +19,7 @@ struct ToolOverview: View {
     @Namespace private var namespace
     
     var body: some View {
-        Button{
+        Button(disableGlassEffect: true){
             viewModel.selectedTool = tool.id
         }label: {
             AppCard{

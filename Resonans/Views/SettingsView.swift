@@ -53,18 +53,18 @@ struct SettingsView: View {
                 .padding(.bottom, AppStyle.innerPadding)
             }
             .background(
-                                    LinearGradient(
-                                        colors: [accent.gradient, .clear],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottom
-                                    )
-                                    .ignoresSafeArea()
-                                )
+                LinearGradient(
+                    colors: [accent.gradient, .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar(content: {
                 ToolbarItem(placement: .topBarTrailing, content: {
-                    Button(action: {
+                    Button(disableGlassEffect: true, action: {
                         HapticsManager.shared.pulse()
                         viewModel.showOnboarding = true
                     }) {

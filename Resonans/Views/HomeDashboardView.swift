@@ -78,7 +78,7 @@ struct HomeDashboardView: View {
                         } else {
                             VStack(spacing: 12) {
                                 ForEach(viewModel.recentTools.reversed()) { tool in
-                                    Button {
+                                    Button(disableGlassEffect: true){
                                         HapticsManager.shared.selection()
                                         Task{
                                             viewModel.selectedTab = .tools

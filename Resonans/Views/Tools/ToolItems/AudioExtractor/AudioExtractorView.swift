@@ -104,7 +104,7 @@ struct AudioExtractorView: View {
     }
 
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button {
+        Button(disableGlassEffect: true){
             HapticsManager.shared.pulse()
             action()
         } label: {
