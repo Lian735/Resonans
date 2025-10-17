@@ -10,11 +10,15 @@ struct ToolsView: View {
     @Namespace private var namespace
     
     var body: some View {
-        ScrollView{
-            ForEach(ToolItem.all) { tool in
-                ToolOverview(tool: tool)
-                    .environmentObject(viewModel)
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 20) {
+                ForEach(ToolItem.all) { tool in
+                    ToolOverview(tool: tool)
+                        .environmentObject(viewModel)
+                }
             }
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.vertical, AppStyle.innerPadding)
         }
         .background(
             LinearGradient(
@@ -26,6 +30,9 @@ struct ToolsView: View {
             .scaledToFill()
         )
         .navigationTitle("Tools")
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarColorScheme(.automatic, for: .navigationBar)
     }
 }
 

@@ -72,23 +72,25 @@ struct AppCard<Content: View>: View {
     private var glassView: some View {
         content()
             .padding()
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: AppStyle.cornerRadius))
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(5)
     }
-    
+
     private var nonGlassView: some View {
         content()
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                     .fill(.primary.opacity(0.09))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                             .strokeBorder(.primary.opacity(0.10), lineWidth: 1)
                     )
             )
-            .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
             .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(5)
     }
 }

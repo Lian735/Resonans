@@ -18,7 +18,16 @@ struct ContentView: View {
                 HomeDashboardView(accent: accent, primary: .primary)
                     .environmentObject(viewModel)
             }, label: {
-                Label("Home", systemImage: "house")
+                Label {
+                    Text("Home")
+                } icon: {
+                    Image("icon")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .accessibilityHidden(true)
+                }
             })
             Tab(value: .tools, content: {
                 NavigationStack{
