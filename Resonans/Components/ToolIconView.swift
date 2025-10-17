@@ -57,8 +57,7 @@ struct ToolIconView: View {
             )
             .overlay(
                 Image(systemName: tool.iconName)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(Color.white)
+                    .typography(.custom(size: 24, weight: .bold), color: .white)
             )
             .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
     }

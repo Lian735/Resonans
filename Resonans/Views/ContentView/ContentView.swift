@@ -10,7 +10,6 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var background: Color { AppStyle.background(for: colorScheme) }
-    
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     var body: some View {

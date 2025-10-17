@@ -13,8 +13,7 @@ struct RecentRow: View {
                 .frame(width: 48, height: 48)
                 .overlay(
                     Image(systemName: "waveform")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.primary.opacity(0.9))
+                        .typography(.titleMedium, color: .primary.opacity(0.9))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
@@ -24,20 +23,17 @@ struct RecentRow: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .typography(.titleMedium, color: .primary, design: .rounded)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(item.duration)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(.primary.opacity(0.8))
+                    .typography(.caption, color: .primary.opacity(0.8))
             }
             Spacer()
             HStack(spacing: 10) {
                 ShareLink(item: item.fileURL) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.primary.opacity(0.9))
+                        .typography(.titleMedium, color: .primary.opacity(0.9))
                 }
                 .simultaneousGesture(TapGesture().onEnded {
                     HapticsManager.shared.selection()
@@ -48,8 +44,7 @@ struct RecentRow: View {
                     onSave(item)
                 }) {
                     Image(systemName: "tray.and.arrow.down")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.primary)
+                        .typography(.custom(size: 22, weight: .bold))
                 }
                 .buttonStyle(.plain)
             }

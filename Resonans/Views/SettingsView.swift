@@ -80,8 +80,7 @@ struct SettingsView: View {
     private var appearanceSection: some View {
         settingsBox {
             Text("Appearance")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+                .typography(.displaySmall, design: .rounded)
 
             HStack(spacing: 12) {
                 ForEach(Appearance.allCases) { mode in
@@ -103,8 +102,7 @@ struct SettingsView: View {
                             }
                         }
                         Text(mode.label)
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(.primary.opacity(0.8))
+                            .typography(.callout, color: .primary.opacity(0.8), design: .rounded)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -112,8 +110,7 @@ struct SettingsView: View {
             .padding(.top, 8)
 
             Text("Accent color")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
+                .typography(.titleMedium, design: .rounded)
                 .padding(.top, 20)
 
             HStack(spacing: 16) {
@@ -143,8 +140,7 @@ struct SettingsView: View {
     private var otherSection: some View {
         settingsBox {
             Text("Other")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+                .typography(.displaySmall, design: .rounded)
 
             Toggle(isOn: $hapticsEnabled) {
                 Text("Vibration")
@@ -178,7 +174,7 @@ struct SettingsView: View {
                 HapticsManager.shared.notify(.success)
             } label: {
                 Text("Clear Cache")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .typography(.titleSmall, design: .rounded)
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -193,8 +189,7 @@ struct SettingsView: View {
     private var aboutSection: some View {
         settingsBox {
             Text("About")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+                .typography(.displaySmall, design: .rounded)
 
             HStack {
                 Text("Version")
@@ -210,8 +205,7 @@ struct SettingsView: View {
                 }
             } label: {
                 Text("Send Feedback")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .typography(.bodyBold, design: .rounded)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(accent.color.opacity(0.25))

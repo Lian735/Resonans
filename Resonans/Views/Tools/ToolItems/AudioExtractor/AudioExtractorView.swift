@@ -74,26 +74,22 @@ struct AudioExtractorView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Extractor")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary.opacity(0.7))
+                    .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
                 Text("Pull crisp audio from your videos")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .typography(.displaySmall, design: .rounded)
             }
 
             Spacer()
 
             Image(systemName: "waveform")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(accent.color)
+                .typography(.custom(size: 30, weight: .bold), color: accent.color)
         }
     }
 
     private var sourceOptionsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Choose a source")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
+                .typography(.titleMedium, design: .rounded)
 
             HStack(spacing: 16) {
                 sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
@@ -115,11 +111,9 @@ struct AudioExtractorView: View {
             AppCard {
                 VStack(spacing: 12) {
                     Image(systemName: icon)
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .typography(.custom(size: 30, weight: .semibold))
                     Text(title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
+                        .typography(.titleSmall, design: .rounded)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -133,16 +127,14 @@ struct AudioExtractorView: View {
         AppCard{
             VStack(alignment: .leading, spacing: 12) {
                 Text("Recent conversions")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .typography(.titleLarge, design: .rounded)
                     .padding(.top, 16)
                     .padding(.horizontal, 12)
                 
                 VStack(spacing: 12) {
                     if viewModel.recents.isEmpty {
                         Text("No exports yet")
-                            .font(.system(size: 17, weight: .medium, design: .rounded))
-                            .foregroundStyle(.primary.opacity(0.7))
+                            .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 40)
                     } else {
@@ -170,8 +162,7 @@ struct AudioExtractorView: View {
                                 }
                             } label: {
                                 Text(showAllRecents ? "Show less" : "Show more")
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.primary.opacity(0.75))
+                                    .typography(.bodyBold, color: .primary.opacity(0.75), design: .rounded)
                             }
                             .padding(.top, 6)
                         }

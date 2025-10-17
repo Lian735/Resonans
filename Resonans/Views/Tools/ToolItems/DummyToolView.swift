@@ -28,18 +28,15 @@ struct DummyToolView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Dummy Playground")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary.opacity(0.7))
+                    .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
                 Text("Experiment with tool navigation")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .typography(.displaySmall, design: .rounded)
             }
 
             Spacer()
 
             Image(systemName: "puzzlepiece.extension")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(accent.color)
+                .typography(.custom(size: 30, weight: .bold), color: accent.color)
         }
     }
 
@@ -47,12 +44,10 @@ struct DummyToolView: View {
         AppCard{
             VStack(alignment: .leading, spacing: 16) {
                 Text("This is a simple placeholder tool designed to help you test how the multi-tool flow behaves when several entries are available.")
-                    .font(.system(size: 17, weight: .medium, design: .rounded))
-                    .foregroundStyle(.primary.opacity(0.8))
+                    .typography(.titleSmall, color: .primary.opacity(0.8), design: .rounded)
                 
                 Text("Close the tool from the header or the list to return to the tool overview. Everything here is purely for demonstration purposes.")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(.primary.opacity(0.7))
+                    .typography(.callout, color: .primary.opacity(0.7), design: .rounded)
             }
             .padding(.horizontal, AppStyle.innerPadding)
             .padding(.vertical, 24)
