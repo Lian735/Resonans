@@ -80,8 +80,16 @@ struct HomeDashboardView: View {
                                 ForEach(viewModel.recentTools.reversed()) { tool in
                                     Button {
                                         HapticsManager.shared.selection()
-                                        viewModel.selectedTab = .tools
-                                        viewModel.selectedTool = tool.id
+                                        Task{
+                                            viewModel.selectedTab = .tools
+                                            if viewModel.selectedTool == nil{
+                                                viewModel.selectedTool = tool.id
+                                            }else{
+                                                viewModel.selectedTool = nil
+                                                try! await Task.sleep(for: .nanoseconds(1))
+                                                viewModel.selectedTool = tool.id
+                                            }
+                                        }
                                     } label: {
                                         ToolOverview(tool: tool, presentedInHomeboard: true)
                                             .environmentObject(viewModel)
