@@ -9,7 +9,7 @@ import Combine
 import Foundation
 
 final class AudioExtractorViewModel: ObservableObject {
-    var recents: [RecentItem] = []
+    @Published var recents: [RecentItem] = []
     let cacheManager: CacheManager
     
     init(cacheManager: CacheManager) {

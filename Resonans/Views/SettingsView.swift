@@ -206,10 +206,16 @@ struct SettingsView: View {
             } label: {
                 Text("Send Feedback")
                     .typography(.bodyBold, design: .rounded)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(accent.color.opacity(0.25))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                            .fill(accent.color.opacity(0.22))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
+                    )
                     .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             }
             .padding(.top, 12)

@@ -47,12 +47,16 @@ struct HomeDashboardView: View {
                                 .foregroundStyle(accent.color)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(accent.color.opacity(colorScheme == .dark ? 0.28 : 0.18))
-                                .clipShape(RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous))
+                                .padding(.horizontal, 18)
+                                .background(
+                                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                                        .fill(accent.color.opacity(colorScheme == .dark ? 0.28 : 0.2))
+                                )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                                         .stroke(accent.color.opacity(0.35), lineWidth: 1)
                                 )
+                                .shadow(color: accent.color.opacity(colorScheme == .dark ? 0.25 : 0.2), radius: 16, x: 0, y: 10)
                             }
                             .buttonStyle(.plain)
                         }

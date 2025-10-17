@@ -36,6 +36,7 @@ struct ToolOverview: View {
                     .multilineTextAlignment(.leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationDestination(isPresented: Binding(get: {
             if isHomeboard{

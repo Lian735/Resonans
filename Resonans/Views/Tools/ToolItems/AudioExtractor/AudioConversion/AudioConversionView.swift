@@ -142,10 +142,12 @@ struct AudioConversionView: View {
                     )
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(.primary.opacity(0.07))
-                    .clipShape(Capsule())
+                    .background(
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                            .fill(.primary.opacity(0.07))
+                    )
                     .overlay(
-                        Capsule()
+                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
                             .stroke(.primary.opacity(0.15), lineWidth: 1)
                     )
                     .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
@@ -367,10 +369,16 @@ struct AudioConversionView: View {
                     .typography(.titleMedium, color: background, design: .rounded)
                 Spacer()
             }
-            .padding(.vertical, 14)
-            .background(accent.color.opacity(isProcessing ? 0.6 : 1))
-            .clipShape(Capsule())
-            .shadow(color: accent.color.opacity(0.35), radius: 14, x: 0, y: 8)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .fill(accent.color.opacity(isProcessing ? 0.65 : 1))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
+                    .stroke(accent.color.opacity(0.35), lineWidth: 1)
+            )
+            .shadow(color: accent.color.opacity(0.3), radius: 16, x: 0, y: 10)
         }
         .disabled(isProcessing)
         .opacity(isProcessing ? 0.9 : 1)

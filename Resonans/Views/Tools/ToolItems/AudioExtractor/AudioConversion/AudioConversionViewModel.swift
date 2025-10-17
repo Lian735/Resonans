@@ -13,8 +13,8 @@ final class AudioConversionViewModel: ObservableObject {
     @Published var selectedFormat: AudioFormat = .mp3
     @Published var bitrate: Double = 192
     @Published var audioDuration: Double = 0
-    @Published var audioSampleRate: Double = 44_100
-    @Published var audioChannelCount: Int = 2
+    @Published var audioSampleRate: Double = 0
+    @Published var audioChannelCount: Int = 0
     @Published var audioStatus: AudioStatus = .initiate
     var videoURL: URL = URL(fileURLWithPath: "")
     var exportUrl: String?
@@ -25,7 +25,7 @@ final class AudioConversionViewModel: ObservableObject {
     }
     
     var isLoadedAudioMetadata: Bool {
-        audioDuration > 0 || audioSampleRate > 0 || audioChannelCount > 0
+        audioDuration > 0
     }
     
     func getVideoFileSize() -> String {
@@ -94,6 +94,7 @@ final class AudioConversionViewModel: ObservableObject {
     
     func convertToAudio() {
         let targetBitrate = Int(max(min(bitrate, 320), 64))
+        audioStatus = .inprogress(0)
         videoConverter.convert(
             videoURL: videoURL,
             format: selectedFormat,
