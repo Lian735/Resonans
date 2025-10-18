@@ -12,7 +12,7 @@ struct ToolsView: View {
     var body: some View {
         NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 20) {
+                VStack(spacing: 20) {
                     if #available(iOS 26, *){
                         GlassEffectContainer{
                             ForEach(ToolItem.all) { tool in
