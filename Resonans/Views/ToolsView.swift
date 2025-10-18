@@ -10,29 +10,37 @@ struct ToolsView: View {
     @Namespace private var namespace
     
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 20) {
-                ForEach(ToolItem.all) { tool in
-                    ToolOverview(tool: tool)
-                        .environmentObject(viewModel)
+        NavigationStack{
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 20) {
+                    if #available(iOS 26, *){
+                        GlassEffectContainer{
+                            ForEach(ToolItem.all) { tool in
+                                ToolOverview(tool: tool)
+                                    .environmentObject(viewModel)
+                            }
+                        }
+                    }else{
+                        ForEach(ToolItem.all) { tool in
+                            ToolOverview(tool: tool)
+                                .environmentObject(viewModel)
+                        }
+                    }
                 }
+                .padding(.horizontal, AppStyle.horizontalPadding)
+                .padding(.vertical, AppStyle.innerPadding)
             }
-            .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.vertical, AppStyle.innerPadding)
-        }
-        .background(
-            LinearGradient(
-                colors: [accent.gradient, .clear],
-                startPoint: .topLeading,
-                endPoint: .bottom
+            .background(
+                LinearGradient(
+                    colors: [accent.gradient, .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .scaledToFill()
             )
-            .ignoresSafeArea()
-            .scaledToFill()
-        )
-        .navigationTitle("Tools")
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-        .toolbarColorScheme(.automatic, for: .navigationBar)
+            .navigationTitle("Tools")
+        }
     }
 }
 

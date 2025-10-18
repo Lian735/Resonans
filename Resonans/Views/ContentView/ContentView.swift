@@ -30,16 +30,8 @@ struct ContentView: View {
                 }
             })
             Tab(value: .tools, content: {
-                NavigationStack{
-                    if #available(iOS 26, *){
-                        GlassEffectContainer{
-                            ToolsView(accent: accent, primary: .primary)                    .environmentObject(viewModel)
-                        }
-                    }else{
-                        ToolsView(accent: accent, primary: .primary)
-                            .environmentObject(viewModel)
-                    }
-                }
+                ToolsView(accent: accent, primary: .primary)
+                    .environmentObject(viewModel)
             }, label: {
                 Label("Tools", systemImage: "wrench.and.screwdriver.fill")
             })
