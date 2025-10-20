@@ -52,7 +52,7 @@ struct ToolsView: View {
         var body: some View {
             ToolsView(
                 accent: .purple,
-                primary: .black,
+                primary: .black
             )
         }
     }

@@ -129,7 +129,7 @@ struct HomeDashboardView: View {
         var body: some View {
             HomeDashboardView(
                 accent: .purple,
-                primary: .black,
+                primary: .black
             )
         }
     }

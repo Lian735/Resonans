@@ -332,6 +332,6 @@ private struct FavoriteSelectionCard: View {
 #Preview {
     OnboardingFlowView(
         accent: Color.purple,
-        primary: .black,
+        primary: .black
     ) { _, _ in }
 }
