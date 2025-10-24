@@ -46,8 +46,6 @@ struct HomeDashboardView: View {
                                 }
                                 .foregroundStyle(accent.color)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .padding(.horizontal, 18)
                                 .background(
                                     RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                                         .fill(accent.color.opacity(colorScheme == .dark ? 0.28 : 0.2))

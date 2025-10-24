@@ -34,6 +34,7 @@ struct ToolOverview: View {
                             .lineLimit(2)
                     }
                     .multilineTextAlignment(.leading)
+                    Spacer()
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
