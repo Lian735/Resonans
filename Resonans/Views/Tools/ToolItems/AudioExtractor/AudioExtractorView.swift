@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct AudioExtractorView: View {
     @StateObject var viewModel: AudioExtractorViewModel
@@ -39,9 +40,11 @@ struct AudioExtractorView: View {
                     activeSheet = .conversion(url)
                 }
             case .photoPicker:
-                VideoPicker { url in
-                    activeSheet = .conversion(url)
-                }
+                PhotoLibraryPicker(
+                    config: .init(filter: .videos) { url in
+                        activeSheet = .conversion(url)
+                    }
+                )
             case .conversion(let url):
                 AudioConversionView(
                     viewModel: AudioConversionViewModel(
