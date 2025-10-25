@@ -15,13 +15,13 @@ struct ToolsView: View {
                 VStack(spacing: 20) {
                     if #available(iOS 26, *){
                         GlassEffectContainer{
-                            ForEach(ToolItem.all) { tool in
+                            ForEach(viewModel.toolManager.tools) { tool in
                                 ToolOverview(tool: tool)
                                     .environmentObject(viewModel)
                             }
                         }
                     }else{
-                        ForEach(ToolItem.all) { tool in
+                        ForEach(viewModel.toolManager.tools) { tool in
                             ToolOverview(tool: tool)
                                 .environmentObject(viewModel)
                         }
@@ -46,7 +46,7 @@ struct ToolsView: View {
 
 #Preview {
     struct PreviewWrapper: View {
-        @State private var selected: ToolItem.Identifier? = ToolItem.Identifier.audioExtractor
+        @State private var selected: ToolIdentifier? = .audioExtractor
         @State private var trigger = false
 
         var body: some View {

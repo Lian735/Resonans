@@ -22,25 +22,26 @@ struct OnboardingFlowView: View {
 
     let accent: Color
     let primary: Color
-    let onComplete: (Set<ToolItem.Identifier>, Bool) -> Void
+    let onComplete: (Set<ToolIdentifier>, Bool) -> Void
+    let toolManager: ToolManager = ToolManager.shared
     
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
     @State private var currentStep = 0
-    @State private var selectedFavorites: Set<ToolItem.Identifier>
+    @State private var selectedFavorites: Set<ToolIdentifier>
     @State private var selectedWorkflow: WorkflowOption = .contentCreator
     @State private var showTips = true
 
     init(
         accent: Color,
         primary: Color,
-        onComplete: @escaping (Set<ToolItem.Identifier>, Bool) -> Void
+        onComplete: @escaping (Set<ToolIdentifier>, Bool) -> Void
     ) {
         self.accent = accent
         self.primary = primary
         self.onComplete = onComplete
-        _selectedFavorites = State(initialValue: Set(ToolItem.all.prefix(1).map { $0.id }))
+        _selectedFavorites = State(initialValue: Set())
     }
 
     var body: some View {
@@ -147,7 +148,7 @@ struct OnboardingFlowView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    ForEach(ToolItem.all) { tool in
+                    ForEach(toolManager.tools) { tool in
                         FavoriteSelectionCard(
                             tool: tool,
                             isSelected: selectedFavorites.contains(tool.id),
@@ -272,7 +273,7 @@ struct OnboardingFlowView: View {
     }
 
     private func finish() {
-        let favorites = selectedFavorites.isEmpty ? Set(ToolItem.all.prefix(1).map { $0.id }) : selectedFavorites
+        let favorites = selectedFavorites.isEmpty ? Set(toolManager.tools.prefix(1).map { $0.id }) : selectedFavorites
         onComplete(favorites, showTips)
         dismiss()
     }
@@ -292,7 +293,7 @@ private struct FavoriteSelectionCard: View {
                 HStack(alignment: .top) {
                     ZStack {
                         RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                            .fill(LinearGradient(colors: tool.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(LinearGradient(colors: tool.gradientHex.compactMap { Color($0) }, startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 54, height: 54)
                             .overlay(
                                 RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)

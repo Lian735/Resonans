@@ -52,7 +52,7 @@ struct ToolOverview: View {
                 viewModel.selectedTool = nil
             }
         }), destination: {
-            tool.destination
+            tool.id.destination
                 .onAppear {
                 viewModel.recentToolIDs.removeAll(where: { $0 == tool.id })
                 viewModel.recentToolIDs.append(tool.id)
@@ -62,5 +62,5 @@ struct ToolOverview: View {
 }
 
 #Preview {
-    ToolOverview(tool: .audioExtractor)
+    ToolOverview(tool: ToolIdentifier.audioExtractor.tool)
 }

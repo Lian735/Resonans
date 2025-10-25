@@ -45,7 +45,7 @@ struct ToolIconView: View {
         RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
             .fill(
                 LinearGradient(
-                    colors: tool.gradientColors,
+                    colors: tool.gradientHex.compactMap { Color(hex: $0) },
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )

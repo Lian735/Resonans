@@ -123,7 +123,7 @@ struct HomeDashboardView: View {
 #Preview {
     struct PreviewWrapper: View {
         @State private var trigger = false
-        let tools = ToolItem.all
+        let tools = ToolManager.shared.tools
         var body: some View {
             HomeDashboardView(
                 accent: .purple,
