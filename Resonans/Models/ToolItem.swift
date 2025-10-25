@@ -1,20 +1,41 @@
 import SwiftUI
 
 struct ToolItem: Identifiable {
-    enum Identifier: String, Hashable {
-        case audioExtractor
-        case dummy
-    }
-
-    let id: Identifier
+    let id: ToolIdentifier
     let title: String
     let subtitle: String
     let iconName: String
-    let gradientColors: [Color]
+    let gradientHex: [String]
+}
+
+enum ToolIdentifier: String, Hashable {
+    case audioExtractor
+    case dummy
     
-    var destination: some View{
-        VStack{
-            switch id{
+    var tool: ToolItem {
+        switch self {
+        case .audioExtractor:
+            ToolItem(
+                id: .audioExtractor,
+                title: "Extractor",
+                subtitle: "Pull crisp audio tracks from your videos in seconds.",
+                iconName: "waveform.circle.fill",
+                gradientHex: ["#7D55F3", "#9568FA"]
+            )
+        case .dummy:
+            ToolItem(
+                id: .dummy,
+                title: "Dummy",
+                subtitle: "A playful sandbox to test multi-tool interactions.",
+                iconName: "puzzlepiece.extension.fill",
+                gradientHex: ["#FA8C4F", "#FDB560"]
+            )
+        }
+    }
+    
+    var destination: some View {
+        Group {
+            switch self {
             case .audioExtractor:
                 AudioExtractorView(viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared))
             case .dummy:
@@ -22,31 +43,4 @@ struct ToolItem: Identifiable {
             }
         }
     }
-
-    static let audioExtractor = ToolItem(
-        id: .audioExtractor,
-        title: "Extractor",
-        subtitle: "Pull crisp audio tracks from your videos in seconds.",
-        iconName: "waveform.circle.fill",
-        gradientColors: [
-            Color(red: 0.49, green: 0.33, blue: 0.95),
-            Color(red: 0.58, green: 0.41, blue: 0.98)
-        ]
-    )
-
-    static let dummy = ToolItem(
-        id: .dummy,
-        title: "Dummy",
-        subtitle: "A playful sandbox to test multi-tool interactions.",
-        iconName: "puzzlepiece.extension.fill",
-        gradientColors: [
-            Color(red: 0.98, green: 0.55, blue: 0.31),
-            Color(red: 0.99, green: 0.71, blue: 0.39)
-        ]
-    )
-
-    static let all: [ToolItem] = [
-        .audioExtractor,
-        .dummy
-    ]
 }

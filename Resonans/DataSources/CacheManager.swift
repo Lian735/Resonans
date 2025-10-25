@@ -36,16 +36,16 @@ final class CacheManager {
 
     // MARK: - Recent tools
 
-    func loadRecentTools() -> [ToolItem.Identifier] {
+    func loadRecentTools() -> [ToolIdentifier] {
         guard let data = try? Data(contentsOf: recentToolsURL) else { return [] }
         guard let rawIDs = try? decoder.decode([String].self, from: data) else {
             try? fileManager.removeItem(at: recentToolsURL)
             return []
         }
-        return rawIDs.compactMap { ToolItem.Identifier(rawValue: $0) }
+        return rawIDs.compactMap { ToolIdentifier(rawValue: $0) }
     }
 
-    func saveRecentTools(_ identifiers: [ToolItem.Identifier]) {
+    func saveRecentTools(_ identifiers: [ToolIdentifier]) {
         let trimmed = Array(identifiers.prefix(maxRecentTools))
         let raw = trimmed.map { $0.rawValue }
         guard let data = try? encoder.encode(raw) else { return }
