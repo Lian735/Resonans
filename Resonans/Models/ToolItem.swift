@@ -10,6 +10,7 @@ struct ToolItem: Identifiable {
 
 enum ToolIdentifier: String, Hashable {
     case audioExtractor
+    case bgRemover
     case dummy
     
     var tool: ToolItem {
@@ -21,6 +22,14 @@ enum ToolIdentifier: String, Hashable {
                 subtitle: "Pull crisp audio tracks from your videos in seconds.",
                 iconName: "waveform.circle.fill",
                 gradientHex: ["#7D55F3", "#9568FA"]
+            )
+        case .bgRemover:
+            ToolItem(
+                id: .bgRemover,
+                title: "Background Remover",
+                subtitle: "Removes Background from your images",
+                iconName: "camera.circle",
+                gradientHex: ["#4FACFE", "#00F2FE"]
             )
         case .dummy:
             ToolItem(
@@ -38,6 +47,8 @@ enum ToolIdentifier: String, Hashable {
             switch self {
             case .audioExtractor:
                 AudioExtractorView(viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared))
+            case .bgRemover:
+                BgRemoverView(viewModel: BgRemoverViewModel())
             case .dummy:
                 DummyToolView()
             }

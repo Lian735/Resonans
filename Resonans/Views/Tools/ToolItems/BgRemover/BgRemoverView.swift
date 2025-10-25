@@ -1,67 +1,54 @@
+//
+//  BgRemoverView.swift
+//  Resonans
+//
+//  Created by Kevin Dallian on 25/10/25.
+//
+
 import SwiftUI
 import PhotosUI
 
-struct AudioExtractorView: View {
-    @StateObject var viewModel: AudioExtractorViewModel
-    @State private var showAllRecents = false
-    @State private var activeSheet: ActiveSheet?
-
-    @Environment(\.colorScheme) private var colorScheme
+struct BgRemoverView: View {
+    @StateObject var viewModel: BgRemoverViewModel
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    @State var activeSheet: ActiveSheet?
+    @State var showAllRecents: Bool = false
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-
-    init(viewModel: AudioExtractorViewModel) {
+    
+    init(viewModel: BgRemoverViewModel) {
         self._viewModel = StateObject(wrappedValue: viewModel)
     }
-
+    
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 28) {
-                Color.clear
-                    .frame(height: AppStyle.innerPadding)
-                    .padding(.bottom, -24)
-
+        ScrollView {
+            VStack(spacing: 24) {
                 headerSection
-
-                sourceOptionsSection
-
+                sourceSection
                 recentSection
-
-                Spacer(minLength: 60)
             }
-            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.horizontal, 24)
         }
-        .background(.clear)
-        .sheet(item: $activeSheet) { sheetType in
-            switch sheetType {
-            case .filePicker:
-                FilePicker { url in
-                    activeSheet = .conversion(url)
-                }
-            case .photoPicker:
+        .sheet(item: $activeSheet) { type in
+            switch type {
+            case .photoLibrary:
                 PhotoLibraryPicker(
-                    config: .init(filter: .videos) { urls in
+                    config: .init(
+                        selectionLimit: 1,
+                        filter: .images
+                    ) { urls in
                         guard let firstUrl = urls.first else { return }
-                        activeSheet = .conversion(firstUrl)
+                        if let image = viewModel.getImageFromUrl(firstUrl) {
+                            activeSheet = .tool(image: image)
+                        }
                     }
                 )
-            case .conversion(let url):
-                AudioConversionView(
-                    viewModel: AudioConversionViewModel(
-                        videoConverter: VideoToAudioConverter()
-                    ),
-                    videoUrl: url
-                )
+            case .camera:
+                EmptyView()
             case .recents(let url):
                 ExportPicker(url: url)
-            }
-        }
-        .onAppear(perform: viewModel.reloadRecents)
-        .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate)) { notification in
-            guard let items = notification.object as? [RecentItem] else { return }
-            withAnimation(.easeInOut(duration: 0.25)) {
-                viewModel.recents = items
+            case .tool(let image):
+                RemoveBackgroundView(image: image)
             }
         }
         .background(
@@ -73,62 +60,41 @@ struct AudioExtractorView: View {
             .ignoresSafeArea()
         )
     }
-
+    
     private var headerSection: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Extractor")
-                    .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
-                Text("Pull crisp audio from your videos")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Background Remover")
+                .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
+            HStack {
+                Text("Removes background from your images")
                     .typography(.displaySmall, design: .rounded)
+                Spacer()
+                Image(systemName: "photo.on.rectangle.angled")
+                    .typography(.custom(size: 30, weight: .bold), color: accent.color)
             }
-
-            Spacer()
-
-            Image(systemName: "waveform")
-                .typography(.custom(size: 30, weight: .bold), color: accent.color)
         }
+        .padding(.top, 24)
     }
-
-    private var sourceOptionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    
+    private var sourceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Choose a source")
                 .typography(.titleMedium, design: .rounded)
 
             HStack(spacing: 16) {
-                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
-                    activeSheet = .filePicker
+                sourceOptionCard(icon: "camera", title: "Take from Camera") {
+                    activeSheet = .camera
                 }
 
-                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
-                    activeSheet = .photoPicker
+                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Photo Library") {
+                    activeSheet = .photoLibrary
                 }
             }
         }
     }
-
-    private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(disableGlassEffect: true){
-            HapticsManager.shared.pulse()
-            action()
-        } label: {
-            AppCard {
-                VStack(spacing: 12) {
-                    Image(systemName: icon)
-                        .typography(.custom(size: 30, weight: .semibold))
-                    Text(title)
-                        .typography(.titleSmall, design: .rounded)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
+    
     private var recentSection: some View {
-        AppCard{
+        AppCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Recent conversions")
                     .typography(.titleLarge, design: .rounded)
@@ -178,7 +144,27 @@ struct AudioExtractorView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
-
+    
+    private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(disableGlassEffect: true){
+            HapticsManager.shared.pulse()
+            action()
+        } label: {
+            AppCard {
+                VStack(spacing: 12) {
+                    Image(systemName: icon)
+                        .typography(.custom(size: 30, weight: .semibold))
+                    Text(title)
+                        .typography(.titleSmall, design: .rounded)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+    
     private func handleRecentExport(_ item: RecentItem) {
         let url = item.fileURL
         guard FileManager.default.fileExists(atPath: url.path) else {
@@ -189,21 +175,16 @@ struct AudioExtractorView: View {
     }
 }
 
-// MARK: - Sheet Handler
-extension AudioExtractorView {
+// MARK: Sheet
+extension BgRemoverView {
     enum ActiveSheet: Identifiable {
-        case photoPicker, filePicker, recents(URL), conversion(URL)
+        case photoLibrary, camera, recents(URL), tool(image: UIImage)
         var id: String { String(describing: self) }
     }
 }
 
 #Preview {
-    let viewModel: AudioExtractorViewModel = AudioExtractorViewModel(cacheManager: CacheManager.shared)
-    viewModel.recents = [
-        .init(title: "Conversion Hahahahahahha", duration: "20 Minutes", fileURL: URL(string: "hello.com")!),
-        .init(title: "Modar", duration: "29 Minutes", fileURL: URL(string: "hello.com")!)
-    ]
-    return AudioExtractorView(
-        viewModel: viewModel
-    )
+    NavigationStack {
+        BgRemoverView(viewModel: BgRemoverViewModel())
+    }
 }
