@@ -11,8 +11,8 @@ import PhotosUI
 struct BgRemoverView: View {
     @StateObject var viewModel: BgRemoverViewModel
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
-    @State var activeSheet: ActiveSheet?
     @State var showAllRecents: Bool = false
+    @Namespace var animation
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
@@ -21,44 +21,49 @@ struct BgRemoverView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                headerSection
-                sourceSection
-                recentSection
-            }
-            .padding(.horizontal, 24)
-        }
-        .sheet(item: $activeSheet) { type in
-            switch type {
-            case .photoLibrary:
-                PhotoLibraryPicker(
-                    config: .init(
-                        selectionLimit: 1,
-                        filter: .images
-                    ) { urls in
-                        guard let firstUrl = urls.first else { return }
-                        if let image = viewModel.getImageFromUrl(firstUrl) {
-                            activeSheet = .tool(image: image)
-                        }
+        ZStack {
+            if viewModel.useFullScreenSheet {
+                cameraView
+                    .swipeToDismiss($viewModel.useFullScreenSheet)
+            } else {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        headerSection
+                        sourceSection
+                        recentSection
                     }
+                    .padding(.horizontal, 24)
+                }
+                .sheet(item: $viewModel.activeSheet) { type in
+                    switch type {
+                    case .photoLibrary:
+                        PhotoLibraryPicker(
+                            config: .init(
+                                selectionLimit: 1,
+                                filter: .images
+                            ) { urls in
+                                guard let firstUrl = urls.first else { return }
+                                viewModel.handleImageFromPhotoPicker(url: firstUrl)
+                            }
+                        )
+                    case .recents(let url):
+                        ExportPicker(url: url)
+                    case .tool(let image):
+                        RemoveBackgroundView(image: image)
+                    case .cameraNotAuthorized(let status):
+                        AllowCameraSheet(status: status)
+                    }
+                }
+                .background(
+                    LinearGradient(
+                        colors: [accent.gradient, .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
                 )
-            case .camera:
-                EmptyView()
-            case .recents(let url):
-                ExportPicker(url: url)
-            case .tool(let image):
-                RemoveBackgroundView(image: image)
             }
         }
-        .background(
-            LinearGradient(
-                colors: [accent.gradient, .clear],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
     }
     
     private var headerSection: some View {
@@ -83,11 +88,12 @@ struct BgRemoverView: View {
 
             HStack(spacing: 16) {
                 sourceOptionCard(icon: "camera", title: "Take from Camera") {
-                    activeSheet = .camera
+                    viewModel.handleOpenCamera()
                 }
+                .matchedGeometryEffect(id: "camera", in: animation, isSource: false)
 
                 sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Photo Library") {
-                    activeSheet = .photoLibrary
+                    viewModel.showPhotoLibrary()
                 }
             }
         }
@@ -114,7 +120,7 @@ struct BgRemoverView: View {
                         ForEach(recents.indices, id: \.self) { index in
                             let item = recents[index]
                             VStack(spacing: 12) {
-                                RecentRow(item: item, onSave: handleRecentExport)
+                                RecentRow(item: item, onSave: viewModel.handleRecentExport)
                                     .padding(.horizontal, 12)
                                 
                                 if index < recents.count - 1 {
@@ -165,21 +171,29 @@ struct BgRemoverView: View {
         .buttonStyle(.plain)
     }
     
-    private func handleRecentExport(_ item: RecentItem) {
-        let url = item.fileURL
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            viewModel.reloadRecents()
-            return
+    private var cameraView: some View {
+        BgRemoverCameraView(
+            cameraManager: CameraManager.shared,
+            onPhotoCaptured: { image in
+                withAnimation(.spring(duration: 0.3)) {
+                    viewModel.useFullScreenSheet = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    viewModel.handleImageFromPhotoLibrary(image)
+                }
+            },
+            onClose: {
+                withAnimation(.spring(duration: 0.3)) {
+                    viewModel.useFullScreenSheet = false
+                }
+            }
+        )
+        .background {
+            Color.clear
+                .matchedGeometryEffect(id: "camera", in: animation)
         }
-        activeSheet = .recents(url)
-    }
-}
-
-// MARK: Sheet
-extension BgRemoverView {
-    enum ActiveSheet: Identifiable {
-        case photoLibrary, camera, recents(URL), tool(image: UIImage)
-        var id: String { String(describing: self) }
+        .transition(.opacity)
+        .zIndex(1)
     }
 }
 

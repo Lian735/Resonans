@@ -27,6 +27,7 @@ struct RemoveBackgroundView: View {
             Spacer()
             footerButton
         }
+        .presentationDetents([.medium])
         .padding(.top, 12)
         .padding(.horizontal, 24)
         .background(
@@ -70,23 +71,10 @@ struct RemoveBackgroundView: View {
                 HapticsManager.shared.selection()
                 dismiss()
             }) {
-                Text("Done")
-                    .typography(
-                        .titleSmall,
-                        color: colorScheme == .dark ? .white : .black,
-                        design: .rounded
-                    )
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                            .fill(.primary.opacity(0.07))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                            .stroke(.primary.opacity(0.15), lineWidth: 1)
-                    )
-                    .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
+                AppCard(isMaxWidth: false) {
+                    Text("Done")
+                        .typography(.titleSmall, design: .rounded)
+                }
             }
         }
     }
@@ -133,5 +121,17 @@ extension RemoveBackgroundView {
 }
 
 #Preview {
-    RemoveBackgroundView(image: .icon)
+    struct Preview: View {
+        @State var isShown: Bool = true
+        
+        var body: some View {
+            Button("Show Sheet") {
+                isShown = true
+            }
+            .sheet(isPresented: $isShown) {
+                RemoveBackgroundView(image: .logo)
+            }
+        }
+    }
+    return Preview()
 }

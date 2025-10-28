@@ -293,7 +293,7 @@ private struct FavoriteSelectionCard: View {
                 HStack(alignment: .top) {
                     ZStack {
                         RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                            .fill(LinearGradient(colors: tool.gradientHex.compactMap { Color($0) }, startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(LinearGradient(colors: tool.gradientHex.compactMap { Color(hex: $0) }, startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 54, height: 54)
                             .overlay(
                                 RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)

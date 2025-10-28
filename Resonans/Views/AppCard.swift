@@ -51,6 +51,12 @@ struct AppCard<Content: View>: View {
     
     @State private var measuredHeight: CGFloat = .zero
     @State private var measuredWidth: CGFloat = .zero
+    var isMaxWidth: Bool
+    
+    init(isMaxWidth: Bool = true, content: @escaping () -> Content) {
+        self.content = content
+        self.isMaxWidth = isMaxWidth
+    }
     
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
     
@@ -72,14 +78,15 @@ struct AppCard<Content: View>: View {
     private var glassView: some View {
         content()
             .padding()
+            .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .center)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: AppStyle.cornerRadius))
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(5)
     }
 
     private var nonGlassView: some View {
         content()
             .padding()
+            .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                     .fill(.primary.opacity(0.09))
@@ -90,7 +97,19 @@ struct AppCard<Content: View>: View {
             )
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
             .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(5)
+    }
+}
+
+#Preview {
+    VStack {
+        AppCard {
+            Text("Max Width")
+                .typography(.bodyBold)
+        }
+        AppCard(isMaxWidth: false) {
+            Text("No Max Width")
+                .typography(.bodyBold)
+        }
     }
 }

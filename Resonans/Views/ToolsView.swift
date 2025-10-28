@@ -57,4 +57,5 @@ struct ToolsView: View {
         }
     }
     return PreviewWrapper()
+        .environmentObject(ContentViewModel())
 }

@@ -63,4 +63,5 @@ struct ToolOverview: View {
 
 #Preview {
     ToolOverview(tool: ToolIdentifier.audioExtractor.tool)
+        .environmentObject(ContentViewModel())
 }
