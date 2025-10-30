@@ -14,7 +14,6 @@ final class ContentViewModel: ObservableObject {
     @Published var showOnboarding: Bool = false
     
     @Published var selectedTab: TabSelection = .home
-    @Published var selectedTool: ToolIdentifier? = nil
     
     let toolManager: ToolManager = .shared
     

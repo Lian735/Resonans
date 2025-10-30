@@ -16,7 +16,7 @@ final class RemoveBackgroundViewModel: ObservableObject {
     let tool: BgRemoverTool
     
     init(image: UIImage) {
-        self.image = image
+        self.image = image.normalizedForDisplay()
         self.tool = BgRemoverTool()
     }
     

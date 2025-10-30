@@ -4,64 +4,40 @@
 import SwiftUI
 
 struct ToolOverview: View {
-    private let tool: ToolItem
-    init(tool:  ToolItem, presentedInHomeboard atHome: Bool = false){
-        self.tool = tool
-        isHomeboard = atHome
-    }
-    
-    private let isHomeboard: Bool
-    
-    @State private var showDetailView: Bool = false
-    
-    @EnvironmentObject private var viewModel: ContentViewModel
-    
-    @Namespace private var namespace
-    
+    let tool: ToolItem
+
     var body: some View {
-        Button(disableGlassEffect: true){
-            viewModel.selectedTool = tool.id
-        }label: {
-            AppCard{
-                HStack{
-                    ToolIconView(tool: tool)
-                    VStack(alignment: .leading){
-                        Text(tool.title)
-                            .typography(.titleMedium, color: .primary, design: .rounded)
-                        
-                        Text(tool.subtitle)
-                            .typography(.caption, color: .secondary, design: .rounded)
-                            .lineLimit(2)
-                    }
-                    .multilineTextAlignment(.leading)
-                    Spacer()
-                }
+        HStack(spacing: 16) {
+            Image(systemName: tool.iconName)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.accentColor)
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(tool.title)
+                    .font(.headline)
+                Text(tool.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
-        .navigationDestination(isPresented: Binding(get: {
-            if isHomeboard{
-                return false
-            }else{
-                return viewModel.selectedTool == tool.id
-            }
-        }, set: {
-            if $0 {
-                viewModel.selectedTool = tool.id
-            }else{
-                viewModel.selectedTool = nil
-            }
-        }), destination: {
-            tool.id.destination
-                .onAppear {
-                viewModel.recentToolIDs.removeAll(where: { $0 == tool.id })
-                viewModel.recentToolIDs.append(tool.id)
-            }
-        })
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
 
 #Preview {
     ToolOverview(tool: ToolIdentifier.audioExtractor.tool)
-        .environmentObject(ContentViewModel())
 }
