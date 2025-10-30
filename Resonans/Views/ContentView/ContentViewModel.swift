@@ -14,12 +14,10 @@ final class ContentViewModel: ObservableObject {
     @Published var showOnboarding: Bool = false
     
     @Published var selectedTab: TabSelection = .home
-    @Published var selectedTool: ToolIdentifier? = nil
-    
     let toolManager: ToolManager = .shared
-    
+
     var favoriteToolIds: Set<ToolIdentifier> = []
-    var recentToolIDs: [ToolIdentifier] = []
+    @Published var recentToolIDs: [ToolIdentifier] = []
     
     var recentTools: [ToolItem] {
         recentToolIDs.compactMap { id in toolManager.tools.first(where: { $0.id == id }) }

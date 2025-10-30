@@ -18,7 +18,7 @@ final class BgRemoverTool {
         }
         let maskImage = try createMask(from: inputImage)
         let outputImage = applyMask(mask: maskImage, to: inputImage)
-        return try convertToUIImage(ciImage: outputImage)
+        return try convertToUIImage(ciImage: outputImage, original: image)
     }
     
     private func createMask(from inputImage: CIImage) throws -> CIImage {
@@ -52,12 +52,12 @@ final class BgRemoverTool {
         return filter.outputImage ?? image
     }
     
-    private func convertToUIImage(ciImage: CIImage) throws -> UIImage {
+    private func convertToUIImage(ciImage: CIImage, original: UIImage) throws -> UIImage {
         guard let cgImage = CIContext(options: nil).createCGImage(ciImage, from: ciImage.extent) else {
             throw BgRemoverError.convertError
         }
-        
-        return UIImage(cgImage: cgImage)
+
+        return UIImage(cgImage: cgImage, scale: original.scale, orientation: original.imageOrientation)
     }
 }
 
