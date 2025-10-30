@@ -7,9 +7,6 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("showGuidedTips") private var showGuidedTips = true
 
-    @Environment(\.colorScheme) private var colorScheme
-    
-    private var background: Color { AppStyle.background(for: colorScheme) }
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     var body: some View {
@@ -58,6 +55,7 @@ struct ContentView: View {
                 HapticsManager.shared.notify(.success)
             }
         }
+        .background(AppBackgroundView(accent: accent))
         .tint(accent.color)
     }
 }

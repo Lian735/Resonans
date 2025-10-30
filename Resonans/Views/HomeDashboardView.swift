@@ -107,14 +107,7 @@ struct HomeDashboardView: View {
                     Spacer(minLength: 60)
                 }
             }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
+            .appBackground(accent: accent)
             .navigationTitle("Home")
         }
     }

@@ -3,8 +3,6 @@ import SwiftUI
 struct ToolsView: View {
     let accent: AccentColorOption
     let primary: Color
-    @Environment(\.colorScheme) private var colorScheme
-    
     @EnvironmentObject private var viewModel: ContentViewModel
     
     @Namespace private var namespace
@@ -30,15 +28,7 @@ struct ToolsView: View {
                 .padding(.horizontal, AppStyle.horizontalPadding)
                 .padding(.vertical, AppStyle.innerPadding)
             }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                .scaledToFill()
-            )
+            .appBackground(accent: accent)
             .navigationTitle("Tools")
         }
     }

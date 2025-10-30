@@ -6,7 +6,6 @@ struct AudioExtractorView: View {
     @State private var showAllRecents = false
     @State private var activeSheet: ActiveSheet?
 
-    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -64,14 +63,7 @@ struct AudioExtractorView: View {
                 viewModel.recents = items
             }
         }
-        .background(
-            LinearGradient(
-                colors: [accent.gradient, .clear],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
+        .appBackground(accent: accent)
     }
 
     private var headerSection: some View {

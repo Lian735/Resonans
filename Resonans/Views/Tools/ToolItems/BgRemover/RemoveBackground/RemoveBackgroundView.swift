@@ -11,7 +11,6 @@ struct RemoveBackgroundView: View {
     @StateObject var viewModel: RemoveBackgroundViewModel
     
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
     @State var activeSheet: ActiveSheet?
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -30,14 +29,7 @@ struct RemoveBackgroundView: View {
         .presentationDetents([.medium])
         .padding(.top, 12)
         .padding(.horizontal, 24)
-        .background(
-            LinearGradient(
-                colors: [accent.gradient, colorScheme == .dark ? .black : .white],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
+        .appBackground(accent: accent)
         .onChange(of: viewModel.errorMessage) { oldError, newError in
             if let newError, oldError != newError, !newError.isEmpty {
                 activeSheet = .removeFailed(errorMessage: newError)

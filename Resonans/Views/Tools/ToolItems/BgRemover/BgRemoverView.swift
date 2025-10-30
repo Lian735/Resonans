@@ -54,16 +54,9 @@ struct BgRemoverView: View {
                         AllowCameraSheet(status: status)
                     }
                 }
-                .background(
-                    LinearGradient(
-                        colors: [accent.gradient, .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
-                )
             }
         }
+        .appBackground(accent: accent)
     }
     
     private var headerSection: some View {

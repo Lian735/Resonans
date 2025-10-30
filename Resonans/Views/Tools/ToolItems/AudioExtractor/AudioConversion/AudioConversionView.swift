@@ -115,12 +115,7 @@ struct AudioConversionView: View {
     }
 
     private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [accent.gradient, colorScheme == .dark ? .black : .white],
-            startPoint: .topLeading,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        AppBackgroundView(accent: accent)
     }
 
     private var headerRow: some View {

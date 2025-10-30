@@ -12,18 +12,19 @@ import SwiftUI
 import Vision
 
 final class BgRemoverTool {
-    func removeBackground(from image: UIImage) async throws -> UIImage? {
+    func removeBackground(from image: UIImage) async throws -> UIImage {
         guard let inputImage = CIImage(image: image) else {
             throw BgRemoverError.convertError
         }
-        let maskImage = try createMask(from: inputImage)
+        let orientation = CGImagePropertyOrientation(image.imageOrientation)
+        let maskImage = try createMask(from: inputImage, orientation: orientation)
         let outputImage = applyMask(mask: maskImage, to: inputImage)
-        return try convertToUIImage(ciImage: outputImage)
+        return try convertToUIImage(ciImage: outputImage, originalImage: image)
     }
-    
-    private func createMask(from inputImage: CIImage) throws -> CIImage {
+
+    private func createMask(from inputImage: CIImage, orientation: CGImagePropertyOrientation) throws -> CIImage {
         let request = VNGenerateForegroundInstanceMaskRequest()
-        let handler = VNImageRequestHandler(ciImage: inputImage)
+        let handler = VNImageRequestHandler(ciImage: inputImage, orientation: orientation)
         
         do {
             try handler.perform([request])
@@ -44,20 +45,20 @@ final class BgRemoverTool {
     
     private func applyMask(mask: CIImage, to image: CIImage) -> CIImage {
         let filter = CIFilter.blendWithMask()
-        
+
         filter.inputImage = image
         filter.maskImage = mask
         filter.backgroundImage = CIImage.empty()
-        
-        return filter.outputImage ?? image
+
+        return (filter.outputImage ?? image).cropped(to: image.extent)
     }
-    
-    private func convertToUIImage(ciImage: CIImage) throws -> UIImage {
+
+    private func convertToUIImage(ciImage: CIImage, originalImage: UIImage) throws -> UIImage {
         guard let cgImage = CIContext(options: nil).createCGImage(ciImage, from: ciImage.extent) else {
             throw BgRemoverError.convertError
         }
-        
-        return UIImage(cgImage: cgImage)
+
+        return UIImage(cgImage: cgImage, scale: originalImage.scale, orientation: originalImage.imageOrientation)
     }
 }
 

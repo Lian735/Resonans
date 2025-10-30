@@ -52,14 +52,7 @@ struct SettingsView: View {
                 }
                 .padding(.bottom, AppStyle.innerPadding)
             }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
+            .appBackground(accent: accent)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar(content: {
