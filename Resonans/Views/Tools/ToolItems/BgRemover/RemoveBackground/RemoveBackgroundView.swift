@@ -9,35 +9,53 @@ import SwiftUI
 
 struct RemoveBackgroundView: View {
     @StateObject var viewModel: RemoveBackgroundViewModel
-    
+
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
-    @State var activeSheet: ActiveSheet?
+    @State private var activeSheet: ActiveSheet?
+
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
-    
+
     init(image: UIImage) {
-        self._viewModel = StateObject(wrappedValue: RemoveBackgroundViewModel(image: image))
+        _viewModel = StateObject(wrappedValue: RemoveBackgroundViewModel(image: image))
     }
-    
+
     var body: some View {
-        VStack {
-            headerSection
-            imageSection
-            Spacer()
-            footerButton
+        NavigationStack {
+            Form {
+                Section("Preview") {
+                    VStack(alignment: .center, spacing: 16) {
+                        Image(uiImage: viewModel.image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        if viewModel.isLoading {
+                            ProgressView("Processing…")
+                                .progressViewStyle(.circular)
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0))
+                }
+
+                Section {
+                    Button(action: viewModel.removeBackground) {
+                        Text(viewModel.isLoading ? "Converting…" : "Remove background")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(viewModel.isLoading)
+                }
+            }
+            .navigationTitle("Remove background")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done", action: dismiss.callAsFunction)
+                }
+            }
         }
-        .presentationDetents([.medium])
-        .padding(.top, 12)
-        .padding(.horizontal, 24)
-        .background(
-            LinearGradient(
-                colors: [accent.gradient, colorScheme == .dark ? .black : .white],
-                startPoint: .topLeading,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
+        .tint(accent.color)
+        .presentationDetents([.medium, .large])
         .onChange(of: viewModel.errorMessage) { oldError, newError in
             if let newError, oldError != newError, !newError.isEmpty {
                 activeSheet = .removeFailed(errorMessage: newError)
@@ -49,11 +67,11 @@ struct RemoveBackgroundView: View {
         }
         .sheet(item: $activeSheet) { type in
             switch type {
-            case .removeFailed(_):
+            case .removeFailed:
                 ConversionFailSheet(
                     accentColor: accent.color,
                     primaryColor: .primary,
-                    onRetry: {},
+                    onRetry: viewModel.removeBackground,
                     onDone: { activeSheet = nil }
                 )
             case .removeSuccess(let image):
@@ -61,77 +79,19 @@ struct RemoveBackgroundView: View {
             }
         }
     }
-    
-    private var headerSection: some View {
-        HStack {
-            Text("Background")
-                .typography(.displayMedium, design: .rounded)
-            Spacer()
-            Button(action: {
-                HapticsManager.shared.selection()
-                dismiss()
-            }) {
-                AppCard(isMaxWidth: false) {
-                    Text("Done")
-                        .typography(.titleSmall, design: .rounded)
-                }
-            }
-        }
-    }
-    
-    private var imageSection: some View {
-        AppCard {
-            VStack {
-                Image(uiImage: viewModel.image)
-                    .resizable()
-                    .scaledToFit()
-                Text("Image")
-                    .typography(.titleLarge)
-            }
-        }
-        .frame(width: 250)
-    }
-    
-    private var footerButton: some View {
-        Button(action: viewModel.removeBackground) {
-            Text("Convert")
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .fill(accent.color.opacity(viewModel.isLoading ? 0.65 : 1))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                )
-                .shadow(color: accent.color.opacity(0.3), radius: 16, x: 0, y: 10)
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.isLoading)
-    }
 }
 
 extension RemoveBackgroundView {
     enum ActiveSheet: Identifiable {
         case removeFailed(errorMessage: String)
         case removeSuccess(image: UIImage)
+
         var id: String { String(describing: self) }
     }
 }
 
 #Preview {
-    struct Preview: View {
-        @State var isShown: Bool = true
-        
-        var body: some View {
-            Button("Show Sheet") {
-                isShown = true
-            }
-            .sheet(isPresented: $isShown) {
-                RemoveBackgroundView(image: .logo)
-            }
-        }
+    NavigationStack {
+        RemoveBackgroundView(image: .logo)
     }
-    return Preview()
 }

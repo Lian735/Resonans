@@ -7,41 +7,47 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("showGuidedTips") private var showGuidedTips = true
 
-    @Environment(\.colorScheme) private var colorScheme
-    
-    private var background: Color { AppStyle.background(for: colorScheme) }
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+
+    @State private var homePath = NavigationPath()
+    @State private var toolsPath = NavigationPath()
 
     var body: some View {
         TabView(selection: $viewModel.selectedTab) {
-            Tab(value: .home, content: {
-                HomeDashboardView(accent: accent, primary: .primary)
+            NavigationStack(path: $homePath) {
+                HomeDashboardView()
                     .environmentObject(viewModel)
-            }, label: {
-                Label {
-                    Text("Home")
-                } icon: {
-                    Image("icon")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                        .accessibilityHidden(true)
-                }
-            })
-            Tab(value: .tools, content: {
-                ToolsView(accent: accent, primary: .primary)
-                    .environmentObject(viewModel)
-            }, label: {
-                Label("Tools", systemImage: "wrench.and.screwdriver.fill")
-            })
-            Tab(value: .settings){
-                SettingsView()
-            }label: {
-                Label("Settings", systemImage: "gearshape.fill")
             }
+            .navigationDestination(for: ToolIdentifier.self) { identifier in
+                ToolDestinationView(toolIdentifier: identifier)
+                    .environmentObject(viewModel)
+            }
+            .tabItem {
+                Label("Home", systemImage: "house.fill")
+            }
+            .tag(TabSelection.home)
+
+            NavigationStack(path: $toolsPath) {
+                ToolsView()
+                    .environmentObject(viewModel)
+            }
+            .navigationDestination(for: ToolIdentifier.self) { identifier in
+                ToolDestinationView(toolIdentifier: identifier)
+                    .environmentObject(viewModel)
+            }
+            .tabItem {
+                Label("Tools", systemImage: "wrench.and.screwdriver")
+            }
+            .tag(TabSelection.tools)
+
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .tag(TabSelection.settings)
         }
-        .labelStyle(.iconOnly)
         .onAppear {
             if !hasCompletedOnboarding {
                 viewModel.showOnboarding = true
