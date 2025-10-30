@@ -10,17 +10,17 @@ struct ToolsView: View {
     @Namespace private var namespace
     
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 20) {
-                    if #available(iOS 26, *){
-                        GlassEffectContainer{
+                    if #available(iOS 26, *) {
+                        GlassEffectContainer {
                             ForEach(viewModel.toolManager.tools) { tool in
                                 ToolOverview(tool: tool)
                                     .environmentObject(viewModel)
                             }
                         }
-                    }else{
+                    } else {
                         ForEach(viewModel.toolManager.tools) { tool in
                             ToolOverview(tool: tool)
                                 .environmentObject(viewModel)
@@ -30,17 +30,9 @@ struct ToolsView: View {
                 .padding(.horizontal, AppStyle.horizontalPadding)
                 .padding(.vertical, AppStyle.innerPadding)
             }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                .scaledToFill()
-            )
             .navigationTitle("Tools")
         }
+        .appBackground(accent: accent)
     }
 }
 

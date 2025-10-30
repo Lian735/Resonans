@@ -12,13 +12,19 @@ import SwiftUI
 import Vision
 
 final class BgRemoverTool {
-    func removeBackground(from image: UIImage) async throws -> UIImage? {
-        guard let inputImage = CIImage(image: image) else {
+    private let context = CIContext(options: nil)
+
+    func removeBackground(from image: UIImage) async throws -> UIImage {
+        guard let inputImage = CIImage(image: image, options: [.applyOrientationProperty: true]) else {
             throw BgRemoverError.convertError
         }
         let maskImage = try createMask(from: inputImage)
         let outputImage = applyMask(mask: maskImage, to: inputImage)
-        return try convertToUIImage(ciImage: outputImage)
+        return try convertToUIImage(
+            ciImage: outputImage,
+            originalExtent: inputImage.extent,
+            scale: image.scale
+        )
     }
     
     private func createMask(from inputImage: CIImage) throws -> CIImage {
@@ -44,20 +50,20 @@ final class BgRemoverTool {
     
     private func applyMask(mask: CIImage, to image: CIImage) -> CIImage {
         let filter = CIFilter.blendWithMask()
-        
+
         filter.inputImage = image
         filter.maskImage = mask
         filter.backgroundImage = CIImage.empty()
-        
-        return filter.outputImage ?? image
+
+        return filter.outputImage?.cropped(to: image.extent) ?? image
     }
-    
-    private func convertToUIImage(ciImage: CIImage) throws -> UIImage {
-        guard let cgImage = CIContext(options: nil).createCGImage(ciImage, from: ciImage.extent) else {
+
+    private func convertToUIImage(ciImage: CIImage, originalExtent: CGRect, scale: CGFloat) throws -> UIImage {
+        guard let cgImage = context.createCGImage(ciImage, from: originalExtent) else {
             throw BgRemoverError.convertError
         }
-        
-        return UIImage(cgImage: cgImage)
+
+        return UIImage(cgImage: cgImage, scale: scale, orientation: .up)
     }
 }
 

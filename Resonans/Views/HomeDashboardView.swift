@@ -10,10 +10,10 @@ struct HomeDashboardView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
     
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 28) {
-                    AppCard{
+                    AppCard {
                         VStack(alignment: .leading, spacing: 20) {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 6) {
@@ -71,7 +71,7 @@ struct HomeDashboardView: View {
                         .padding(.horizontal, AppStyle.horizontalPadding)
 
                         if viewModel.recentTools.isEmpty {
-                            AppCard{
+                            AppCard {
                                 Text("Jump back into tools and your history will live here.")
                                     .typography(.body, color: primary.opacity(0.65), design: .rounded)
                                     .frame(maxWidth: .infinity)
@@ -107,16 +107,9 @@ struct HomeDashboardView: View {
                     Spacer(minLength: 60)
                 }
             }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
             .navigationTitle("Home")
         }
+        .appBackground(accent: accent)
     }
 }
 

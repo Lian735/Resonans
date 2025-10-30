@@ -35,13 +35,13 @@ struct ContentView: View {
             }, label: {
                 Label("Tools", systemImage: "wrench.and.screwdriver.fill")
             })
-            Tab(value: .settings){
+            Tab(value: .settings) {
                 SettingsView()
-            }label: {
+            } label: {
                 Label("Settings", systemImage: "gearshape.fill")
             }
         }
-        .labelStyle(.iconOnly)
+        .labelStyle(.titleAndIcon)
         .onAppear {
             if !hasCompletedOnboarding {
                 viewModel.showOnboarding = true
@@ -59,6 +59,7 @@ struct ContentView: View {
             }
         }
         .tint(accent.color)
+        .appBackground(accent: accent)
     }
 }
 

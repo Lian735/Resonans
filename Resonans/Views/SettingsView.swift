@@ -35,15 +35,15 @@ struct SettingsView: View {
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
     
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     appearanceSection
                     otherSection
                     aboutSection
-                    if #available(iOS 26, *){
-                        if experimentalEnabled{
-                            settingsBox{
+                    if #available(iOS 26, *) {
+                        if experimentalEnabled {
+                            settingsBox {
                                 Toggle("Glass Effect", isOn: $glassEffectActivated)
                             }
                         }
@@ -52,14 +52,6 @@ struct SettingsView: View {
                 }
                 .padding(.bottom, AppStyle.innerPadding)
             }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar(content: {
@@ -74,6 +66,7 @@ struct SettingsView: View {
             })
             .animation(.linear, value: glassEffectActivated)
         }
+        .appBackground(accent: accent)
     }
 
     // MARK: - Sections
@@ -244,7 +237,7 @@ struct SettingsView: View {
     }
 
     private func settingsBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
-        AppCard{
+        AppCard {
             VStack(alignment: .leading, spacing: 16) {
                 content()
             }

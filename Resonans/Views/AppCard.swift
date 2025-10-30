@@ -89,10 +89,10 @@ struct AppCard<Content: View>: View {
             .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                    .fill(.primary.opacity(0.09))
+                    .fill(Color.primary.opacity(AppStyle.cardFillOpacity))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .strokeBorder(.primary.opacity(0.10), lineWidth: 1)
+                            .strokeBorder(Color.primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
                     )
             )
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
