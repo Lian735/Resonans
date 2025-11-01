@@ -60,7 +60,8 @@ final class BgRemoverViewModel: ObservableObject {
         if activeSheet != nil {
             self.activeSheet = nil
         }
-        self.activeSheet = .tool(image: image)
+        let preparedImage = image.normalizedForDisplay()
+        self.activeSheet = .tool(image: preparedImage)
     }
     
     private func getCameraAuthorization() -> AuthorizationStatus {
