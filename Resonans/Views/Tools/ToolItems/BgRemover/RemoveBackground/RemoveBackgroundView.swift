@@ -30,18 +30,18 @@ struct RemoveBackgroundView: View {
                 }
 
                 Section {
-                    Button(action: viewModel.removeBackground) {
-                        if viewModel.isLoading {
-                            HStack {
-                                ProgressView()
-                                Text("Removing background…")
-                            }
-                        } else {
-                            Text("Remove background")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(viewModel.isLoading)
+                    // Button(action: viewModel.removeBackground) {
+                    //    if viewModel.isLoading {
+                    //        HStack {
+                    //            ProgressView()
+                    //            Text("Removing background…")
+                    //        }
+                    //    } else {
+                    //        Text("Remove background")
+                    //    }
+                    //}
+                    //.buttonStyle(.borderedProminent)
+                    //.disabled(viewModel.isLoading)
                 }
             }
             .navigationTitle("Background")
@@ -55,28 +55,34 @@ struct RemoveBackgroundView: View {
             }
             .sheet(item: $activeSheet) { type in
                 switch type {
-                case .removeFailed:
-                    ConversionFailSheet(
-                        accentColor: accentColor,
-                        primaryColor: .primary,
-                        onRetry: {
-                            activeSheet = nil
-                        },
-                        onDone: {
-                            activeSheet = nil
-                        }
+                case .removeFailed(let errorMessage):
+                    AnyView(
+                        ConversionFailSheet(
+                            accentColor: accentColor,
+                            primaryColor: .primary,
+                            onRetry: {
+                                activeSheet = nil
+                            },
+                            onDone: {
+                                activeSheet = nil
+                            }
+                        )
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
                     )
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
                 case .removeSuccess(let image):
-                    SuccessBackgroundRemovalView(image: image)
+                    AnyView(
+                        SuccessBackgroundRemovalView(image: image)
+                            .presentationDetents([.medium])
+                            .presentationDragIndicator(.visible)
+                    )
                 }
             }
-            .onChange(of: viewModel.errorMessage) { oldValue, newValue in
-                guard let newValue, oldValue != newValue, !newValue.isEmpty else { return }
+            .onChange(of: viewModel.errorMessage) { newValue in
+                guard let newValue, !newValue.isEmpty else { return }
                 activeSheet = .removeFailed(errorMessage: newValue)
             }
-            .onChange(of: viewModel.outputImage) { _, newImage in
+            .onChange(of: viewModel.outputImage) { newImage in
                 guard let newImage else { return }
                 activeSheet = .removeSuccess(image: newImage)
             }

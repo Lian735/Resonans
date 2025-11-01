@@ -96,10 +96,13 @@ struct SettingsView: View {
 
     private var supportSection: some View {
         Section("Support") {
-            Button("Clear cache", role: .destructive) {
+            Button {
                 CacheManager.shared.clear()
                 HapticsManager.shared.notify(.success)
+            } label: {
+                Text("Clear cache")
             }
+            .tint(.red)
 
             Button("Send feedback") {
                 HapticsManager.shared.pulse()
