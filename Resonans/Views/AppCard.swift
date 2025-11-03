@@ -58,7 +58,7 @@ struct AppCard<Content: View>: View {
         self.isMaxWidth = isMaxWidth
     }
     
-    @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
+    @AppStorage(AppStorageKey.Settings.glassEffectActivated) private var glassEffectActivated: Bool = true
     
     var body: some View {
         HStack{

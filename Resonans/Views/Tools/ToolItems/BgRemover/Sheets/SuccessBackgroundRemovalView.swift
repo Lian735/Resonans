@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SuccessBackgroundRemovalView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
     let image: UIImage

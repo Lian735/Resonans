@@ -10,7 +10,7 @@ import PhotosUI
 
 struct BgRemoverView: View {
     @StateObject var viewModel: BgRemoverViewModel
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     @State var showAllRecents: Bool = false
     @Namespace var animation
 

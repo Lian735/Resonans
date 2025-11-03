@@ -2,12 +2,12 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
-    @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    @AppStorage(AppStorageKey.Settings.appearance) private var appearanceRaw = Appearance.system.rawValue
+    @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
 
-    @AppStorage("hapticsEnabled") private var hapticsEnabled = true
-    @AppStorage("soundsEnabled") private var soundsEnabled = true
-    @AppStorage("experimentalEnabled") private var experimentalEnabled = false
+    @AppStorage(AppStorageKey.Settings.hapticsEnabled) private var hapticsEnabled = true
+    @AppStorage(AppStorageKey.Settings.soundsEnabled) private var soundsEnabled = true
+    @AppStorage(AppStorageKey.Settings.experimentalEnabled) private var experimentalEnabled = false
     @State private var showTopBorder = false
 
     private var appearance: Appearance {

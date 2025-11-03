@@ -8,7 +8,7 @@ struct Button<Label: View>: View {
     var action: () -> Void
     @ViewBuilder var label: () -> Label
     
-    @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
+    @AppStorage(AppStorageKey.Settings.glassEffectActivated) private var glassEffectActivated: Bool = true
     
     private let disableGlassEffect: Bool
     

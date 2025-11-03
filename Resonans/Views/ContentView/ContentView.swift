@@ -3,9 +3,9 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
     
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("showGuidedTips") private var showGuidedTips = true
+    @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
+    @AppStorage(AppStorageKey.Onboarding.hasCompletedOnboarding) private var hasCompletedOnboarding = false
+    @AppStorage(AppStorageKey.Onboarding.showGuidedTips) private var showGuidedTips = true
 
     @Environment(\.colorScheme) private var colorScheme
     

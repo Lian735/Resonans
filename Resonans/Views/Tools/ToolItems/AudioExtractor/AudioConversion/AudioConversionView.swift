@@ -5,7 +5,7 @@ import UIKit
 struct AudioConversionView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
 
     @Environment(\.colorScheme) private var colorScheme

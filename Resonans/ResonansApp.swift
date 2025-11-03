@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct ResonansApp: App {
-    @AppStorage("appearance") private var appearanceRaw = Appearance.system.rawValue
+    @AppStorage(AppStorageKey.Settings.appearance) private var appearanceRaw = Appearance.system.rawValue
     private var appearance: Appearance { Appearance(rawValue: appearanceRaw) ?? .system }
     
     @StateObject private var viewModel = ContentViewModel()

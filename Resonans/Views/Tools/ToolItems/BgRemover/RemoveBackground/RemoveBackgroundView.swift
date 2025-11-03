@@ -12,7 +12,7 @@ struct RemoveBackgroundView: View {
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @AppStorage("accentColor") private var accentRaw = AccentColorOption.purple.rawValue
+    @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     @State var activeSheet: ActiveSheet?
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
