@@ -21,12 +21,7 @@ struct ContentView: View {
                 Label {
                     Text("Home")
                 } icon: {
-                    Image("icon")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                        .accessibilityHidden(true)
+                    Image("resonansicon.SFSymbol")
                 }
             })
             Tab(value: .tools, content: {

@@ -129,7 +129,7 @@ extension RemoveBackgroundView {
                 isShown = true
             }
             .sheet(isPresented: $isShown) {
-                RemoveBackgroundView(image: .logo)
+                RemoveBackgroundView(image: .resonansicon)
             }
         }
     }

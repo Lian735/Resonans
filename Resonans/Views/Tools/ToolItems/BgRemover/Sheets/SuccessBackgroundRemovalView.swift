@@ -73,5 +73,5 @@ struct SuccessBackgroundRemovalView: View {
 }
 
 #Preview {
-    SuccessBackgroundRemovalView(image: .logo)
+    SuccessBackgroundRemovalView(image: .resonansicon)
 }
