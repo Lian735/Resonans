@@ -25,7 +25,7 @@ struct SettingsView: View {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         if let version = version, !version.isEmpty {
             if let build = build, !build.isEmpty {
-                return "\(version).\(build)"
+                return "v\(version).\(build)"
             }
             return version
         }
@@ -147,8 +147,10 @@ struct SettingsView: View {
 
             Toggle(isOn: $soundsEnabled) {
                 Text("Sounds")
-                    .foregroundStyle(.primary.opacity(0.9))
+                    .foregroundStyle(.primary.opacity(0.5))
             }
+            .disabled(true)
+            .opacity(0.5)
             .onChange(of: soundsEnabled) { _, _ in
                 HapticsManager.shared.selection()
             }
@@ -252,3 +254,4 @@ struct SettingsView: View {
         .background(Color.black)
         .preferredColorScheme(.dark)
 }
+

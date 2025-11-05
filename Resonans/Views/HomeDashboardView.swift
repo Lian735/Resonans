@@ -5,9 +5,23 @@ struct HomeDashboardView: View {
     let accent: AccentColorOption
     let primary: Color
     
+    private var versionDisplayString: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        if let version = version, !version.isEmpty {
+            if let build = build, !build.isEmpty {
+                return "v\(version).\(build)"
+            }
+            return version
+        }
+        return "—"
+    }
+    
     @Environment(\.colorScheme) private var colorScheme
     
     @EnvironmentObject private var viewModel: ContentViewModel
+    
+    @State private var shimmerPhase: Bool = false
     
     var body: some View {
         NavigationStack{
@@ -17,20 +31,59 @@ struct HomeDashboardView: View {
                         VStack(alignment: .leading, spacing: 20) {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text("Welcome back")
-                                        .typography(.custom(size: 16, weight: .semibold), color: primary.opacity(0.7), design: .rounded)
-                                        .foregroundStyle(primary.opacity(0.7))
-                                    Text("Craft something brilliant today")
-                                        .typography(.custom(size: 30, weight: .heavy), color: primary, design: .rounded)
+                                    Text("Welcome back!")
+                                        .typography(.displaySmall, design: .rounded)
+                                    Text("Craft something brilliant today.")
+                                        .typography(.titleMedium, color: primary.opacity(0.7), design: .rounded)
                                 }
                                 
                                 Spacer()
                                 
-                                VStack(spacing: 8) {
-                                    Image(systemName: "sparkles")
-                                        .typography(.custom(size: 26, weight: .bold), color: accent.color)
-                                    Text("v1.2")
-                                        .typography(.caption, color: primary.opacity(0.6), design: .rounded)
+                                VStack(spacing: 3) {
+                                    Image("resonansicon.SFSymbol")
+                                        .typography(.custom(size: 35, weight: .medium), color: primary.opacity(0.6))
+                                        .overlay {
+                                            GeometryReader { proxy in
+                                                let width = proxy.size.width
+                                                let height = proxy.size.height
+                                                let oversize: CGFloat = 1.8
+                                                let overlayWidth = width * oversize
+                                                let overlayHeight = height * oversize
+
+                                                LinearGradient(
+                                                    colors: [
+                                                        .clear,
+                                                        Color.white.opacity(colorScheme == .dark ? 0.35 : 0.4),
+                                                        .clear
+                                                    ],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                                .frame(width: overlayWidth, height: overlayHeight)
+                                                .rotationEffect(.degrees(20))
+                                                .offset(x: shimmerPhase ? overlayWidth : -overlayWidth)
+                                                .blendMode(.plusLighter)
+                                                .animation(
+                                                    .easeInOut(duration: 2.2)
+                                                        .delay(0.6)
+                                                        .repeatForever(autoreverses: false),
+                                                    value: shimmerPhase
+                                                )
+                                                .mask(
+                                                    Image("resonansicon.SFSymbol")
+                                                        .typography(.custom(size: 35, weight: .medium), color: primary.opacity(0.6))
+                                                )
+                                                .frame(width: width, height: height, alignment: .center)
+                                                .clipped()
+                                            }
+                                        }
+                                        .onAppear {
+                                            shimmerPhase = true
+                                        }
+                                    ZStack {
+                                        Text(versionDisplayString)
+                                            .typography(.caption, color: primary.opacity(0.4), design: .rounded)
+                                    }
                                 }
                             }
                             
@@ -58,7 +111,6 @@ struct HomeDashboardView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        .padding(AppStyle.innerPadding)
                     }
                         .padding(.horizontal, AppStyle.horizontalPadding)
                     
