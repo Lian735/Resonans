@@ -79,7 +79,7 @@ struct AppCard<Content: View>: View {
         content()
             .padding()
             .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .center)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: AppStyle.cornerRadius))
+            .glassEffect(.regular, in: .rect(cornerRadius: AppStyle.cornerRadius))
             .padding(5)
     }
 

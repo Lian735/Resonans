@@ -25,7 +25,7 @@ struct SettingsView: View {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         if let version = version, !version.isEmpty {
             if let build = build, !build.isEmpty {
-                return "\(version) (\(build))"
+                return "\(version).\(build)"
             }
             return version
         }
@@ -40,14 +40,8 @@ struct SettingsView: View {
                 VStack(spacing: 24) {
                     appearanceSection
                     otherSection
+                    experimentalSection
                     aboutSection
-                    if #available(iOS 26, *){
-                        if experimentalEnabled{
-                            settingsBox{
-                                Toggle("Glass Effect", isOn: $glassEffectActivated)
-                            }
-                        }
-                    }
                     Spacer(minLength: 120)
                 }
                 .padding(.bottom, AppStyle.innerPadding)
@@ -170,17 +164,24 @@ struct SettingsView: View {
             Divider()
                 .padding(.vertical, 4)
 
-            Button {
+            Button("Clear Cache") {
                 CacheManager.shared.clear()
                 HapticsManager.shared.notify(.success)
-            } label: {
-                Text("Clear Cache")
-                    .typography(.titleSmall, design: .rounded)
-                    .foregroundStyle(.primary)
-                    .background(accent.color.opacity(0.25))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .padding(.top, 4)
+        }
+    }
+    
+    @ViewBuilder private var experimentalSection: some View {
+        if experimentalEnabled{
+            settingsBox {
+                Text("Experimental")
+                    .typography(.displaySmall, design: .rounded)
+                
+                if #available(iOS 26, *){
+                    Toggle("Glass Effect", isOn: $glassEffectActivated)
+                }
+            }
         }
     }
 
@@ -196,24 +197,16 @@ struct SettingsView: View {
             }
             .foregroundStyle(.primary.opacity(0.8))
 
-            Button {
+            Divider()
+                .padding(.vertical, 4)
+            
+            Button("Send Feedback") {
                 HapticsManager.shared.pulse()
                 if let url = URL(string: "mailto:feedback.lian@gmail.com") {
                     openURL(url)
                 }
-            } label: {
-                Text("Send Feedback")
-                    .typography(.bodyBold, design: .rounded)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                            .fill(accent.color.opacity(0.22))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                    )
             }
-            .padding(.top, 12)
+            .padding(.top, 4)
         }
     }
 
