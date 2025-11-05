@@ -33,6 +33,8 @@ struct SettingsView: View {
     }
 
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
+    @AppStorage("Interactive Glass activated") private var interactiveGlassActivated: Bool = false
+
     
     var body: some View {
         NavigationStack{
@@ -182,6 +184,11 @@ struct SettingsView: View {
                 
                 if #available(iOS 26, *){
                     Toggle("Glass Effect", isOn: $glassEffectActivated)
+                        .disabled(true)
+                        .opacity(0.5)
+                    if glassEffectActivated {
+                        Toggle("Interactive Glass", isOn: $interactiveGlassActivated)
+                    }
                 }
             }
         }
@@ -249,9 +256,39 @@ struct SettingsView: View {
     }
 }
 
+private extension Color {
+    func rgba() -> (r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat)? {
+        #if canImport(UIKit)
+        let ui = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard ui.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+        return (r, g, b, a)
+        #else
+        return nil
+        #endif
+    }
+}
+
+private func nearestAccentOption(for color: Color) -> AccentColorOption {
+    guard let target = color.rgba() else { return AccentColorOption.purple }
+    var best: (option: AccentColorOption, distance: CGFloat)?
+    for option in AccentColorOption.allCases {
+        if let c = option.color.rgba() {
+            let dr = target.r - c.r
+            let dg = target.g - c.g
+            let db = target.b - c.b
+            let da = target.a - c.a
+            let d = dr*dr + dg*dg + db*db + da*da
+            if best == nil || d < best!.distance {
+                best = (option, d)
+            }
+        }
+    }
+    return best?.option ?? AccentColorOption.purple
+}
+
 #Preview {
     SettingsView()
         .background(Color.black)
         .preferredColorScheme(.dark)
 }
-

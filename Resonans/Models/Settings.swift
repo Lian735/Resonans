@@ -28,9 +28,9 @@ enum AccentColorOption: String, CaseIterable, Identifiable {
     case blue
     case green
     case orange
-    case pink
-    case purple
     case red
+    case purple
+
 
     var id: String { rawValue }
 
@@ -39,9 +39,9 @@ enum AccentColorOption: String, CaseIterable, Identifiable {
         case .blue: return .blue
         case .green: return .green
         case .orange: return .orange
-        case .pink: return .pink
-        case .purple: return .purple
         case .red: return .red
+        case .purple: return .purple
+
         }
     }
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 enum AppStyle {
     /// Standard corner radius used throughout the app
-    static let cornerRadius: CGFloat = 28
+    static let cornerRadius: CGFloat = 33
     /// Compact corner radius for smaller cards and rows
     static let compactCornerRadius: CGFloat = 22
     /// Corner radius for icons and thumbnails
