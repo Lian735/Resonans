@@ -61,9 +61,19 @@ struct HomeDashboardView: View {
                                 Text("Browse tools")
                                     .typography(.titleSmall, design: .rounded)
                             }
+                            .overlay {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "magnifyingglass")
+                                        .typography(.custom(size: 18, weight: .semibold))
+                                    Text("Browse tools")
+                                        .typography(.titleSmall, design: .rounded)
+                                }
+                                .shimmer(.init(tint: .white, highlight: .yellow, highlightOpacity: 0.75))
+                            }
                             .foregroundStyle(accent.color)
                             .frame(maxWidth: .infinity)
                             .shadow(color: accent.color.opacity(colorScheme == .dark ? 0.25 : 0.2), radius: 16, x: 0, y: 10)
+                            
                         }
                         .buttonStyle(.plain)
                         .padding(.top, 4)
