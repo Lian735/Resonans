@@ -55,20 +55,24 @@ struct OnboardingFlowView: View {
 
             VStack(spacing: 28) {
                 header
-
+                    .padding(.horizontal, 28)
                 TabView(selection: $currentStep) {
-                    introStep.tag(0)
-                    favoritesStep.tag(1)
-                    workflowStep.tag(2)
+                    Group {
+                        introStep.tag(0)
+                        favoritesStep.tag(1)
+                        workflowStep.tag(2)
+                    }
+                    .padding(.horizontal, 28)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: currentStep)
 
-                progressIndicators
-
-                footerButtons
+                Group {
+                    progressIndicators
+                    footerButtons
+                }
+                .padding(.horizontal, 28)
             }
-            .padding(.horizontal, 28)
             .padding(.top, 36)
             .padding(.bottom, 32)
         }
