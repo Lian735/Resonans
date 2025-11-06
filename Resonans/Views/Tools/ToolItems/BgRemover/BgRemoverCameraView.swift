@@ -22,15 +22,12 @@ struct BgRemoverCameraView: View {
     
     var body: some View {
         ZStack {
-            CameraPreview(session: cameraManager.session)
-            .ignoresSafeArea()
+            cameraPreview
             cameraTools
         }
         .onDisappear {
             cameraManager.stopSession()
         }
-        .toolbar(.hidden, for: .tabBar)
-        .navigationBarBackButtonHidden()
         .task {
             do {
                 try await cameraManager.configureSession()
@@ -39,6 +36,20 @@ struct BgRemoverCameraView: View {
                 print("Error starting session : \(error.localizedDescription)")
             }
         }
+    }
+    
+    var cameraPreview: some View {
+        #if targetEnvironment(simulator)
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+            Text("This is a Camera Preview")
+        }
+        
+        #else
+        CameraPreview(session: cameraManager.session)
+            .ignoresSafeArea()
+        #endif
     }
     
     var cameraTools: some View {
@@ -70,8 +81,12 @@ struct BgRemoverCameraView: View {
     private func handlePhotoCapture() {
         Task {
             do {
+                #if targetEnvironment(simulator)
+                print("Capture image")
+                #else
                 let image = try await cameraManager.capturePhoto()
                 onPhotoCaptured?(image)
+                #endif
             } catch let error {
                 print("Error Capture Photo : \(error)")
             }

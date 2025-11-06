@@ -12,7 +12,6 @@ struct BgRemoverView: View {
     @StateObject var viewModel: BgRemoverViewModel
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     @State var showAllRecents: Bool = false
-    @Namespace var animation
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
@@ -21,51 +20,49 @@ struct BgRemoverView: View {
     }
     
     var body: some View {
-        ZStack {
-            if viewModel.useFullScreenSheet {
-                cameraView
-                    .swipeToDismiss($viewModel.useFullScreenSheet)
-            } else {
-                ScrollView {
-                    VStack(spacing: 24) {
-                        headerSection
-                        sourceSection
-                        recentSection
+        ScrollView {
+            VStack(spacing: 24) {
+                headerSection
+                sourceSection
+                recentSection
+            }
+            .padding(.horizontal, 24)
+        }
+        .sheet(item: $viewModel.activeSheet) { type in
+            switch type {
+            case .photoLibrary:
+                PhotoLibraryPicker(
+                    config: .init(
+                        selectionLimit: 1,
+                        filter: .images
+                    ) { urls in
+                        guard let firstUrl = urls.first else { return }
+                        viewModel.handleImageFromPhotoPicker(url: firstUrl)
                     }
-                    .padding(.horizontal, 24)
-                }
-                .sheet(item: $viewModel.activeSheet) { type in
-                    switch type {
-                    case .photoLibrary:
-                        PhotoLibraryPicker(
-                            config: .init(
-                                selectionLimit: 1,
-                                filter: .images
-                            ) { urls in
-                                guard let firstUrl = urls.first else { return }
-                                viewModel.handleImageFromPhotoPicker(url: firstUrl)
-                            }
-                        )
-                    case .recents(let url):
-                        ExportPicker(url: url)
-                    case .tool(let image):
-                        RemoveBackgroundView(image: image)
-                    case .cameraNotAuthorized(let status):
-                        AllowCameraSheet(status: status) { isAccept in
-                            viewModel.useFullScreenSheet = isAccept
-                        }
-                    }
-                }
-                .background(
-                    LinearGradient(
-                        colors: [accent.gradient, .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
                 )
+            case .recents(let url):
+                ExportPicker(url: url)
+            case .tool(let image):
+                RemoveBackgroundView(image: image)
+            case .cameraNotAuthorized(let status):
+                AllowCameraSheet(status: status) { isAccept in
+                    withAnimation(.spring(duration: 0.3)) {
+                        viewModel.useFullScreenSheet = isAccept
+                    }
+                }
             }
         }
+        .fullScreenCover(isPresented: $viewModel.useFullScreenSheet) {
+            cameraView
+        }
+        .background(
+            LinearGradient(
+                colors: [accent.gradient, .clear],
+                startPoint: .topLeading,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
     }
     
     private var headerSection: some View {
@@ -92,7 +89,6 @@ struct BgRemoverView: View {
                 sourceOptionCard(icon: "camera", title: "Take from Camera") {
                     viewModel.handleOpenCamera()
                 }
-                .matchedGeometryEffect(id: "camera", in: animation, isSource: false)
 
                 sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Photo Library") {
                     viewModel.showPhotoLibrary()
@@ -190,10 +186,6 @@ struct BgRemoverView: View {
                 }
             }
         )
-        .background {
-            Color.clear
-                .matchedGeometryEffect(id: "camera", in: animation)
-        }
         .transition(.opacity)
         .zIndex(1)
     }
