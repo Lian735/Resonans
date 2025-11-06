@@ -53,7 +53,7 @@ struct ToolIconView: View {
             .frame(width: 52, height: 52)
             .overlay(
                 RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
             )
             .overlay(
                 Image(systemName: tool.iconName)

@@ -54,6 +54,11 @@ struct ContentView: View {
             }
         }
         .tint(accent.color)
+        .onChange(of: viewModel.selectedTab) { _, newValue in
+            if newValue == .settings {
+                NotificationCenter.default.post(name: Notification.Name("SettingsTabTappedNotification"), object: nil)
+            }
+        }
     }
 }
 

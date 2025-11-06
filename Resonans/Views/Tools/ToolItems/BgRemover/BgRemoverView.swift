@@ -23,7 +23,11 @@ struct BgRemoverView: View {
         ScrollView {
             VStack(spacing: 24) {
                 headerSection
+                
+                Divider()
+                
                 sourceSection
+                
                 recentSection
             }
             .padding(.horizontal, 24)
@@ -66,18 +70,22 @@ struct BgRemoverView: View {
     }
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Background Remover")
-                .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
-            HStack {
-                Text("Removes background from your images")
-                    .typography(.displaySmall, design: .rounded)
+        titleBox {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Background Remover")
+                        .typography(.displaySmall, design: .rounded)
+                    Text("Remove backgrounds from your images")
+                        .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
+                        .padding(.top, 4)
+                }
+
                 Spacer()
-                Image(systemName: "photo.on.rectangle.angled")
-                    .typography(.custom(size: 30, weight: .bold), color: accent.color)
+
+                Image(systemName: "circle.rectangle.filled.pattern.diagonalline")
+                    .typography(.custom(size: 35, weight: .medium), color: .primary)
             }
         }
-        .padding(.top, 24)
     }
     
     private var sourceSection: some View {
@@ -188,6 +196,12 @@ struct BgRemoverView: View {
         )
         .transition(.opacity)
         .zIndex(1)
+    }
+    private func titleBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
+            VStack(alignment: .leading, spacing: 16) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

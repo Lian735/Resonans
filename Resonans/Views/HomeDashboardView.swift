@@ -26,7 +26,7 @@ struct HomeDashboardView: View {
     var body: some View {
         NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 28) {
+                VStack(spacing: 24) {
                     homeBox {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 12) {
@@ -126,6 +126,7 @@ struct HomeDashboardView: View {
                 .ignoresSafeArea()
             )
             .navigationTitle("Home")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
     private func homeBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
