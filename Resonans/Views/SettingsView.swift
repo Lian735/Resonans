@@ -61,10 +61,10 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar(content: {
                 ToolbarItem(placement: .topBarTrailing, content: {
-                    Button(disableGlassEffect: true, action: {
+                    Button {
                         HapticsManager.shared.pulse()
                         viewModel.showOnboarding = true
-                    }) {
+                    } label: {
                         Image(systemName: "questionmark")
                     }
                 })
@@ -169,7 +169,7 @@ struct SettingsView: View {
 
             Divider()
 
-            Button("Clear Cache") {
+            GlassButton("Clear Cache") {
                 CacheManager.shared.clear()
                 HapticsManager.shared.notify(.success)
             }
@@ -212,7 +212,7 @@ struct SettingsView: View {
 
             Divider()
             
-            Button("Send Feedback") {
+            GlassButton("Send Feedback") {
                 HapticsManager.shared.pulse()
                 if let url = URL(string: "mailto:feedback.lian@gmail.com") {
                     openURL(url)

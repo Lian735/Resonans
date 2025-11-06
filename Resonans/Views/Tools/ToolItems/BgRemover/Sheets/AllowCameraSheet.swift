@@ -47,7 +47,7 @@ struct AllowCameraSheet: View {
                         .typography(.body)
                 }
                 if !config.buttonTitle.isEmpty {
-                    Button {
+                    GlassButton {
                         config.action?()
                     } label: {
                         HStack {
@@ -152,10 +152,10 @@ extension AllowCameraSheet {
         @State var status: AuthorizationStatus?
         var body: some View {
             VStack {
-                Button("Not Determined") { status = .notDetermined }
-                Button("Denied") { status = .denied }
-                Button("Authorized") { status = .authorized }
-                Button("Restricted") { status = .restricted }
+                GlassButton("Not Determined") { status = .notDetermined }
+                GlassButton("Denied") { status = .denied }
+                GlassButton("Authorized") { status = .authorized }
+                GlassButton("Restricted") { status = .restricted }
             }
             .sheet(item: $status) { status in
                 AllowCameraSheet(status: status) { isTrue in

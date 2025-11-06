@@ -19,7 +19,7 @@ struct ToolOverview: View {
     @Namespace private var namespace
     
     var body: some View {
-        Button(disableGlassEffect: true){
+        GlassButton(disableGlassEffect: true){
             HapticsManager.shared.selection()
             viewModel.selectedTool = tool.id
         }label: {

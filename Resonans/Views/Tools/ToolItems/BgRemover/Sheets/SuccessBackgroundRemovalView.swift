@@ -25,6 +25,7 @@ struct SuccessBackgroundRemovalView: View {
                     Text("Final Image")
                         .typography(.displaySmall, design: .rounded)
                 }
+                .padding(.horizontal, 24)
             }
             if let url = saveImageToTemporaryFile(image) {
                 ShareLink(
@@ -46,7 +47,6 @@ struct SuccessBackgroundRemovalView: View {
                 Text("Failed to prepare image")
             }
         }
-        
     }
     
     private func saveImageToTemporaryFile(_ image: UIImage) -> URL? {

@@ -51,7 +51,7 @@ struct HomeDashboardView: View {
                         
                         Divider()
                         
-                        Button {
+                        GlassButton {
                             HapticsManager.shared.selection()
                             viewModel.selectedTab = .tools
                         } label: {
@@ -89,7 +89,7 @@ struct HomeDashboardView: View {
                             .padding(.horizontal, AppStyle.horizontalPadding)
                             VStack(spacing: 12) {
                                 ForEach(viewModel.recentTools.reversed()) { tool in
-                                    Button(disableGlassEffect: true){
+                                    Button {
                                         HapticsManager.shared.selection()
                                         Task{
                                             viewModel.selectedTab = .tools
@@ -148,6 +148,7 @@ struct HomeDashboardView: View {
                 accent: .purple,
                 primary: .black
             )
+            .environmentObject(ContentViewModel())
         }
     }
     return PreviewWrapper()

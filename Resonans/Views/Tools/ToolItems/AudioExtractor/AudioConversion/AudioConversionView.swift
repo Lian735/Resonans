@@ -130,7 +130,7 @@ struct AudioConversionView: View {
 
             Spacer()
 
-            Button(action: {
+            GlassButton(action: {
                 HapticsManager.shared.selection()
                 dismiss()
             }) {
@@ -240,7 +240,7 @@ struct AudioConversionView: View {
                 Spacer()
                 Text(bitrateLabel)
                     .typography(.caption, color: .primary.opacity(0.8))
-                Button(action: { withAnimation { showBitrateInfo.toggle() } }) {
+                GlassButton(action: { withAnimation { showBitrateInfo.toggle() } }) {
                     Image(systemName: "info.circle")
                         .opacity(0.5)
                 }
@@ -265,7 +265,7 @@ struct AudioConversionView: View {
     }
 
     private var advancedToggleButton: some View {
-        Button(action: toggleAdvanced) {
+        GlassButton(action: toggleAdvanced) {
             Text(showAdvanced ? "Hide" : "More")
                 .typography(.bodyBold, design: .rounded)
                 .frame(maxWidth: .infinity)
@@ -362,7 +362,7 @@ struct AudioConversionView: View {
     }
 
     private var exportButton: some View {
-        Button(action: convertToAudio) {
+        GlassButton(action: convertToAudio) {
             HStack {
                 Spacer()
                 Text(isProcessing ? "Converting…" : "Convert")

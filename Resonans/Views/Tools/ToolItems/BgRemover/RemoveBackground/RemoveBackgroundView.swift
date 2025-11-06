@@ -93,21 +93,12 @@ struct RemoveBackgroundView: View {
     }
     
     private var footerButton: some View {
-        Button(action: viewModel.removeBackground) {
+        GlassButton(action: viewModel.removeBackground) {
             Text("Convert")
+                .typography(.titleMedium, color: .white)
                 .padding(.vertical, 16)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .fill(accent.color.opacity(viewModel.isLoading ? 0.65 : 1))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                        .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                )
-                .shadow(color: accent.color.opacity(0.3), radius: 16, x: 0, y: 10)
         }
-        .buttonStyle(.plain)
         .disabled(viewModel.isLoading)
     }
 }
@@ -125,7 +116,7 @@ extension RemoveBackgroundView {
         @State var isShown: Bool = true
         
         var body: some View {
-            Button("Show Sheet") {
+            GlassButton("Show Sheet") {
                 isShown = true
             }
             .sheet(isPresented: $isShown) {

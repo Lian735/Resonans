@@ -39,7 +39,7 @@ struct RecentRow: View {
                     HapticsManager.shared.selection()
                 })
                 
-                Button(action: {
+                GlassButton(action: {
                     HapticsManager.shared.pulse()
                     onSave(item)
                 }) {

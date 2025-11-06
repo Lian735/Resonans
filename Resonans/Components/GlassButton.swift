@@ -4,7 +4,7 @@
 
 import SwiftUI
 
-struct Button<Label: View>: View {
+struct GlassButton<Label: View>: View {
     var action: () -> Void
     @ViewBuilder var label: () -> Label
     
@@ -42,4 +42,20 @@ struct Button<Label: View>: View {
             }
         }
     }
+}
+
+#Preview {
+    struct Preview: View {
+        var body: some View {
+            VStack {
+                GlassButton("Hello") {
+                    
+                }
+                SwiftUI.Button("Hello") {
+                    
+                }
+            }
+        }
+    }
+    return Preview()
 }

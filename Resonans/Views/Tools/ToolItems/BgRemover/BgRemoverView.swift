@@ -133,7 +133,7 @@ struct BgRemoverView: View {
                         }
                         
                         if viewModel.recents.count > 3 {
-                            Button {
+                            GlassButton {
                                 HapticsManager.shared.pulse()
                                 withAnimation(.easeInOut(duration: 0.25)) {
                                     showAllRecents.toggle()
@@ -154,7 +154,7 @@ struct BgRemoverView: View {
     }
     
     private func sourceOptionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(disableGlassEffect: true){
+        Button {
             HapticsManager.shared.pulse()
             action()
         } label: {
