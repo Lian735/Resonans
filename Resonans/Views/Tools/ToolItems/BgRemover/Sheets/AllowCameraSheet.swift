@@ -11,9 +11,11 @@ struct AllowCameraSheet: View {
     @Environment(\.dismiss) var dismiss
     @State var logoAnimateCheck: Bool = false
     let status: AuthorizationStatus
+    let onStatusChange: (Bool) -> Void
     
-    init(status: AuthorizationStatus) {
+    init(status: AuthorizationStatus, onStatusChange: @escaping (Bool) -> Void) {
         self.status = status
+        self.onStatusChange = onStatusChange
     }
     
     var body: some View {
@@ -21,13 +23,13 @@ struct AllowCameraSheet: View {
         VStack(spacing: 24) {
             HStack {
                 Spacer()
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .fontWeight(.bold)
-                }
-                .buttonStyle(.borderless)
+                Image(systemName: "xmark")
+                    .typography(.custom(size: 24, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .fontWeight(.bold)
+                    .onTapGesture {
+                        dismiss()
+                    }
             }
             VStack(alignment: .center, spacing: 24) {
                 Image(systemName: "camera.viewfinder")
@@ -48,18 +50,19 @@ struct AllowCameraSheet: View {
                     Button {
                         config.action?()
                     } label: {
-                        AppCard {
-                            HStack {
-                                Text(config.buttonTitle)
-                                Image(systemName: "chevron.right")
-                                    .symbolEffect(
-                                        .wiggle,
-                                        options: .repeat(.continuous),
-                                        value: logoAnimateCheck
-                                    )
-                            }
-                            .frame(maxWidth: .infinity)
+                        HStack {
+                            Text(config.buttonTitle)
+                                .typography(.bodyBold, color: .white)
+                            Image(systemName: config.logoString)
+                                .typography(.bodyBold, color: .white)
+                                .symbolEffect(
+                                    .wiggle,
+                                    options: .repeat(.continuous),
+                                    value: logoAnimateCheck
+                                )
                         }
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
                     }
                     .tint(config.logoColor)
                 }
@@ -83,6 +86,7 @@ extension AllowCameraSheet {
         let desc: String
         let buttonTitle: String
         let logoColor: Color
+        let logoString: String
         let action: (() -> Void)?
     }
     
@@ -92,12 +96,15 @@ extension AllowCameraSheet {
             return Config(
                 title: "Allow Camera Access",
                 desc: "To capture photos or videos, please allow access to your camera. You’ll be prompted to grant permission on the next screen.",
-                buttonTitle: "Allow Access",
-                logoColor: .primary,
+                buttonTitle: "Open Permission",
+                logoColor: .accentColor.opacity(0.8),
+                logoString: "camera.badge.ellipsis",
                 action: {
                     Task {
-                        let _ = await CameraManager.shared.requestCameraAccess()
+                        let status = await CameraManager.shared.requestCameraAccess()
                         dismiss()
+                        try await Task.sleep(for: .milliseconds(200))
+                        onStatusChange(status)
                     }
                 }
             )
@@ -107,7 +114,8 @@ extension AllowCameraSheet {
                 title: "Camera Access Denied",
                 desc: "You’ve previously denied camera access. Please enable it in Settings to use this feature.",
                 buttonTitle: "Open Settings",
-                logoColor: .red.opacity(0.6),
+                logoColor: .red.opacity(0.8),
+                logoString: "gear",
                 action: {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
@@ -120,7 +128,8 @@ extension AllowCameraSheet {
                 title: "Camera Access Restricted",
                 desc: "Camera access is restricted and cannot be changed due to parental controls or system settings.",
                 buttonTitle: "I understand",
-                logoColor: .red.opacity(0.6),
+                logoColor: .red.opacity(0.8),
+                logoString: "arrow.right",
                 action: {}
             )
             
@@ -130,6 +139,7 @@ extension AllowCameraSheet {
                 desc: "Your camera is fully authorized. You can dismiss and use the camera",
                 buttonTitle: "",
                 logoColor: .green.opacity(0.8),
+                logoString: "",
                 action: {}
             )
         }
@@ -138,8 +148,21 @@ extension AllowCameraSheet {
 
 
 #Preview {
-    Text("")
-        .sheet(isPresented: .constant(true)) {
-            AllowCameraSheet(status: .authorized)
+    struct Preview: View {
+        @State var status: AuthorizationStatus?
+        var body: some View {
+            VStack {
+                Button("Not Determined") { status = .notDetermined }
+                Button("Denied") { status = .denied }
+                Button("Authorized") { status = .authorized }
+                Button("Restricted") { status = .restricted }
+            }
+            .sheet(item: $status) { status in
+                AllowCameraSheet(status: status) { isTrue in
+                    print("isTrue: \(isTrue)")
+                }
+            }
         }
+    }
+    return Preview()
 }

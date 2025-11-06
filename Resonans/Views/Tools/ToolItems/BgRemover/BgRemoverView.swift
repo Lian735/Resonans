@@ -51,7 +51,9 @@ struct BgRemoverView: View {
                     case .tool(let image):
                         RemoveBackgroundView(image: image)
                     case .cameraNotAuthorized(let status):
-                        AllowCameraSheet(status: status)
+                        AllowCameraSheet(status: status) { isAccept in
+                            viewModel.useFullScreenSheet = isAccept
+                        }
                     }
                 }
                 .background(
