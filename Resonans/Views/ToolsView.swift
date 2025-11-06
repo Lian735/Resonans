@@ -9,19 +9,25 @@ struct ToolsView: View {
     
     @Namespace private var namespace
     
+    @State private var searchText = ""
+    
     var body: some View {
         NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: 12) {
                     if #available(iOS 26, *){
                         GlassEffectContainer{
-                            ForEach(viewModel.toolManager.tools) { tool in
+                            ForEach(viewModel.toolManager.tools.filter {
+                                searchText.isEmpty || $0.title.localizedCaseInsensitiveContains(searchText)
+                            }) { tool in
                                 ToolOverview(tool: tool)
                                     .environmentObject(viewModel)
                             }
                         }
                     }else{
-                        ForEach(viewModel.toolManager.tools) { tool in
+                        ForEach(viewModel.toolManager.tools.filter {
+                            searchText.isEmpty || $0.title.localizedCaseInsensitiveContains(searchText)
+                        }) { tool in
                             ToolOverview(tool: tool)
                                 .environmentObject(viewModel)
                         }
@@ -30,6 +36,7 @@ struct ToolsView: View {
                 .padding(.horizontal, AppStyle.horizontalPadding)
                 .padding(.vertical, AppStyle.innerPadding)
             }
+            .padding(.top, -AppStyle.innerPadding)
             .background(
                 LinearGradient(
                     colors: [accent.gradient, .clear],
@@ -40,6 +47,7 @@ struct ToolsView: View {
                 .scaledToFill()
             )
             .navigationTitle("Tools")
+            .searchable(text: $searchText)
         }
     }
 }

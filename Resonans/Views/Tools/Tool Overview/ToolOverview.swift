@@ -20,6 +20,7 @@ struct ToolOverview: View {
     
     var body: some View {
         Button(disableGlassEffect: true){
+            HapticsManager.shared.selection()
             viewModel.selectedTool = tool.id
         }label: {
             AppCard{
@@ -32,7 +33,10 @@ struct ToolOverview: View {
                         Text(tool.subtitle)
                             .typography(.caption, color: .secondary, design: .rounded)
                             .lineLimit(2)
+                        
+                        Spacer()
                     }
+                    .frame(maxHeight: 52, alignment: .center)
                     .multilineTextAlignment(.leading)
                     Spacer()
                 }

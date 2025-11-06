@@ -59,6 +59,5 @@ struct ToolIconView: View {
                 Image(systemName: tool.iconName)
                     .typography(.custom(size: 24, weight: .bold), color: .white)
             )
-            .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
     }
 }

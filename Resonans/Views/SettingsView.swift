@@ -34,12 +34,13 @@ struct SettingsView: View {
 
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
     @AppStorage("Interactive Glass activated") private var interactiveGlassActivated: Bool = false
+    @AppStorage("Reduce Transparency activated") private var reduceTransparencyActivated: Bool = false
 
     
     var body: some View {
         NavigationStack{
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 12) {
                     appearanceSection
                     otherSection
                     experimentalSection
@@ -105,10 +106,11 @@ struct SettingsView: View {
                 }
             }
             .padding(.top, 8)
-
+            
+            Divider()
+            
             Text("Accent color")
                 .typography(.titleMedium, design: .rounded)
-                .padding(.top, 20)
 
             HStack(spacing: 16) {
                 ForEach(AccentColorOption.allCases) { option in
@@ -166,7 +168,6 @@ struct SettingsView: View {
             }
 
             Divider()
-                .padding(.vertical, 4)
 
             Button("Clear Cache") {
                 CacheManager.shared.clear()
@@ -183,11 +184,14 @@ struct SettingsView: View {
                     .typography(.displaySmall, design: .rounded)
                 
                 if #available(iOS 26, *){
-                    Toggle("Glass Effect", isOn: $glassEffectActivated)
+                    Toggle("Liquid Glass", isOn: $glassEffectActivated)
                         .disabled(true)
                         .opacity(0.5)
                     if glassEffectActivated {
-                        Toggle("Interactive Glass", isOn: $interactiveGlassActivated)
+                            Divider()
+                            Toggle("Interactive Glass", isOn: $interactiveGlassActivated)
+                            Toggle("Reduce Transparency", isOn: $reduceTransparencyActivated)
+                            
                     }
                 }
             }
@@ -207,7 +211,6 @@ struct SettingsView: View {
             .foregroundStyle(.primary.opacity(0.8))
 
             Divider()
-                .padding(.vertical, 4)
             
             Button("Send Feedback") {
                 HapticsManager.shared.pulse()

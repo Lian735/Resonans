@@ -60,6 +60,7 @@ struct AppCard<Content: View>: View {
     
     @AppStorage(AppStorageKey.Settings.glassEffectActivated) private var glassEffectActivated: Bool = true
     @AppStorage(AppStorageKey.Settings.interactiveGlassActivated) private var interactiveGlassActivated: Bool = false
+    @AppStorage(AppStorageKey.Settings.reduceTransparencyActivated) private var reduceTransparencyActivated: Bool = false
     
     var body: some View {
         HStack{
@@ -81,10 +82,9 @@ struct AppCard<Content: View>: View {
             .padding()
             .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .center)
             .glassEffect(
-                interactiveGlassActivated ? .regular.interactive() : .regular,
+                interactiveGlassActivated ? (reduceTransparencyActivated ? .clear.interactive() : .regular.interactive()) : (reduceTransparencyActivated ? .clear : .regular),
                 in: .rect(cornerRadius: AppStyle.cornerRadius)
             )
-            .padding(5)
     }
 
     private var nonGlassView: some View {
@@ -101,7 +101,6 @@ struct AppCard<Content: View>: View {
             )
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
             .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
-            .padding(5)
     }
 }
 

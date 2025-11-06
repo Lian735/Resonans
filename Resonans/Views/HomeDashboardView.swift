@@ -50,14 +50,13 @@ struct HomeDashboardView: View {
                         }
                         
                         Divider()
-                            .padding(.vertical, 4)
                         
                         Button {
                             HapticsManager.shared.selection()
                             viewModel.selectedTab = .tools
                         } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: "wrench.and.screwdriver")
+                                Image(systemName: "magnifyingglass")
                                     .typography(.custom(size: 18, weight: .semibold))
                                 Text("Browse tools")
                                     .typography(.titleSmall, design: .rounded)

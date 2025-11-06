@@ -18,6 +18,7 @@ struct AppStorageKey {
         static let accentColor = "accentColor"
         static let glassEffectActivated = "Glass Effect deactivated"
         static let interactiveGlassActivated = "Interactive Glass activated"
+        static let reduceTransparencyActivated = "Reduce Transparency activated"
         static let hapticsEnabled = "hapticsEnabled"
         static let soundsEnabled = "soundsEnabled"
         static let experimentalEnabled = "experimentalEnabled"

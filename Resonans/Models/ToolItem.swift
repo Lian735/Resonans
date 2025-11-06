@@ -20,7 +20,7 @@ enum ToolIdentifier: String, Hashable {
                 id: .audioExtractor,
                 title: "Extractor",
                 subtitle: "Pull crisp audio tracks from your videos in seconds.",
-                iconName: "waveform.circle.fill",
+                iconName: "waveform",
                 gradientHex: ["#7D55F3", "#9568FA"]
             )
         case .bgRemover:
@@ -28,7 +28,7 @@ enum ToolIdentifier: String, Hashable {
                 id: .bgRemover,
                 title: "Background Remover",
                 subtitle: "Removes Background from your images",
-                iconName: "camera.circle",
+                iconName: "circle.rectangle.filled.pattern.diagonalline",
                 gradientHex: ["#4FACFE", "#00F2FE"]
             )
         case .dummy:

@@ -28,7 +28,7 @@ struct ContentView: View {
                 ToolsView(accent: accent, primary: .primary)
                     .environmentObject(viewModel)
             }, label: {
-                Label("Tools", systemImage: "wrench.and.screwdriver.fill")
+                Label("Tools", systemImage: "rectangle.stack.fill")
             })
             Tab(value: .settings){
                 SettingsView()
