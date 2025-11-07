@@ -23,6 +23,12 @@ struct HomeDashboardView: View {
     
     @State private var shimmerPhase: Bool = false
     
+    private var favoriteTools: [ToolItem] {
+        ToolManager.shared.tools.filter { tool in
+            viewModel.favoriteToolIds.contains(tool.id)
+        }
+    }
+    
     var body: some View {
         NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
@@ -80,36 +86,77 @@ struct HomeDashboardView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 12) {
-                        if !viewModel.recentTools.isEmpty {
-                            HStack {
-                                Text("Recently used")
-                                    .typography(.titleLarge, color: primary, design: .rounded)
-                                Spacer()
-                            }
-                            .padding(.horizontal, AppStyle.horizontalPadding)
-                            VStack(spacing: 12) {
-                                ForEach(viewModel.recentTools.reversed()) { tool in
-                                    Button {
-                                        HapticsManager.shared.selection()
-                                        Task{
-                                            viewModel.selectedTab = .tools
-                                            if viewModel.selectedTool == nil{
-                                                viewModel.selectedTool = tool.id
-                                            }else{
-                                                viewModel.selectedTool = nil
-                                                try! await Task.sleep(for: .nanoseconds(1))
-                                                viewModel.selectedTool = tool.id
-                                            }
-                                        }
-                                    } label: {
-                                        ToolOverview(tool: tool, presentedInHomeboard: true)
-                                            .environmentObject(viewModel)
-                                            .disabled(true)
-                                    }
-                                    .buttonStyle(.plain)
+                        if !favoriteTools.isEmpty {
+                            VStack {
+                                HStack {
+                                    Text("Favorites")
+                                        .typography(.titleLarge, color: primary, design: .rounded)
+                                    Spacer()
                                 }
+                                .padding(.horizontal, AppStyle.horizontalPadding)
+                                VStack(spacing: 12) {
+                                    ForEach(favoriteTools) { tool in
+                                        Button {
+                                            HapticsManager.shared.selection()
+                                            Task {
+                                                viewModel.selectedTab = .tools
+                                                if viewModel.selectedTool == nil {
+                                                    viewModel.selectedTool = tool.id
+                                                } else {
+                                                    viewModel.selectedTool = nil
+                                                    try! await Task.sleep(for: .nanoseconds(1))
+                                                    viewModel.selectedTool = tool.id
+                                                }
+                                            }
+                                        } label: {
+                                            ToolOverview(tool: tool, presentedInHomeboard: true)
+                                                .environmentObject(viewModel)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, AppStyle.horizontalPadding)
                             }
-                            .padding(.horizontal, AppStyle.horizontalPadding)
+                            .animation(
+                                .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
+                                value: viewModel.favoriteToolIds
+                            )
+                        }
+                        if !viewModel.recentTools.isEmpty {
+                            VStack {
+                                HStack {
+                                    Text("Recently used")
+                                        .typography(.titleLarge, color: primary, design: .rounded)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, AppStyle.horizontalPadding)
+                                VStack(spacing: 12) {
+                                    ForEach(viewModel.recentTools.reversed()) { tool in
+                                        Button {
+                                            HapticsManager.shared.selection()
+                                            Task {
+                                                viewModel.selectedTab = .tools
+                                                if viewModel.selectedTool == nil {
+                                                    viewModel.selectedTool = tool.id
+                                                } else {
+                                                    viewModel.selectedTool = nil
+                                                    try! await Task.sleep(for: .nanoseconds(1))
+                                                    viewModel.selectedTool = tool.id
+                                                }
+                                            }
+                                        } label: {
+                                            ToolOverview(tool: tool, presentedInHomeboard: true)
+                                                .environmentObject(viewModel)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, AppStyle.horizontalPadding)
+                            }
+                            .animation(
+                                .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
+                                value: viewModel.favoriteToolIds
+                            )
                         }
                             
                     }

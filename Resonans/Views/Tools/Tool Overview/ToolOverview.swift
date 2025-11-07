@@ -24,56 +24,108 @@ struct ToolOverview: View {
     @Namespace private var namespace
     
     var body: some View {
-        GlassButton(disableGlassEffect: true){
-            HapticsManager.shared.selection()
-            viewModel.selectedTool = tool.id
-        }label: {
-            AppCard{
-                HStack{
-                    ToolIconView(tool: tool)
-                    HStack {
-                        VStack(alignment: .leading){
-                            Text(tool.title)
-                                .typography(.titleMedium, color: .primary, design: .rounded)
-                            Text(tool.subtitle)
-                                .typography(.caption, color: .secondary, design: .rounded)
-                                .lineLimit(2)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxHeight: 52, alignment: .top)
-                        .multilineTextAlignment(.leading)
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Button {
-                                let key = "favorite_\(tool.id.rawValue)"
-                                if isFavorite {
-                                    // turning off
-                                    isFavorite = false
-                                    UserDefaults.standard.set(false, forKey: key)
-                                    viewModel.favoriteToolIds.remove(tool.id)
-                                } else {
-                                    // turning on
-                                    isFavorite = true
-                                    UserDefaults.standard.set(true, forKey: key)
-                                    viewModel.favoriteToolIds.insert(tool.id)
-                                }
-                                HapticsManager.shared.selection()
-                            } label: {
-                                Image(systemName: isFavorite ? "star.fill" : "star")
-                                    .foregroundStyle(isFavorite ? .yellow : Color(.gray))
+        Group {
+            if isHomeboard {
+                AppCard {
+                    HStack{
+                        ToolIconView(tool: tool)
+                        HStack {
+                            VStack(alignment: .leading){
+                                Text(tool.title)
+                                    .typography(.titleMedium, color: .primary, design: .rounded)
+                                Text(tool.subtitle)
+                                    .typography(.caption, color: .secondary, design: .rounded)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                                 
+                            .frame(maxHeight: 52, alignment: .top)
+                            .multilineTextAlignment(.leading)
                             Spacer()
-                            
-                            if tool.beta {
-                                betaBadge
+                            VStack(alignment: .trailing) {
+                                Button {
+                                    let key = "favorite_\(tool.id.rawValue)"
+                                    if isFavorite {
+                                        // turning off
+                                        isFavorite = false
+                                        UserDefaults.standard.set(false, forKey: key)
+                                        viewModel.favoriteToolIds.remove(tool.id)
+                                    } else {
+                                        // turning on
+                                        isFavorite = true
+                                        UserDefaults.standard.set(true, forKey: key)
+                                        viewModel.favoriteToolIds.insert(tool.id)
+                                    }
+                                    HapticsManager.shared.selection()
+                                } label: {
+                                    Image(systemName: isFavorite ? "star.fill" : "star")
+                                        .foregroundStyle(isFavorite ? .yellow : Color(.gray))
+                                }
+                                     
+                                Spacer()
+                                
+                                if tool.beta {
+                                    betaBadge
+                                }
                             }
+                            .frame(maxHeight: 52, alignment: .center)
                         }
-                        .frame(maxHeight: 52, alignment: .center)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            else {
+                GlassButton(disableGlassEffect: true){
+                    HapticsManager.shared.selection()
+                    viewModel.selectedTool = tool.id
+                } label: {
+                    AppCard {
+                        HStack{
+                            ToolIconView(tool: tool)
+                            HStack {
+                                VStack(alignment: .leading){
+                                    Text(tool.title)
+                                        .typography(.titleMedium, color: .primary, design: .rounded)
+                                    Text(tool.subtitle)
+                                        .typography(.caption, color: .secondary, design: .rounded)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxHeight: 52, alignment: .top)
+                                .multilineTextAlignment(.leading)
+                                Spacer()
+                                VStack(alignment: .trailing) {
+                                    Button {
+                                        let key = "favorite_\(tool.id.rawValue)"
+                                        if isFavorite {
+                                            // turning off
+                                            isFavorite = false
+                                            UserDefaults.standard.set(false, forKey: key)
+                                            viewModel.favoriteToolIds.remove(tool.id)
+                                        } else {
+                                            // turning on
+                                            isFavorite = true
+                                            UserDefaults.standard.set(true, forKey: key)
+                                            viewModel.favoriteToolIds.insert(tool.id)
+                                        }
+                                        HapticsManager.shared.selection()
+                                    } label: {
+                                        Image(systemName: isFavorite ? "star.fill" : "star")
+                                            .foregroundStyle(isFavorite ? .yellow : Color(.gray))
+                                    }
+                                         
+                                    Spacer()
+                                    
+                                    if tool.beta {
+                                        betaBadge
+                                    }
+                                }
+                                .frame(maxHeight: 52, alignment: .center)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
         .navigationDestination(isPresented: Binding(get: {
             if isHomeboard{

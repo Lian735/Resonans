@@ -19,6 +19,17 @@ final class ContentViewModel: ObservableObject {
     let toolManager: ToolManager = .shared
     
     @Published var favoriteToolIds: Set<ToolIdentifier> = []
+    
+    func loadFavoritesOnLaunch() {
+        let allTools = toolManager.tools
+        for tool in allTools {
+            let key = "favorite_\(tool.id.rawValue)"
+            if UserDefaults.standard.bool(forKey: key) == true {
+                favoriteToolIds.insert(tool.id)
+            }
+        }
+    }
+    
     var recentToolIDs: [ToolIdentifier] = []
     
     var recentTools: [ToolItem] {

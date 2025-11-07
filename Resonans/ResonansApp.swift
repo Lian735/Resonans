@@ -18,6 +18,9 @@ struct ResonansApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(viewModel)
+                .onAppear {
+                    viewModel.loadFavoritesOnLaunch()
+                }
                 .preferredColorScheme(appearance.colorScheme)
                 .animation(.easeInOut(duration: 0.4), value: appearanceRaw)
         }
