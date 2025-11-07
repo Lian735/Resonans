@@ -11,8 +11,7 @@ import SwiftUI
 extension View {
     @ViewBuilder
     func shimmer(_ config: ShimmerConfig) -> some View {
-        self
-            .modifier(ShimmerEffectHelper(config: config))
+        self.modifier(ShimmerEffectHelper(config: config))
     }
 }
 
@@ -22,59 +21,65 @@ fileprivate struct ShimmerEffectHelper: ViewModifier {
     var config: ShimmerConfig
     // Animation Properties
     @State private var moveTo: CGFloat = -0.7
+    
+    // Use overlays to avoid layout and hit-testing side effects
     func body(content: Content) -> some View {
-        ZStack {
-            // Keep base content visible so it never appears cropped
-            content
+        // Render base content as-is to own layout & hit-testing.
+        content
+            // Apply visual-only tint and shimmer as overlays so they don't affect layout.
+            .overlay(alignment: .center) {
+                // Tint layer constrained to content via mask.
+                Rectangle()
+                    .fill(config.tint.opacity(min(config.baseOpacity, 1)))
+                    .brightness(max(config.baseOpacity - 1, 0))
+                    .mask { content }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .compositingGroup()
+            }
+            .overlay(alignment: .center) {
+                // Shimmer highlight overlay constrained to content bounds.
+                GeometryReader { proxy in
+                    let size = proxy.size
+                    let extraOffset = size.height / 2.5
+                    let bandThickness = max(config.width, 1)
 
-            // Additive tint layer (optional subtle tint)
-            Rectangle()
-                .fill(config.tint.opacity(min(config.baseOpacity, 1)))
-                .brightness(max(config.baseOpacity - 1, 0))
-                .mask { content }
-                .allowsHitTesting(false)
-
-            // Shimmer highlight overlay that spans full bounds
-            GeometryReader { proxy in
-                let size = proxy.size
-                let extraOffset = size.height / 2.5
-                // Treat `width` as the band thickness, not total coverage
-                let bandThickness = max(config.width, 1)
-
-                ZStack {
-                    Rectangle()
-                        .fill(config.highlight)
-                        .mask {
-                            // Vertical gradient band (thin), then rotate to sweep diagonally
-                            Rectangle()
-                                .fill(
-                                    LinearGradient(colors: [
-                                        .white.opacity(0),
-                                        config.highlight.opacity(config.highlightOpacity),
-                                        .white.opacity(0)
-                                    ], startPoint: .top, endPoint: .bottom)
-                                )
-                                .frame(height: bandThickness)
-                                .blur(radius: config.blur)
-                                .rotationEffect(.degrees(-70))
-                                // Center in an infinite frame so its rotated bounds don't crop
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        }
-                        // Sweep motion across the full width
-                        .offset(x: (moveTo > 0 ? extraOffset : -extraOffset))
-                        .offset(x: size.width * moveTo)
+                    ZStack {
+                        Rectangle()
+                            .fill(config.highlight)
+                            .mask {
+                                Rectangle()
+                                    .fill(
+                                        LinearGradient(colors: [
+                                            .white.opacity(0),
+                                            config.highlight.opacity(config.highlightOpacity),
+                                            .white.opacity(0)
+                                        ], startPoint: .top, endPoint: .bottom)
+                                    )
+                                    .frame(height: bandThickness)
+                                    .blur(radius: config.blur)
+                                    .rotationEffect(.degrees(-70))
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                            }
+                            .offset(x: (moveTo > 0 ? extraOffset : -extraOffset))
+                            .offset(x: size.width * moveTo)
+                    }
+                    // Constrain to the original content's visible shape.
+                    .mask { content }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .compositingGroup()
                 }
-                // Constrain the shimmer to the content's shape
-                .mask { content }
-                .allowsHitTesting(false)
             }
-        }
-        .onAppear {
-            DispatchQueue.main.async {
-                moveTo = 0.7
+            // Ensure overlay never changes hit-testing or layout of base content
+            .contentShape(.rect)
+            .drawingGroup(opaque: false)
+            .onAppear {
+                DispatchQueue.main.async {
+                    moveTo = 0.7
+                }
             }
-        }
-        .animation(.linear(duration: config.speed).repeatForever(autoreverses: false), value: moveTo)
+            .animation(.linear(duration: config.speed).repeatForever(autoreverses: false), value: moveTo)
     }
 }
 
@@ -83,7 +88,7 @@ struct ShimmerConfig {
     var tint: Color
     var highlight: Color
     var baseOpacity: CGFloat = 1.5
-    var blur: CGFloat = 0
+    var blur: CGFloat = 10
     var highlightOpacity: CGFloat = 2
     var speed: CGFloat = 2
     var width: CGFloat = 100

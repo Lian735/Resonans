@@ -18,7 +18,7 @@ final class ContentViewModel: ObservableObject {
     
     let toolManager: ToolManager = .shared
     
-    var favoriteToolIds: Set<ToolIdentifier> = []
+    @Published var favoriteToolIds: Set<ToolIdentifier> = []
     var recentToolIDs: [ToolIdentifier] = []
     
     var recentTools: [ToolItem] {

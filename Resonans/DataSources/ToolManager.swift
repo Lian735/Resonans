@@ -17,7 +17,7 @@ final class ToolManager: ObservableObject {
         loadTools()
     }
     
-    private let localToolIdentifiers: [ToolIdentifier] = [.audioExtractor, .bgRemover]
+    private let localToolIdentifiers: [ToolIdentifier] = [.audioExtractor, .bgRemover, .editor]
     
     private func loadTools() {
         let localTools = localToolIdentifiers.map { $0.tool }

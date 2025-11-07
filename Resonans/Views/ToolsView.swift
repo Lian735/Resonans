@@ -11,23 +11,34 @@ struct ToolsView: View {
     
     @State private var searchText = ""
     
+    private var filteredAndSortedTools: [ToolItem] {
+        let favorites = viewModel.favoriteToolIds
+        let filtered = viewModel.toolManager.tools.filter { tool in
+            searchText.isEmpty || tool.title.localizedCaseInsensitiveContains(searchText)
+        }
+        return filtered.sorted { lhs, rhs in
+            let lFav = favorites.contains(lhs.id)
+            let rFav = favorites.contains(rhs.id)
+            if lFav != rFav {
+                return lFav && !rFav
+            }
+            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        }
+    }
+    
     var body: some View {
         NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
                     if #available(iOS 26, *){
                         GlassEffectContainer{
-                            ForEach(viewModel.toolManager.tools.filter {
-                                searchText.isEmpty || $0.title.localizedCaseInsensitiveContains(searchText)
-                            }) { tool in
+                            ForEach(filteredAndSortedTools) { tool in
                                 ToolOverview(tool: tool)
                                     .environmentObject(viewModel)
                             }
                         }
                     }else{
-                        ForEach(viewModel.toolManager.tools.filter {
-                            searchText.isEmpty || $0.title.localizedCaseInsensitiveContains(searchText)
-                        }) { tool in
+                        ForEach(filteredAndSortedTools) { tool in
                             ToolOverview(tool: tool)
                                 .environmentObject(viewModel)
                         }
@@ -35,6 +46,10 @@ struct ToolsView: View {
                 }
                 .padding(.horizontal, AppStyle.horizontalPadding)
                 .padding(.vertical, AppStyle.innerPadding)
+                .animation(
+                    .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
+                    value: viewModel.favoriteToolIds
+                )
             }
             .padding(.top, -AppStyle.innerPadding)
             .background(
