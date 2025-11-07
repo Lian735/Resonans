@@ -30,150 +30,151 @@ struct HomeDashboardView: View {
     }
     
     var body: some View {
-        NavigationStack{
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
-                    homeBox {
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Welcome back!")
-                                    .typography(.displaySmall, design: .rounded)
-                                Text("Craft something brilliant today.")
-                                    .typography(.titleMedium, color: primary.opacity(0.7), design: .rounded)
-                                    .padding(.top, 4)
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(spacing: 3) {
-                                Image("resonansicon.SFSymbol")
-                                    .typography(.custom(size: 35, weight: .medium), color: primary)
-                                ZStack {
-                                    Text(versionDisplayString)
-                                        .typography(.caption, color: primary.opacity(0.4), design: .rounded)
+        ZStack(alignment: .top) {
+            NavigationStack{
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        homeBox {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Welcome back!")
+                                        .typography(.displaySmall, design: .rounded)
+                                    Text("Craft something brilliant today.")
+                                        .typography(.titleMedium, color: primary.opacity(0.7), design: .rounded)
+                                        .padding(.top, 4)
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(spacing: 3) {
+                                    Image("resonansicon.SFSymbol")
+                                        .typography(.custom(size: 35, weight: .medium), color: primary)
+                                    ZStack {
+                                        Text(versionDisplayString)
+                                            .typography(.caption, color: primary.opacity(0.4), design: .rounded)
+                                    }
                                 }
                             }
-                        }
-                        
-                        Divider()
-                        
-                        GlassButton {
-                            HapticsManager.shared.selection()
-                            viewModel.selectedTab = .tools
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "magnifyingglass")
-                                    .typography(.custom(size: 18, weight: .semibold))
-                                Text("Browse tools")
-                                    .typography(.titleSmall, design: .rounded)
-                            }
-                            .overlay {
+                            
+                            Divider()
+                            
+                            GlassButton {
+                                HapticsManager.shared.selection()
+                                viewModel.selectedTab = .tools
+                            } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "magnifyingglass")
                                         .typography(.custom(size: 18, weight: .semibold))
                                     Text("Browse tools")
                                         .typography(.titleSmall, design: .rounded)
                                 }
-                                .shimmer(.init(tint: .white, highlight: .yellow, highlightOpacity: 0.75))
+                                .overlay {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "magnifyingglass")
+                                            .typography(.custom(size: 18, weight: .semibold))
+                                        Text("Browse tools")
+                                            .typography(.titleSmall, design: .rounded)
+                                    }
+                                    .shimmer(.init(tint: .white, highlight: .yellow, highlightOpacity: 0.75))
+                                }
+                                .foregroundStyle(accent.color)
+                                .frame(maxWidth: .infinity)
+                                .shadow(color: accent.color.opacity(colorScheme == .dark ? 0.25 : 0.2), radius: 16, x: 0, y: 10)
+                                
                             }
-                            .foregroundStyle(accent.color)
-                            .frame(maxWidth: .infinity)
-                            .shadow(color: accent.color.opacity(colorScheme == .dark ? 0.25 : 0.2), radius: 16, x: 0, y: 10)
+                            .buttonStyle(.plain)
+                            .padding(.top, 4)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            if !favoriteTools.isEmpty {
+                                VStack {
+                                    HStack {
+                                        Text("Favorites")
+                                            .typography(.titleLarge, color: primary, design: .rounded)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, AppStyle.horizontalPadding)
+                                    VStack(spacing: 12) {
+                                        ForEach(favoriteTools) { tool in
+                                            Button {
+                                                HapticsManager.shared.selection()
+                                                Task {
+                                                    viewModel.selectedTab = .tools
+                                                    if viewModel.selectedTool == nil {
+                                                        viewModel.selectedTool = tool.id
+                                                    } else {
+                                                        viewModel.selectedTool = nil
+                                                        try! await Task.sleep(for: .nanoseconds(1))
+                                                        viewModel.selectedTool = tool.id
+                                                    }
+                                                }
+                                            } label: {
+                                                ToolOverview(tool: tool, presentedInHomeboard: true)
+                                                    .environmentObject(viewModel)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .padding(.horizontal, AppStyle.horizontalPadding)
+                                }
+                                .animation(
+                                    .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
+                                    value: viewModel.favoriteToolIds
+                                )
+                            }
+                            if !viewModel.recentTools.isEmpty {
+                                VStack {
+                                    HStack {
+                                        Text("Recently used")
+                                            .typography(.titleLarge, color: primary, design: .rounded)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, AppStyle.horizontalPadding)
+                                    VStack(spacing: 12) {
+                                        ForEach(viewModel.recentTools.reversed()) { tool in
+                                            Button {
+                                                HapticsManager.shared.selection()
+                                                Task {
+                                                    viewModel.selectedTab = .tools
+                                                    if viewModel.selectedTool == nil {
+                                                        viewModel.selectedTool = tool.id
+                                                    } else {
+                                                        viewModel.selectedTool = nil
+                                                        try! await Task.sleep(for: .nanoseconds(1))
+                                                        viewModel.selectedTool = tool.id
+                                                    }
+                                                }
+                                            } label: {
+                                                ToolOverview(tool: tool, presentedInHomeboard: true)
+                                                    .environmentObject(viewModel)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .padding(.horizontal, AppStyle.horizontalPadding)
+                                }
+                                .animation(
+                                    .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
+                                    value: viewModel.favoriteToolIds
+                                )
+                            }
                             
                         }
-                        .buttonStyle(.plain)
-                        .padding(.top, 4)
+                        
+                        Spacer(minLength: 60)
                     }
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        if !favoriteTools.isEmpty {
-                            VStack {
-                                HStack {
-                                    Text("Favorites")
-                                        .typography(.titleLarge, color: primary, design: .rounded)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, AppStyle.horizontalPadding)
-                                VStack(spacing: 12) {
-                                    ForEach(favoriteTools) { tool in
-                                        Button {
-                                            HapticsManager.shared.selection()
-                                            Task {
-                                                viewModel.selectedTab = .tools
-                                                if viewModel.selectedTool == nil {
-                                                    viewModel.selectedTool = tool.id
-                                                } else {
-                                                    viewModel.selectedTool = nil
-                                                    try! await Task.sleep(for: .nanoseconds(1))
-                                                    viewModel.selectedTool = tool.id
-                                                }
-                                            }
-                                        } label: {
-                                            ToolOverview(tool: tool, presentedInHomeboard: true)
-                                                .environmentObject(viewModel)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(.horizontal, AppStyle.horizontalPadding)
-                            }
-                            .animation(
-                                .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
-                                value: viewModel.favoriteToolIds
-                            )
-                        }
-                        if !viewModel.recentTools.isEmpty {
-                            VStack {
-                                HStack {
-                                    Text("Recently used")
-                                        .typography(.titleLarge, color: primary, design: .rounded)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, AppStyle.horizontalPadding)
-                                VStack(spacing: 12) {
-                                    ForEach(viewModel.recentTools.reversed()) { tool in
-                                        Button {
-                                            HapticsManager.shared.selection()
-                                            Task {
-                                                viewModel.selectedTab = .tools
-                                                if viewModel.selectedTool == nil {
-                                                    viewModel.selectedTool = tool.id
-                                                } else {
-                                                    viewModel.selectedTool = nil
-                                                    try! await Task.sleep(for: .nanoseconds(1))
-                                                    viewModel.selectedTool = tool.id
-                                                }
-                                            }
-                                        } label: {
-                                            ToolOverview(tool: tool, presentedInHomeboard: true)
-                                                .environmentObject(viewModel)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(.horizontal, AppStyle.horizontalPadding)
-                            }
-                            .animation(
-                                .spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.2),
-                                value: viewModel.favoriteToolIds
-                            )
-                        }
-                            
-                    }
-                    
-                    Spacer(minLength: 60)
                 }
-            }
-            .background(
-                LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
+                .background(
+                    LinearGradient(
+                        colors: [accent.gradient, .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
                 )
-                .ignoresSafeArea()
-            )
-            .navigationTitle("Home")
-            .navigationBarTitleDisplayMode(.large)
+                .navigationTitle("Home")
+            }
         }
     }
     private func homeBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
