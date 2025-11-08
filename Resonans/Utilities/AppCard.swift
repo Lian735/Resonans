@@ -60,7 +60,7 @@ struct AppCard<Content: View>: View {
     
     @AppStorage(AppStorageKey.Settings.glassEffectActivated) private var glassEffectActivated: Bool = true
     @AppStorage(AppStorageKey.Settings.interactiveGlassActivated) private var interactiveGlassActivated: Bool = false
-    @AppStorage(AppStorageKey.Settings.reduceTransparencyActivated) private var reduceTransparencyActivated: Bool = false
+    @AppStorage(AppStorageKey.Settings.reduceTransparencyActivated) private var reduceTransparencyActivated: Bool = true
     
     var body: some View {
         HStack{

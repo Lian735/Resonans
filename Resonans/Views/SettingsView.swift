@@ -34,7 +34,7 @@ struct SettingsView: View {
 
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
     @AppStorage("Interactive Glass activated") private var interactiveGlassActivated: Bool = false
-    @AppStorage("Reduce Transparency activated") private var reduceTransparencyActivated: Bool = false
+    @AppStorage("Reduce Transparency activated") private var reduceTransparencyActivated: Bool = true
 
     
     var body: some View {

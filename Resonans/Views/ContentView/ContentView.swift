@@ -21,19 +21,19 @@ struct ContentView: View {
                 Label {
                     Text("Home")
                 } icon: {
-                    Image("resonansicon.SFSymbol")
+                    Image("resonanslogo.SFSymbol")
                 }
             })
             Tab(value: .tools, content: {
                 ToolsView(accent: accent, primary: .primary)
                     .environmentObject(viewModel)
             }, label: {
-                Label("Tools", systemImage: "rectangle.stack.fill")
+                Label("Tools", systemImage: "rectangle.stack")
             })
             Tab(value: .settings){
                 SettingsView()
             }label: {
-                Label("Settings", systemImage: "gearshape.fill")
+                Label("Settings", systemImage: "gearshape")
             }
         }
         .labelStyle(.iconOnly)

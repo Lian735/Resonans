@@ -21,7 +21,7 @@
             {
               "appearance" : "dark",
               "value" : {
-                "automatic-gradient" : "srgb:1.00000,1.00000,1.00000,1.00000"
+                "automatic-gradient" : "extended-gray:1.00000,1.00000"
               }
             },
             {
@@ -39,11 +39,11 @@
             },
             {
               "idiom" : "square",
-              "value" : "resonansicon.svg"
+              "value" : "resonanslogo.svg"
             },
             {
               "idiom" : "watchOS",
-              "value" : "resonanslogo.png"
+              "value" : "resonanslogo.svg"
             }
           ],
           "name" : "resonansss",

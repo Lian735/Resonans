@@ -47,7 +47,7 @@ struct HomeDashboardView: View {
                                 Spacer()
                                 
                                 VStack(spacing: 3) {
-                                    Image("resonansicon.SFSymbol")
+                                    Image("resonanslogo.SFSymbol")
                                         .typography(.custom(size: 35, weight: .medium), color: primary)
                                     ZStack {
                                         Text(versionDisplayString)
