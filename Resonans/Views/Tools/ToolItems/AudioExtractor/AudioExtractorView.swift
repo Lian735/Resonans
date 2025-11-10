@@ -32,6 +32,7 @@ struct AudioExtractorView: View {
     @State private var activeSheet: ActiveSheet?
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.modelContext) private var modelContext
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -72,7 +73,8 @@ struct AudioExtractorView: View {
             case .conversion(let url):
                 AudioConversionView(
                     viewModel: AudioConversionViewModel(
-                        videoConverter: VideoToAudioConverter()
+                        videoConverter: VideoToAudioConverter(),
+                        modelContext: modelContext
                     ),
                     videoUrl: url
                 )

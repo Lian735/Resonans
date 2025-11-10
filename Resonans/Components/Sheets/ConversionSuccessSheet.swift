@@ -168,3 +168,13 @@ struct ConversionSuccessSheet: View {
         onSave()
     }
 }
+
+#Preview {
+    ConversionSuccessSheet(
+        exportURL: URL(fileURLWithPath: ""),
+        accentColor: .purple,
+        primaryColor: .primary,
+        onSave: {},
+        onDone: {}
+    )
+}

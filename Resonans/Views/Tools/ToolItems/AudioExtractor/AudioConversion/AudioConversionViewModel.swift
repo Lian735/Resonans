@@ -8,6 +8,7 @@
 import AVFoundation
 import Foundation
 import Combine
+import SwiftData
 
 final class AudioConversionViewModel: ObservableObject {
     @Published var selectedFormat: AudioFormat = .mp3
@@ -19,9 +20,11 @@ final class AudioConversionViewModel: ObservableObject {
     var videoURL: URL = URL(fileURLWithPath: "")
     var exportUrl: String?
     let videoConverter: VideoToAudioConverter
+    private let modelContext: ModelContext
     
-    init(videoConverter: VideoToAudioConverter) {
+    init(videoConverter: VideoToAudioConverter, modelContext: ModelContext) {
         self.videoConverter = videoConverter
+        self.modelContext = modelContext
     }
     
     var isLoadedAudioMetadata: Bool {
@@ -113,6 +116,15 @@ final class AudioConversionViewModel: ObservableObject {
                 }
             }
         )
+    }
+    
+    func saveAudio(title: String, fileUrl: URL?) {
+        let history: History = History(
+            title: title,
+            tool: ToolIdentifier.audioExtractor.rawValue,
+            fileUrl: fileUrl
+        )
+        modelContext.insert(history)
     }
 }
 

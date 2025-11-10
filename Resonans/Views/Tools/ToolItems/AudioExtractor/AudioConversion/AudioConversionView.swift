@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import AVFoundation
 import UIKit
@@ -872,12 +873,22 @@ private struct AccessibilityHintIfNeeded: ViewModifier {
 }
 
  #Preview {
-     AudioConversionView(
-        viewModel: AudioConversionViewModel(videoConverter: VideoToAudioConverter()),
-        videoUrl: URL(fileURLWithPath: "/tmp/test.mov")
-     )
-         .background(Color.black)
-         .preferredColorScheme(.dark)
+     struct Preview: View {
+         let memoryContainer = try! ModelContainer(
+             for: History.self,
+             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+         )
+         
+         var body: some View {
+             AudioConversionView(
+                viewModel: AudioConversionViewModel(videoConverter: VideoToAudioConverter(), modelContext: memoryContainer.mainContext),
+                videoUrl: URL(fileURLWithPath: "/tmp/test.mov")
+             )
+             .background(.black)
+             .preferredColorScheme(.dark)
+         }
+     }
+     return Preview()
  }
 
 /// A SwiftUI wrapper for `UIVisualEffectView` providing blur effects.

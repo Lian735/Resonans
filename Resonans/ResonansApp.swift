@@ -5,6 +5,7 @@
 //  Created by Lian on 07.09.25.
 //
 
+import SwiftData
 import SwiftUI
 
 /// The main entry point for the Resonans app.
@@ -22,12 +23,14 @@ import SwiftUI
 struct ResonansApp: App {
     @AppStorage(AppStorageKey.Settings.appearance) private var appearanceRaw = Appearance.system.rawValue
     private var appearance: Appearance { Appearance(rawValue: appearanceRaw) ?? .system }
+    private let modelContainerProvider = ModelContainerProvider()
     
     @StateObject private var viewModel = ContentViewModel()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .modelContainer(modelContainerProvider.container)
                 .environmentObject(viewModel)
                 .onAppear {
                     viewModel.loadFavoritesOnLaunch()
