@@ -21,7 +21,7 @@ enum ToolIdentifier: String, Hashable {
             return ToolItem(
                 id: .audioExtractor,
                 title: "Extractor",
-                subtitle: "Pull crisp audio tracks from your videos in seconds.",
+                subtitle: "Extract audio from your videos",
                 iconName: "waveform",
                 gradientHex: ["#B43AA6", "#FD1D1D"],
                 beta: false,
@@ -31,8 +31,8 @@ enum ToolIdentifier: String, Hashable {
             return ToolItem(
                 id: .bgRemover,
                 title: "Background Remover",
-                subtitle: "Removes Background from your images",
-                iconName: "circle.rectangle.filled.pattern.diagonalline",
+                subtitle: "Remove Background from your images",
+                iconName: "person.and.background.dotted",
                 gradientHex: ["#2A7D9B", "#53EDAD"],
                 beta: false,
                 favorite: false
@@ -41,7 +41,7 @@ enum ToolIdentifier: String, Hashable {
             return ToolItem(
                 id: .editor,
                 title: "Editor",
-                subtitle: "Edit your videos and images",
+                subtitle: "Edit your photos and videos",
                 iconName: "scissors",
                 gradientHex: ["#412A9B", "#ED53B2"],
                 beta: true,

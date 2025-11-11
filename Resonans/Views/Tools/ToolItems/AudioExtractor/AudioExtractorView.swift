@@ -16,22 +16,21 @@ struct AudioExtractorView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 28) {
-
+        ScrollView {
+            VStack(spacing: 24) {
                 headerSection
+                    .padding(.horizontal, 24)
                 
                 Divider()
-
-                sourceOptionsSection
-
-                recentSection
-
-                Spacer(minLength: 60)
+                
+                VStack {
+                    sourceSection
+                    
+                    recentSection
+                }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, AppStyle.horizontalPadding)
         }
-        .background(.clear)
         .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
             case .filePicker:
@@ -79,7 +78,7 @@ struct AudioExtractorView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Audio Extractor")
                         .typography(.displaySmall, design: .rounded)
-                    Text("Pull crisp audio from your videos")
+                    Text("Extract audio from your videos")
                         .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
                         .padding(.top, 4)
                 }
@@ -92,7 +91,7 @@ struct AudioExtractorView: View {
         }
     }
 
-    private var sourceOptionsSection: some View {
+    private var sourceSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Choose a source")
@@ -100,11 +99,11 @@ struct AudioExtractorView: View {
                 Spacer()
             }
             HStack(spacing: 16) {
-                sourceOptionCard(icon: "doc.fill", title: "Import from Files") {
+                sourceOptionCard(icon: "doc.fill", title: "Files") {
                     activeSheet = .filePicker
                 }
 
-                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Library") {
+                sourceOptionCard(icon: "photo.on.rectangle.fill", title: "Library") {
                     activeSheet = .photoPicker
                 }
             }
@@ -125,8 +124,10 @@ struct AudioExtractorView: View {
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                .padding(.vertical, 12)
             }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -138,48 +139,46 @@ struct AudioExtractorView: View {
                     .typography(.titleLarge, color: .primary, design: .rounded)
                 Spacer()
             }
-            AppCard{
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(spacing: 12) {
-                        if viewModel.recents.isEmpty {
-                            Text("No exports yet")
-                                .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 40)
-                        } else {
-                            let prefixCount = showAllRecents ? viewModel.recents.count : 3
-                            let recents = Array(viewModel.recents.prefix(prefixCount))
-                            
-                            ForEach(recents.indices, id: \.self) { index in
-                                let item = recents[index]
-                                VStack(spacing: 12) {
-                                    RecentRow(item: item, onSave: handleRecentExport)
-                                        .padding(.horizontal, 12)
-                                    
-                                    if index < recents.count - 1 {
-                                        Divider()
-                                            .padding(.leading, 12)
-                                    }
+            AppCard {
+                VStack(spacing: 12) {
+                    if viewModel.recents.isEmpty {
+                        Text("No exports yet")
+                            .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                    } else {
+                        let prefixCount = showAllRecents ? viewModel.recents.count : 3
+                        let recents = Array(viewModel.recents.prefix(prefixCount))
+                        
+                        ForEach(recents.indices, id: \.self) { index in
+                            let item = recents[index]
+                            VStack(spacing: 12) {
+                                RecentRow(item: item, onSave: handleRecentExport)
+                                    .padding(.horizontal, 12)
+                                
+                                if index < recents.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 12)
                                 }
-                            }
-                            
-                            if viewModel.recents.count > 3 {
-                                GlassButton {
-                                    HapticsManager.shared.pulse()
-                                    withAnimation(.easeInOut(duration: 0.25)) {
-                                        showAllRecents.toggle()
-                                    }
-                                } label: {
-                                    Text(showAllRecents ? "Show less" : "Show more")
-                                        .typography(.bodyBold, color: .primary.opacity(0.75), design: .rounded)
-                                }
-                                .padding(.top, 6)
                             }
                         }
+                        
+                        if viewModel.recents.count > 3 {
+                            GlassButton {
+                                HapticsManager.shared.pulse()
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    showAllRecents.toggle()
+                                }
+                            } label: {
+                                Text(showAllRecents ? "Show less" : "Show more")
+                                    .typography(.bodyBold, color: .primary.opacity(0.75), design: .rounded)
+                            }
+                            .padding(.top, 6)
+                        }
                     }
-                    .padding(.top, 12)
-                    .padding(.bottom, 18)
                 }
+                .padding(.top, 12)
+                .padding(.bottom, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -193,11 +192,12 @@ struct AudioExtractorView: View {
         }
         activeSheet = .recents(url)
     }
+
     private func titleBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
-            VStack(alignment: .leading, spacing: 16) {
-                content()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 16) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
 }

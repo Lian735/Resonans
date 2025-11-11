@@ -23,14 +23,17 @@ struct BgRemoverView: View {
         ScrollView {
             VStack(spacing: 24) {
                 headerSection
+                    .padding(.horizontal, 24)
                 
                 Divider()
                 
-                sourceSection
-                
-                recentSection
+                VStack {
+                    sourceSection
+                    
+                    recentSection
+                }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
         }
         .sheet(item: $viewModel.activeSheet) { type in
             switch type {
@@ -58,7 +61,7 @@ struct BgRemoverView: View {
         }
         .fullScreenCover(isPresented: $viewModel.useFullScreenSheet) {
             cameraView
-        }
+            }
         .background(
             LinearGradient(
                 colors: [accent.gradient, .clear],
@@ -75,30 +78,33 @@ struct BgRemoverView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Background Remover")
                         .typography(.displaySmall, design: .rounded)
-                    Text("Remove backgrounds from your images")
+                    Text("Remove background from your images")
                         .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
                         .padding(.top, 4)
                 }
 
                 Spacer()
 
-                Image(systemName: "circle.rectangle.filled.pattern.diagonalline")
+                Image(systemName: "person.and.background.dotted")
                     .typography(.custom(size: 35, weight: .medium), color: .primary)
+                
             }
         }
     }
     
     private var sourceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Choose a source")
-                .typography(.titleMedium, design: .rounded)
-
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Choose a source")
+                    .typography(.titleLarge, color: .primary, design: .rounded)
+                Spacer()
+            }
             HStack(spacing: 16) {
-                sourceOptionCard(icon: "camera", title: "Take from Camera") {
+                sourceOptionCard(icon: "camera.fill", title: "Camera") {
                     viewModel.handleOpenCamera()
                 }
 
-                sourceOptionCard(icon: "photo.on.rectangle", title: "Pick from Photo Library") {
+                sourceOptionCard(icon: "photo.on.rectangle.fill", title: "Library") {
                     viewModel.showPhotoLibrary()
                 }
             }
@@ -106,13 +112,14 @@ struct BgRemoverView: View {
     }
     
     private var recentSection: some View {
-        AppCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Recent conversions")
-                    .typography(.titleLarge, design: .rounded)
-                    .padding(.top, 16)
-                    .padding(.horizontal, 12)
-                
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("History")
+                    .typography(.titleLarge, color: .primary, design: .rounded)
+                Spacer()
+            }
+            
+            AppCard {
                 VStack(spacing: 12) {
                     if viewModel.recents.isEmpty {
                         Text("No exports yet")
@@ -152,8 +159,8 @@ struct BgRemoverView: View {
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     
@@ -171,8 +178,10 @@ struct BgRemoverView: View {
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                .padding(.vertical, 12)
             }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
