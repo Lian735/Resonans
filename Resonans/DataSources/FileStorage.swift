@@ -36,10 +36,11 @@ final class FileStorage {
         subFolder: SubfolderType = .none,
         fileName: String,
         fileData: Data
-    ) throws {
+    ) throws -> URL {
         let directoryUrl = try getDirectoryUrl(directory, subFolder: subFolder)
         let savedUrl = directoryUrl.appendingPathComponent(fileName)
         try fileData.write(to: savedUrl)
+        return savedUrl
     }
     
     func deleteFile(

@@ -118,6 +118,36 @@ final class AudioConversionViewModel: ObservableObject {
         )
     }
     
+    func saveAudioToLocalFile(tempUrl: URL) -> URL? {
+        do {
+            let fileName = videoURL.deletingPathExtension().lastPathComponent + selectedFormat.fileExtension
+            let data = try Data(contentsOf: tempUrl)
+            // Add Files to FileStorage
+            let savedUrl = try FileStorage.shared.saveFile(
+                on: .documents,
+                fileName: fileName,
+                fileData: data,
+            )
+            
+            // Add recent history to with saved URL
+            let durationLabel = formatTime(audioDuration)
+            let metadataDict: [String: Any] = ["duration": durationLabel]
+            let metadata = try JSONSerialization.data(withJSONObject: metadataDict, options: .prettyPrinted)
+            let history = History(
+                title: fileName,
+                tool: ToolIdentifier.audioExtractor.rawValue,
+                fileUrl: savedUrl,
+                metadata: metadata
+            )
+            
+            modelContext.insert(history)
+            try modelContext.save()
+            return savedUrl
+        } catch {
+            return nil
+        }
+    }
+    
     func saveAudio(title: String, fileUrl: URL?) {
         let history: History = History(
             title: title,
@@ -125,6 +155,14 @@ final class AudioConversionViewModel: ObservableObject {
             fileUrl: fileUrl
         )
         modelContext.insert(history)
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "00:00" }
+        let totalSeconds = max(Int(seconds.rounded()), 0)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, secs)
     }
 }
 

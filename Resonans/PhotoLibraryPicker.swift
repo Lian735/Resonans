@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import Photos
 import UniformTypeIdentifiers
 
 /// A SwiftUI wrapper for `PHPickerViewController` to select media from the photo library.
@@ -57,6 +58,9 @@ extension PhotoLibraryPicker {
             
             for result in results {
                 let provider = result.itemProvider
+                guard let identifier = result.assetIdentifier else { break }
+                let fetchedAsset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
+                fetchedAsset.value(forKey: "filename")
                 
                 // 🎥 Handle Videos
                 if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {

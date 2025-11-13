@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 /// The main view for the Audio Extractor tool.
 ///
@@ -57,6 +58,10 @@ struct AudioExtractorView: View {
                 .padding(.horizontal, 24)
             }
         }
+        .onAppear {
+            viewModel.getAudioHistories(modelContext: modelContext)
+        }
+        .background(.clear)
         .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
             case .filePicker:
@@ -80,6 +85,8 @@ struct AudioExtractorView: View {
                 )
             case .recents(let url):
                 ExportPicker(url: url)
+            case .filePreview(let url):
+                FilePreviewView(fileURL: url)
             }
         }
         .onAppear(perform: viewModel.reloadRecents)
@@ -109,9 +116,7 @@ struct AudioExtractorView: View {
                         .typography(.titleMedium, color: .primary.opacity(0.7), design: .rounded)
                         .padding(.top, 4)
                 }
-
                 Spacer()
-
                 Image(systemName: "waveform")
                     .typography(.custom(size: 35, weight: .medium), color: .primary)
             }
@@ -161,46 +166,45 @@ struct AudioExtractorView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("History")
-                    .typography(.titleLarge, color: .primary, design: .rounded)
-                Spacer()
-            }
-            AppCard {
-                VStack(spacing: 12) {
-                    if viewModel.recents.isEmpty {
-                        Text("No exports yet")
-                            .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 40)
-                    } else {
-                        let prefixCount = showAllRecents ? viewModel.recents.count : 3
-                        let recents = Array(viewModel.recents.prefix(prefixCount))
-                        
-                        ForEach(recents.indices, id: \.self) { index in
-                            let item = recents[index]
-                            VStack(spacing: 12) {
-                                RecentRow(item: item, onSave: handleRecentExport)
-                                    .padding(.horizontal, 12)
-                                
-                                if index < recents.count - 1 {
-                                    Divider()
-                                        .padding(.leading, 12)
+            Text("History")
+                .typography(.titleLarge, color: .primary, design: .rounded)
+            AppCard{
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(spacing: 12) {
+                        if viewModel.histories.isEmpty {
+                            Text("No exports yet")
+                                .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 40)
+                        } else {
+                            let prefixCount = showAllRecents ? viewModel.histories.count : 3
+                            let histories = viewModel.histories.prefix(prefixCount)
+                            ForEach(histories.indices, id: \.self) { index in
+                                let history = histories[index]
+                                VStack(spacing: 12) {
+                                    historyCard(history: history)
+                                    if index < histories.count - 1 {
+                                        Divider()
+                                            .padding(.leading, 12)
+                                    }
                                 }
                             }
-                        }
-                        
-                        if viewModel.recents.count > 3 {
-                            GlassButton {
-                                HapticsManager.shared.pulse()
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    showAllRecents.toggle()
+                            if viewModel.histories.count > 3 {
+                                Button {
+                                    HapticsManager.shared.pulse()
+                                    withAnimation(.bouncy) {
+                                        showAllRecents.toggle()
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(showAllRecents ? "Show less" : "Show more")
+                                            .typography(.bodyBold, color: .primary, design: .rounded)
+                                        Image(systemName: showAllRecents ? "chevron.up" : "chevron.down")
+                                            .typography(.bodyBold, color: .primary)
+                                    }
                                 }
-                            } label: {
-                                Text(showAllRecents ? "Show less" : "Show more")
-                                    .typography(.bodyBold, color: .primary.opacity(0.75), design: .rounded)
+                                .padding(.top, 6)
                             }
-                            .padding(.top, 6)
                         }
                     }
                 }
@@ -219,10 +223,56 @@ struct AudioExtractorView: View {
         }
         activeSheet = .recents(url)
     }
-
     private func titleBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    @ViewBuilder
+    private func historyCard(history: History) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                .fill(.primary.opacity(AppStyle.iconFillOpacity))
+                .frame(width: 48, height: 48)
+                .overlay(
+                    Image(systemName: "waveform")
+                        .typography(.titleMedium, color: .primary.opacity(0.9))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                        .stroke(.primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
+                )
+                .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(history.title)
+                    .typography(.titleMedium, color: .primary, design: .rounded)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(history.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .typography(.caption, color: .primary)
+            }
+            Spacer()
+            if let url = history.fileUrl {
+                HStack(spacing: 12) {
+                    Button {
+                        activeSheet = .filePreview(url)
+                    } label: {
+                        Image(systemName: "folder")
+                            .typography(.titleMedium, color: .primary.opacity(0.9))
+                    }
+                    
+                    ShareLink(item: url) {
+                        Image(systemName: "square.and.arrow.up")
+                            .typography(.titleMedium, color: .primary.opacity(0.9))
+                    }
+                    .simultaneousGesture(TapGesture().onEnded {
+                        HapticsManager.shared.selection()
+                    })
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -239,19 +289,46 @@ extension AudioExtractorView {
     /// - ``recents``: Shows the export picker for a recent conversion
     /// - ``conversion``: Shows the audio conversion interface for a selected video
     enum ActiveSheet: Identifiable {
-        case photoPicker, filePicker, recents(URL), conversion(URL)
+        case photoPicker, filePicker, recents(URL), conversion(URL), filePreview(URL)
         var id: String { String(describing: self) }
     }
 }
 
 #Preview {
+    let memoryContainer = try! ModelContainer(
+        for: History.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
     let viewModel: AudioExtractorViewModel = AudioExtractorViewModel(cacheManager: CacheManager.shared)
-    viewModel.recents = [
-        .init(title: "Conversion Hahahahahahha", duration: "20 Minutes", fileURL: URL(string: "hello.com")!),
-        .init(title: "Modar", duration: "29 Minutes", fileURL: URL(string: "hello.com")!)
+    let mockHistories: [History] = [
+        History(
+            title: "History",
+            tool: ToolIdentifier.audioExtractor.rawValue,
+            fileUrl: URL(fileURLWithPath: "")
+        ),
+        History(
+            title: "Audio History",
+            tool: ToolIdentifier.audioExtractor.rawValue,
+            fileUrl: URL(fileURLWithPath: "")
+        ),
+        History(
+            title: "Audio History",
+            tool: ToolIdentifier.audioExtractor.rawValue,
+            fileUrl: URL(fileURLWithPath: "")
+        ),
+        History(
+            title: "Audio History",
+            tool: ToolIdentifier.audioExtractor.rawValue,
+            fileUrl: URL(fileURLWithPath: "")
+        )
     ]
+    
+    mockHistories.forEach { memoryContainer.mainContext.insert($0) }
+    
     return AudioExtractorView(
         viewModel: viewModel
     )
+    .accentColor(.purple)
+    .modelContainer(memoryContainer)
 }
 
