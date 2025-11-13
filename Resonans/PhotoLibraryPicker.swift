@@ -58,9 +58,6 @@ extension PhotoLibraryPicker {
             
             for result in results {
                 let provider = result.itemProvider
-                guard let identifier = result.assetIdentifier else { break }
-                let fetchedAsset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
-                fetchedAsset.value(forKey: "filename")
                 
                 // 🎥 Handle Videos
                 if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {

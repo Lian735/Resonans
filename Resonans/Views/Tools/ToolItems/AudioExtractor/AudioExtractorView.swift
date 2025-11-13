@@ -89,13 +89,6 @@ struct AudioExtractorView: View {
                 FilePreviewView(fileURL: url)
             }
         }
-        .onAppear(perform: viewModel.reloadRecents)
-        .onReceive(NotificationCenter.default.publisher(for: .recentConversionsDidUpdate)) { notification in
-            guard let items = notification.object as? [RecentItem] else { return }
-            withAnimation(.easeInOut(duration: 0.25)) {
-                viewModel.recents = items
-            }
-        }
         .background(
             LinearGradient(
                 colors: [accent.gradient.opacity(0.7), .clear],
@@ -168,61 +161,54 @@ struct AudioExtractorView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("History")
                 .typography(.titleLarge, color: .primary, design: .rounded)
-            AppCard{
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(spacing: 12) {
-                        if viewModel.histories.isEmpty {
-                            Text("No exports yet")
-                                .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 40)
-                        } else {
-                            let prefixCount = showAllRecents ? viewModel.histories.count : 3
-                            let histories = viewModel.histories.prefix(prefixCount)
-                            ForEach(histories.indices, id: \.self) { index in
-                                let history = histories[index]
-                                VStack(spacing: 12) {
+            AppCard {
+                VStack(alignment: .center, spacing: 12) {
+                    if viewModel.histories.isEmpty {
+                        Text("No exports yet")
+                            .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                    } else {
+                        let prefixCount = showAllRecents ? viewModel.histories.count : 3
+                        let histories = viewModel.histories.prefix(prefixCount)
+                        ScrollView {
+                            LazyVStack(spacing: 18) {
+                                ForEach(histories.indices, id: \.self) { index in
+                                    let history = histories[index]
                                     historyCard(history: history)
+                                    
                                     if index < histories.count - 1 {
                                         Divider()
-                                            .padding(.leading, 12)
                                     }
                                 }
                             }
-                            if viewModel.histories.count > 3 {
-                                Button {
-                                    HapticsManager.shared.pulse()
-                                    withAnimation(.bouncy) {
-                                        showAllRecents.toggle()
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text(showAllRecents ? "Show less" : "Show more")
-                                            .typography(.bodyBold, color: .primary, design: .rounded)
-                                        Image(systemName: showAllRecents ? "chevron.up" : "chevron.down")
-                                            .typography(.bodyBold, color: .primary)
-                                    }
+                        }
+                        if viewModel.histories.count > 3 {
+                            Button {
+                                HapticsManager.shared.pulse()
+                                withAnimation(.bouncy) {
+                                    showAllRecents.toggle()
                                 }
-                                .padding(.top, 6)
+                            } label: {
+                                HStack {
+                                    Text(showAllRecents ? "Show less" : "Show more")
+                                        .typography(.bodyBold, color: .primary, design: .rounded)
+                                    Image(systemName: showAllRecents ? "chevron.up" : "chevron.down")
+                                        .typography(.bodyBold, color: .primary)
+                                }
                             }
+                            .padding(.top, 6)
                         }
                     }
                 }
+                .animation(.easeInOut, value: viewModel.histories)
                 .padding(.top, 12)
                 .padding(.bottom, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
-
-    private func handleRecentExport(_ item: RecentItem) {
-        let url = item.fileURL
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            viewModel.reloadRecents()
-            return
-        }
-        activeSheet = .recents(url)
-    }
+    
     private func titleBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             content()
@@ -231,7 +217,7 @@ struct AudioExtractorView: View {
     }
     
     @ViewBuilder
-    private func historyCard(history: History) -> some View {
+    private func historyCard(history: AudioHistoryViewData) -> some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
                 .fill(.primary.opacity(AppStyle.iconFillOpacity))
@@ -244,39 +230,61 @@ struct AudioExtractorView: View {
                     RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
                         .stroke(.primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
                 )
-                .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(history.title)
                     .typography(.titleMedium, color: .primary, design: .rounded)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text(history.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .typography(.caption, color: .primary)
+                HStack(alignment: .center, spacing: 6) {
+                    Text(formatTime(history.duration))
+                        .typography(.captionBold, color: .primary)
+                    Text("-")
+                        .typography(.caption, color: .primary)
+                    Text(history.createdAt.formatted(date: .abbreviated, time: .omitted))
+                        .typography(.caption, color: .primary)
+                }
             }
             Spacer()
             if let url = history.fileUrl {
-                HStack(spacing: 12) {
+                HStack(spacing: 18) {
                     Button {
                         activeSheet = .filePreview(url)
                     } label: {
                         Image(systemName: "folder")
                             .typography(.titleMedium, color: .primary.opacity(0.9))
                     }
-                    
-                    ShareLink(item: url) {
-                        Image(systemName: "square.and.arrow.up")
-                            .typography(.titleMedium, color: .primary.opacity(0.9))
-                    }
-                    .simultaneousGesture(TapGesture().onEnded {
-                        HapticsManager.shared.selection()
-                    })
+                    optionMenu(id: history.id, url: url)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-
+    
+    @ViewBuilder
+    private func optionMenu(id: UUID, url: URL) -> some View {
+        Menu {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            Button {
+                viewModel.deleteHistory(id: id, modelContext: modelContext)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .typography(.titleMedium, color: .primary.opacity(0.9))
+        }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "00:00" }
+        let totalSeconds = max(Int(seconds.rounded()), 0)
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, secs)
+    }
 }
 
 // MARK: - Sheet Handler
@@ -300,26 +308,26 @@ extension AudioExtractorView {
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
     let viewModel: AudioExtractorViewModel = AudioExtractorViewModel(cacheManager: CacheManager.shared)
+    let metadata: Data = {
+        let dict: [String: Any] = ["duration": 100]
+        let metadata = try! JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+        return metadata
+    }()
+    
     let mockHistories: [History] = [
         History(
+            id: UUID(),
             title: "History",
             tool: ToolIdentifier.audioExtractor.rawValue,
-            fileUrl: URL(fileURLWithPath: "")
+            fileUrl: URL(fileURLWithPath: ""),
+            metadata: metadata
         ),
         History(
-            title: "Audio History",
+            id: UUID(),
+            title: "Another History",
             tool: ToolIdentifier.audioExtractor.rawValue,
-            fileUrl: URL(fileURLWithPath: "")
-        ),
-        History(
-            title: "Audio History",
-            tool: ToolIdentifier.audioExtractor.rawValue,
-            fileUrl: URL(fileURLWithPath: "")
-        ),
-        History(
-            title: "Audio History",
-            tool: ToolIdentifier.audioExtractor.rawValue,
-            fileUrl: URL(fileURLWithPath: "")
+            fileUrl: URL(fileURLWithPath: ""),
+            metadata: metadata
         )
     ]
     

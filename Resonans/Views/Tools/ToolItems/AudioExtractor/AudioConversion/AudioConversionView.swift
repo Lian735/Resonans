@@ -78,12 +78,8 @@ struct AudioConversionView: View {
                         isProcessing = false
                         dismiss()
                     case .inprogress(let progress):
-                        debounceTask?.cancel()
-                        debounceTask = Task { @MainActor in
-                            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                progressValue = progress
-                            }
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            progressValue = progress
                         }
                     case .completed(let url):
                         isProcessing = false

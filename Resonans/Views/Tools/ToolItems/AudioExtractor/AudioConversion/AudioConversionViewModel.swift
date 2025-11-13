@@ -17,6 +17,7 @@ final class AudioConversionViewModel: ObservableObject {
     @Published var audioSampleRate: Double = 0
     @Published var audioChannelCount: Int = 0
     @Published var audioStatus: AudioStatus = .initiate
+    private var debounceTask: Task<Void, Never>?
     var videoURL: URL = URL(fileURLWithPath: "")
     var exportUrl: String?
     let videoConverter: VideoToAudioConverter
@@ -104,7 +105,11 @@ final class AudioConversionViewModel: ObservableObject {
             bitrate: targetBitrate,
             progress: { [weak self] value in
                 guard let self else { return }
-                self.audioStatus = .inprogress(value)
+                debounceTask?.cancel()
+                debounceTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.5))
+                    self.audioStatus = .inprogress(value)
+                }
             },
             completion: { [weak self] result in
                 guard let self else { return }
@@ -120,7 +125,7 @@ final class AudioConversionViewModel: ObservableObject {
     
     func saveAudioToLocalFile(tempUrl: URL) -> URL? {
         do {
-            let fileName = videoURL.deletingPathExtension().lastPathComponent + selectedFormat.fileExtension
+            let fileName = videoURL.deletingPathExtension().lastPathComponent + ".\(selectedFormat.fileExtension)"
             let data = try Data(contentsOf: tempUrl)
             // Add Files to FileStorage
             let savedUrl = try FileStorage.shared.saveFile(
