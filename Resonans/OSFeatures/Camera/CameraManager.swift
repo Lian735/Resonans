@@ -10,7 +10,9 @@ import Combine
 import Foundation
 import UIKit
 
+/// Manages camera capture configuration, authorization, and photo capture.
 final class CameraManager: NSObject, ObservableObject {
+    /// Shared singleton used by the background remover and other features.
     static let shared: CameraManager = .init()
     
     private override init() { }
@@ -26,6 +28,7 @@ final class CameraManager: NSObject, ObservableObject {
 
 // MARK: - Camera
 extension CameraManager: Camera {
+    /// Configures the capture session with a back wide-angle camera and photo output.
     func configureSession() async throws {
         try await withCheckedThrowingContinuation { continuation in
             sessionQueue.async {
@@ -69,6 +72,7 @@ extension CameraManager: Camera {
         }
     }
     
+    /// Starts the capture session after verifying authorization.
     func startSession() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             sessionQueue.async {
@@ -96,6 +100,7 @@ extension CameraManager: Camera {
         }
     }
     
+    /// Stops the capture session if running.
     func stopSession() {
         sessionQueue.async {
             if self.session.isRunning {
@@ -104,6 +109,7 @@ extension CameraManager: Camera {
         }
     }
     
+    /// Captures a single still image from the active session.
     func capturePhoto() async throws -> UIImage {
         try await withCheckedThrowingContinuation { continuation in
             let settings = AVCapturePhotoSettings()
@@ -135,6 +141,7 @@ extension CameraManager: AVCapturePhotoCaptureDelegate {
 
 // MARK: Authorization
 extension CameraManager {
+    /// Reads the current camera authorization status.
     func checkAuthorization() -> AuthorizationStatus {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .notDetermined: return .notDetermined
@@ -146,6 +153,7 @@ extension CameraManager {
     }
     
     @MainActor
+    /// Prompts the user for camera access permission.
     func requestCameraAccess() async -> Bool {
         await AVCaptureDevice.requestAccess(for: .video)
     }
@@ -153,6 +161,7 @@ extension CameraManager {
 
 // MARK: - Error Types
 extension CameraManager {
+    /// Errors that can occur while configuring or capturing from the camera.
     enum CameraError: LocalizedError {
         case unauthorized
         case noDevice
@@ -174,6 +183,7 @@ extension CameraManager {
     }
 }
 
+/// Requirements for any camera manager implementation.
 protocol Camera {
     var session: AVCaptureSession { get }
     func configureSession() async throws

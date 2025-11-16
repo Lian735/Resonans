@@ -8,6 +8,7 @@
 import SwiftUI
 
 extension Color {
+    /// Initializes a `Color` from a six-character hex string (e.g., `#FF00AA`).
     init?(hex: String) {
         var hexString = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
         guard hexString.count == 6,

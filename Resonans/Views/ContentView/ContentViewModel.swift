@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 @MainActor
+/// Shared view model powering the root tab view and onboarding state.
 final class ContentViewModel: ObservableObject {
     @Published var showOnboarding: Bool = false
     
@@ -20,6 +21,7 @@ final class ContentViewModel: ObservableObject {
     
     @Published var favoriteToolIds: Set<ToolIdentifier> = []
     
+    /// Reads persisted favorite flags from `UserDefaults` and rebuilds the set.
     func loadFavoritesOnLaunch() {
         let allTools = toolManager.tools
         for tool in allTools {
@@ -37,6 +39,7 @@ final class ContentViewModel: ObservableObject {
     }
 }
 
+/// Tabs available in the main app container.
 enum TabSelection: Hashable {
     case home
     case tools

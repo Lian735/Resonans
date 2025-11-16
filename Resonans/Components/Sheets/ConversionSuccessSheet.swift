@@ -7,11 +7,17 @@
 
 import SwiftUI
 
+/// Presents a confirmation sheet after a successful conversion.
 struct ConversionSuccessSheet: View {
+    /// Location of the exported media for sharing and saving.
     let exportURL: URL
+    /// Accent color used for primary actions.
     let accentColor: Color
+    /// Primary text color that responds to theme changes.
     let primaryColor: Color
+    /// Callback fired when the user chooses to save the file locally.
     let onSave: () -> Void
+    /// Callback fired when the sheet is dismissed.
     let onDone: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -133,6 +139,7 @@ struct ConversionSuccessSheet: View {
         .ignoresSafeArea()
     }
 
+    /// Builds the consistent capsule-styled label shared by both buttons.
     private func capsuleLabel(title: String, systemImage: String, foreground: Color) -> some View {
         HStack {
             Spacer()
@@ -143,6 +150,7 @@ struct ConversionSuccessSheet: View {
         .padding(.vertical, 14)
     }
 
+    /// Drives the halo and checkmark entrance animation.
     private func startAnimation() {
         animateCheck = false
         showHalo = false
@@ -163,6 +171,7 @@ struct ConversionSuccessSheet: View {
         }
     }
 
+    /// Triggers haptics and forwards the save action.
     private func handleSaveTapped() {
         HapticsManager.shared.selection()
         onSave()

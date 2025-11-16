@@ -1,7 +1,10 @@
 import SwiftUI
 
+/// Displays a converted item with quick actions for sharing or saving.
 struct RecentRow: View {
+    /// Model describing the exported file.
     let item: RecentItem
+    /// Callback fired when the user chooses to save the file to disk.
     let onSave: (RecentItem) -> Void
 
     @Environment(\.colorScheme) private var colorScheme

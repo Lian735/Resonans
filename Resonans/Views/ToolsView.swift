@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Lists all available tools with favorites prioritized and search support.
 struct ToolsView: View {
     let accent: AccentColorOption
     let primary: Color

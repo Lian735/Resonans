@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Multi-step onboarding flow that captures favorites, workflows, and tips preference.
 struct OnboardingFlowView: View {
     enum WorkflowOption: String, CaseIterable, Identifiable {
         case contentCreator = "Content creator"

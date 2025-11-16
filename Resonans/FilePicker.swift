@@ -1,7 +1,9 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Wraps `UIDocumentPickerViewController` to select movie files.
 struct FilePicker: UIViewControllerRepresentable {
+    /// Completion handler returning the chosen file URL.
     var onComplete: (URL) -> Void
     func makeCoordinator() -> Coordinator { Coordinator(onComplete: onComplete) }
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {

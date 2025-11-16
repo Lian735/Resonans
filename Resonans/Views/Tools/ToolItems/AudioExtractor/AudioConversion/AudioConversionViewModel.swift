@@ -9,6 +9,7 @@ import AVFoundation
 import Foundation
 import Combine
 
+/// Handles metadata extraction and audio export options for video-to-audio conversions.
 final class AudioConversionViewModel: ObservableObject {
     @Published var selectedFormat: AudioFormat = .mp3
     @Published var bitrate: Double = 192

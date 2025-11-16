@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Settings screen for appearance, feedback toggles, and app information.
 struct SettingsView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
     @AppStorage(AppStorageKey.Settings.appearance) private var appearanceRaw = Appearance.system.rawValue

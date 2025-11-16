@@ -3,6 +3,7 @@
 //  Resonans
 import SwiftUI
 
+/// Card-style representation of a tool with favorite toggles and navigation.
 struct ToolOverview: View {
     private let tool: ToolItem
     init(tool:  ToolItem, presentedInHomeboard atHome: Bool = false){

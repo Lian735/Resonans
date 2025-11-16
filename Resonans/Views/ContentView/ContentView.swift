@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Root tab container coordinating the app’s main flows.
 struct ContentView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
     
