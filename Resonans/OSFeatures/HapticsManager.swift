@@ -1,5 +1,32 @@
 import UIKit
 
+/// Manages haptic feedback throughout the app, respecting user preferences.
+///
+/// `HapticsManager` is a singleton that provides a centralized way to trigger haptic feedback.
+/// All haptic methods check the user's "hapticsEnabled" preference before executing.
+///
+/// The manager provides three types of haptic feedback:
+/// - **Impact**: Physical collision or button press (light, medium, heavy, soft, rigid)
+/// - **Selection**: Indicates a change in selection
+/// - **Notification**: Success, warning, or error states
+///
+/// Example usage:
+/// ```swift
+/// // Trigger a light impact
+/// HapticsManager.shared.pulse()
+///
+/// // Trigger a heavier impact
+/// HapticsManager.shared.pulse(.heavy)
+///
+/// // Trigger selection feedback
+/// HapticsManager.shared.selection()
+///
+/// // Trigger success notification
+/// HapticsManager.shared.notify(.success)
+/// ```
+///
+/// - Note: All methods are safe to call from any thread. If haptics are disabled in settings, methods return immediately without effect.
+/// - Important: The user preference is stored in `UserDefaults` with key "hapticsEnabled" (defaults to `true`).
 final class HapticsManager {
     static let shared = HapticsManager()
     private init() {}

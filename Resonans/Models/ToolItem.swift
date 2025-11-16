@@ -1,5 +1,21 @@
 import SwiftUI
 
+/// Represents a tool available in the app with display metadata.
+///
+/// `ToolItem` contains all the information needed to display and identify a tool:
+/// - Unique identifier (``ToolIdentifier``)
+/// - Display title and subtitle
+/// - Icon name (SF Symbol)
+/// - Gradient colors for the icon background (hex strings)
+/// - Beta and favorite flags
+///
+/// - Note: Tool items are typically created through the ``ToolIdentifier`` enum's `tool` property.
+///
+/// Example:
+/// ```swift
+/// let tool = ToolIdentifier.audioExtractor.tool
+/// print(tool.title) // "Extractor"
+/// ```
 struct ToolItem: Identifiable {
     let id: ToolIdentifier
     let title: String
@@ -10,6 +26,27 @@ struct ToolItem: Identifiable {
     let favorite: Bool
 }
 
+/// Identifies available tools in the app and provides their configuration.
+///
+/// `ToolIdentifier` is used as a stable identifier for tools throughout the app.
+/// Each case provides:
+/// - A unique raw string value for persistence
+/// - A configured ``ToolItem`` with display metadata
+/// - A SwiftUI view destination for navigation
+///
+/// Example usage:
+/// ```swift
+/// // Get tool metadata
+/// let tool = ToolIdentifier.audioExtractor.tool
+///
+/// // Navigate to tool
+/// NavigationLink(destination: ToolIdentifier.audioExtractor.destination) {
+///     Text(tool.title)
+/// }
+///
+/// // Store as preference
+/// @AppStorage("favoriteTools") private var favoriteIds: Set<ToolIdentifier>
+/// ```
 enum ToolIdentifier: String, Hashable {
     case audioExtractor
     case bgRemover

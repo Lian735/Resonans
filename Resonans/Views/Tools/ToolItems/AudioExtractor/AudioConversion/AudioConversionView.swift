@@ -837,6 +837,19 @@ private struct PlayerRepresentable: UIViewRepresentable {
     }
 }
 
+/// A SwiftUI wrapper for `UIDocumentPickerViewController` in export mode.
+///
+/// `ExportPicker` presents the system document picker to allow the user to save a file
+/// to a location of their choosing (Files app, iCloud Drive, etc.).
+///
+/// Example usage:
+/// ```swift
+/// .sheet(isPresented: $showExportPicker) {
+///     ExportPicker(url: audioFileURL)
+/// }
+/// ```
+///
+/// - Parameter url: The URL of the file to export
 struct ExportPicker: UIViewControllerRepresentable {
     let url: URL
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
@@ -867,6 +880,19 @@ private struct AccessibilityHintIfNeeded: ViewModifier {
          .preferredColorScheme(.dark)
  }
 
+/// A SwiftUI wrapper for `UIVisualEffectView` providing blur effects.
+///
+/// `VisualEffectBlur` applies a native iOS blur effect to its background using `UIBlurEffect`.
+///
+/// Example usage:
+/// ```swift
+/// ZStack {
+///     Color.blue
+///     VisualEffectBlur(blurStyle: .systemMaterial)
+/// }
+/// ```
+///
+/// - Parameter blurStyle: The ``UIBlurEffect.Style`` to apply (e.g., `.systemMaterial`, `.regular`, `.prominent`)
 struct VisualEffectBlur: UIViewRepresentable {
     var blurStyle: UIBlurEffect.Style
     func makeUIView(context: Context) -> UIVisualEffectView {

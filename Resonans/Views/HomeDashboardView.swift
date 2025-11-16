@@ -1,5 +1,31 @@
 import SwiftUI
 
+/// The home dashboard displaying favorites, recent tools, and quick actions.
+///
+/// `HomeDashboardView` is the first screen users see when opening the app. It features:
+/// - Welcome message with app version
+/// - Quick action button to browse tools
+/// - Favorites section showing pinned tools
+/// - Recently used section showing tool history
+///
+/// The view provides direct navigation to tools through tappable cards and maintains state
+/// through the injected ``ContentViewModel``.
+///
+/// Example usage:
+/// ```swift
+/// HomeDashboardView(
+///     accent: .purple,
+///     primary: .primary
+/// )
+/// .environmentObject(contentViewModel)
+/// ```
+///
+/// - Parameters:
+///   - accent: The ``AccentColorOption`` for theming gradient backgrounds
+///   - primary: The primary text color
+///
+/// - Important: Requires a ``ContentViewModel`` to be provided via `@EnvironmentObject`.
+/// - Note: Uses shimmer effects and animated gradients for visual appeal.
 struct HomeDashboardView: View {
 
     let accent: AccentColorOption

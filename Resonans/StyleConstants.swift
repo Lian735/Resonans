@@ -1,5 +1,26 @@
 import SwiftUI
 
+/// Centralized style constants and utility functions for consistent UI theming.
+///
+/// `AppStyle` provides:
+/// - **Corner Radius**: Standard values for cards, icons, and UI elements
+/// - **Padding**: Consistent spacing values for layouts
+/// - **Opacity**: Default opacity values for fills, strokes, and shadows
+/// - **Colors**: Helper functions for theme-aware colors
+///
+/// Use these constants throughout the app to maintain visual consistency.
+///
+/// Example usage:
+/// ```swift
+/// RoundedRectangle(cornerRadius: AppStyle.cornerRadius)
+///     .fill(.primary.opacity(AppStyle.cardFillOpacity))
+///     .padding(.horizontal, AppStyle.horizontalPadding)
+///
+/// let backgroundColor = AppStyle.background(for: colorScheme)
+/// ```
+///
+/// - Note: Most constants are `CGFloat` for layout values and `Double` for opacity values.
+/// - Important: Color functions require a ``ColorScheme`` parameter to adapt to light/dark mode.
 enum AppStyle {
     /// Standard corner radius used throughout the app
     static let cornerRadius: CGFloat = 33

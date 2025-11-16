@@ -2,6 +2,12 @@ import AVFoundation
 import Foundation
 import LAME
 
+/// Supported audio export formats for video-to-audio conversion.
+///
+/// Each format has different characteristics:
+/// - ``m4a``: AAC-encoded format with good compression and quality
+/// - ``wav``: Uncompressed PCM format with highest quality but largest file size
+/// - ``mp3``: MPEG Layer 3 format with excellent compression and wide compatibility
 enum AudioFormat: String, CaseIterable {
     case m4a = "M4A"
     case wav = "WAV"
@@ -16,6 +22,39 @@ enum AudioFormat: String, CaseIterable {
     }
 }
 
+/// Converts video files to audio files in various formats (M4A, WAV, MP3).
+///
+/// `VideoToAudioConverter` extracts audio tracks from video files and exports them in the specified format.
+/// It supports real-time progress reporting and handles multiple audio formats with appropriate quality settings.
+///
+/// The converter uses:
+/// - `AVFoundation` for M4A and WAV exports
+/// - LAME library for MP3 encoding (via intermediate WAV conversion)
+///
+/// Example usage:
+/// ```swift
+/// let converter = VideoToAudioConverter()
+/// converter.convert(
+///     videoURL: videoFileURL,
+///     format: .mp3,
+///     bitrate: 192,
+///     progress: { value in
+///         print("Progress: \(Int(value * 100))%")
+///     },
+///     completion: { result in
+///         switch result {
+///         case .success(let audioURL):
+///             print("Audio saved to: \(audioURL)")
+///         case .failure(let error):
+///             print("Conversion failed: \(error)")
+///         }
+///     }
+/// )
+/// ```
+///
+/// - Important: All callbacks (progress and completion) are dispatched to the main queue.
+/// - Note: MP3 conversion uses two-stage process: video → WAV → MP3
+/// - Note: Temporary files are automatically cleaned up after MP3 encoding
 final class VideoToAudioConverter {
     private final class MediaExportContext: @unchecked Sendable {
         let reader: AVAssetReader
@@ -66,6 +105,22 @@ final class VideoToAudioConverter {
 
     // MARK: - Public API
 
+    /// Converts a video file to an audio file in the specified format.
+    ///
+    /// The method extracts the audio track from the video and exports it to a temporary directory
+    /// with the specified format and quality settings.
+    ///
+    /// - Parameters:
+    ///   - videoURL: The URL of the source video file
+    ///   - format: The desired output audio format (``AudioFormat``)
+    ///   - bitrate: The target bitrate in kbps (minimum 64, only applies to M4A and MP3)
+    ///   - progress: A closure called periodically with conversion progress (0.0 to 1.0). Called on main queue.
+    ///   - completion: A closure called when conversion completes or fails. Called on main queue.
+    ///     - On success: Returns the URL of the converted audio file in the temporary directory
+    ///     - On failure: Returns an error describing what went wrong
+    ///
+    /// - Note: The output file is created in the system's temporary directory with a name based on the input filename.
+    /// - Important: For WAV format, the bitrate parameter is ignored as WAV uses uncompressed PCM.
     func convert(
         videoURL: URL,
         format: AudioFormat,

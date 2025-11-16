@@ -1,5 +1,26 @@
 import SwiftUI
 
+/// The settings view providing app configuration and preferences.
+///
+/// `SettingsView` offers several sections:
+/// - **Appearance**: Theme selection (light/dark/system) and accent color picker
+/// - **Other**: Haptics and sounds toggles, experimental features, cache clearing
+/// - **Experimental**: Advanced features (glass effects, etc.) when enabled
+/// - **About**: App version and feedback options
+///
+/// All settings are persisted using `@AppStorage` and applied immediately when changed.
+///
+/// Example usage:
+/// ```swift
+/// NavigationStack {
+///     SettingsView()
+///         .environmentObject(contentViewModel)
+/// }
+/// ```
+///
+/// - Important: Requires a ``ContentViewModel`` to be provided via `@EnvironmentObject`.
+/// - Note: The toolbar includes a button to re-show the onboarding flow.
+/// - Note: Uses ``HapticsManager`` for tactile feedback on setting changes.
 struct SettingsView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
     @AppStorage(AppStorageKey.Settings.appearance) private var appearanceRaw = Appearance.system.rawValue

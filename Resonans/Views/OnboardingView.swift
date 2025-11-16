@@ -1,6 +1,40 @@
 import SwiftUI
 
+/// A multi-step onboarding flow introducing new users to the app.
+///
+/// `OnboardingFlowView` presents a paginated onboarding experience with three steps:
+/// 1. **Introduction**: App overview and basic tips
+/// 2. **Favorites**: Tool selection for the home screen
+/// 3. **Workflow**: Workflow preference and guided tips toggle
+///
+/// The view collects user preferences and returns them via the completion handler:
+/// - Selected favorite tools (defaults to first tool if none selected)
+/// - Whether to show guided tips
+///
+/// Example usage:
+/// ```swift
+/// .fullScreenCover(isPresented: $showOnboarding) {
+///     OnboardingFlowView(
+///         accent: accentColor,
+///         primary: .primary
+///     ) { favorites, showTips in
+///         saveFavorites(favorites)
+///         userDefaults.set(showTips, forKey: "showTips")
+///     }
+/// }
+/// ```
+///
+/// - Parameters:
+///   - accent: The accent color for theming
+///   - primary: The primary text color
+///   - onComplete: Closure called when onboarding finishes or is skipped, passing selected favorites and tips preference
+///
+/// - Note: Users can skip onboarding at any time using the "Skip" button.
+/// - Important: Uses ``HapticsManager`` for tactile feedback during navigation.
 struct OnboardingFlowView: View {
+    /// Predefined workflow scenarios presented during onboarding.
+    ///
+    /// Each workflow provides context-specific descriptions to help users understand how to use the app.
     enum WorkflowOption: String, CaseIterable, Identifiable {
         case contentCreator = "Content creator"
         case lecture = "Lecture notes"

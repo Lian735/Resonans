@@ -1,5 +1,27 @@
 import SwiftUI
 
+/// The root view of the app containing the main tab bar navigation.
+///
+/// `ContentView` manages:
+/// - Tab-based navigation between Home, Tools, and Settings
+/// - Onboarding flow presentation for first-time users
+/// - Theme application (accent color and appearance)
+///
+/// The view consists of three tabs:
+/// - **Home**: ``HomeDashboardView`` with favorites and recent tools
+/// - **Tools**: ``ToolsView`` with searchable tool catalog
+/// - **Settings**: ``SettingsView`` for app configuration
+///
+/// On first launch (when `hasCompletedOnboarding` is false), the onboarding flow is automatically presented.
+///
+/// Example usage:
+/// ```swift
+/// ContentView()
+///     .environmentObject(ContentViewModel())
+/// ```
+///
+/// - Important: Requires a ``ContentViewModel`` to be provided via `@EnvironmentObject`.
+/// - Note: Uses `@AppStorage` to persist user preferences for accent color, appearance, and onboarding status.
 struct ContentView: View {
     @EnvironmentObject private var viewModel: ContentViewModel
     

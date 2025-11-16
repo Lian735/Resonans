@@ -2,6 +2,25 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
+/// A SwiftUI wrapper for `PHPickerViewController` to select media from the photo library.
+///
+/// `PhotoLibraryPicker` presents the system photo picker configured with custom settings.
+/// It supports selecting videos, images, and live photos with automatic conversion to temporary file URLs.
+///
+/// Example usage:
+/// ```swift
+/// .sheet(isPresented: $showPhotoPicker) {
+///     PhotoLibraryPicker(
+///         config: .init(filter: .videos) { urls in
+///             print("Selected \(urls.count) videos")
+///             // Process the video URLs
+///         }
+///     )
+/// }
+/// ```
+///
+/// - Note: All selected media is copied to the app's temporary directory.
+/// - Important: The picker automatically handles different media types (videos, images, live photos).
 struct PhotoLibraryPicker: UIViewControllerRepresentable {
     let config: Config
     func makeCoordinator() -> Coordinator {
@@ -112,6 +131,17 @@ extension PhotoLibraryPicker {
 
 // MARK: - Config
 extension PhotoLibraryPicker {
+    /// Configuration for ``PhotoLibraryPicker`` including selection limits, filters, and completion handler.
+    ///
+    /// Example:
+    /// ```swift
+    /// let config = PhotoLibraryPicker.Config(
+    ///     selectionLimit: 5,
+    ///     filter: .any(of: [.images, .videos])
+    /// ) { urls in
+    ///     print("Selected \(urls.count) items")
+    /// }
+    /// ```
     struct Config {
         let selectionLimit: Int
         let filter: PHPickerFilter?

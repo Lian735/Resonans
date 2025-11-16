@@ -1,6 +1,31 @@
 import SwiftUI
 import PhotosUI
 
+/// The main view for the Audio Extractor tool.
+///
+/// `AudioExtractorView` provides a full-screen interface for extracting audio from video files.
+/// It displays:
+/// - Header section with tool title and description
+/// - Source selection options (Files, Library)
+/// - History section showing recent conversions
+///
+/// The view manages multiple sheet presentations for:
+/// - File picker (``FilePicker``)
+/// - Photo library picker (``PhotoLibraryPicker``)
+/// - Audio conversion interface (``AudioConversionView``)
+/// - Export picker (``ExportPicker``)
+///
+/// The view automatically reloads recent conversions when notified via ``NotificationCenter``.
+///
+/// Example usage:
+/// ```swift
+/// AudioExtractorView(
+///     viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared)
+/// )
+/// ```
+///
+/// - Important: Uses ``HapticsManager`` for tactile feedback on user interactions.
+/// - Note: The background features an animated gradient based on the selected accent color.
 struct AudioExtractorView: View {
     @StateObject var viewModel: AudioExtractorViewModel
     @State private var showAllRecents = false
@@ -204,6 +229,13 @@ struct AudioExtractorView: View {
 
 // MARK: - Sheet Handler
 extension AudioExtractorView {
+    /// Identifies which sheet is currently being presented in ``AudioExtractorView``.
+    ///
+    /// Cases:
+    /// - ``photoPicker``: Shows the photo library picker
+    /// - ``filePicker``: Shows the file picker
+    /// - ``recents``: Shows the export picker for a recent conversion
+    /// - ``conversion``: Shows the audio conversion interface for a selected video
     enum ActiveSheet: Identifiable {
         case photoPicker, filePicker, recents(URL), conversion(URL)
         var id: String { String(describing: self) }

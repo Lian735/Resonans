@@ -1,5 +1,26 @@
 import SwiftUI
 
+/// A row view displaying a recent audio conversion with share and save actions.
+///
+/// `RecentRow` shows:
+/// - An icon with waveform symbol
+/// - Title and duration text
+/// - Share button (using system share sheet)
+/// - Save button (opens export picker)
+///
+/// The row uses ``AppStyle`` constants for consistent styling and adapts to the current color scheme.
+///
+/// Example usage:
+/// ```swift
+/// RecentRow(item: recentItem) { item in
+///     // Handle save action
+///     presentExportPicker(for: item.fileURL)
+/// }
+/// ```
+///
+/// - Parameters:
+///   - item: The ``RecentItem`` to display
+///   - onSave: Closure called when the save button is tapped
 struct RecentRow: View {
     let item: RecentItem
     let onSave: (RecentItem) -> Void
