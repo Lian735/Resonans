@@ -1,5 +1,39 @@
 import Foundation
 
+/// Manages application caching including exports directory, recent tools, and recent conversions.
+///
+/// `CacheManager` is a singleton that handles:
+/// - Storage and retrieval of exported audio files
+/// - Tracking of recently used tools
+/// - Tracking of recent conversions with automatic cleanup
+/// - Network cache management
+///
+/// The manager uses a dedicated cache directory structure:
+/// - `baseDirectory`: Main cache directory (`com.resonans.cache`)
+/// - `exportsDirectory`: Subdirectory for exported audio files
+/// - `recentToolsURL`: JSON file storing recent tool identifiers
+/// - `recentConversionsURL`: JSON file storing recent conversion metadata
+///
+/// All operations are thread-safe and can be called from any queue.
+///
+/// Example usage:
+/// ```swift
+/// // Clear all cached data
+/// CacheManager.shared.clear()
+///
+/// // Save recent tools
+/// CacheManager.shared.saveRecentTools([.audioExtractor, .bgRemover])
+///
+/// // Record a conversion
+/// try CacheManager.shared.recordConversion(
+///     title: "My Video",
+///     duration: "5:30",
+///     tempURL: audioFileURL
+/// )
+/// ```
+///
+/// - Important: The manager automatically cleans up old conversions and missing files.
+/// - Note: Uses ``NotificationCenter`` to broadcast updates via `.recentConversionsDidUpdate`.
 final class CacheManager {
     static let shared = CacheManager()
 
@@ -36,6 +70,11 @@ final class CacheManager {
 
     // MARK: - Recent tools
 
+    /// Loads the list of recently used tools from persistent storage.
+    ///
+    /// If the stored data is corrupted or invalid, the file is automatically removed and an empty array is returned.
+    ///
+    /// - Returns: An array of ``ToolIdentifier`` representing recently used tools, ordered from most to least recent.
     func loadRecentTools() -> [ToolIdentifier] {
         guard let data = try? Data(contentsOf: recentToolsURL) else { return [] }
         guard let rawIDs = try? decoder.decode([String].self, from: data) else {
@@ -45,6 +84,11 @@ final class CacheManager {
         return rawIDs.compactMap { ToolIdentifier(rawValue: $0) }
     }
 
+    /// Saves the list of recently used tools to persistent storage.
+    ///
+    /// The list is automatically trimmed to the maximum allowed number of recent tools (currently 6).
+    ///
+    /// - Parameter identifiers: An array of ``ToolIdentifier`` to save, ordered from most to least recent.
     func saveRecentTools(_ identifiers: [ToolIdentifier]) {
         let trimmed = Array(identifiers.prefix(maxRecentTools))
         let raw = trimmed.map { $0.rawValue }
@@ -54,6 +98,12 @@ final class CacheManager {
 
     // MARK: - Recent conversions
 
+    /// Loads the list of recent audio conversions from persistent storage.
+    ///
+    /// This method automatically validates that all referenced files still exist on disk.
+    /// Missing files are filtered out and the list is updated in storage.
+    ///
+    /// - Returns: An array of ``RecentItem`` representing recent conversions with valid file paths.
     func loadRecentConversions() -> [RecentItem] {
         guard let data = try? Data(contentsOf: recentConversionsURL) else { return [] }
         guard let decoded = try? decoder.decode([RecentItem].self, from: data) else {
@@ -68,6 +118,25 @@ final class CacheManager {
         return existing
     }
 
+    /// Records a new audio conversion by moving the file to the exports directory and updating recent conversions.
+    ///
+    /// This method:
+    /// 1. Creates a unique filename in the exports directory to avoid conflicts
+    /// 2. Moves the file from the temporary location to the exports directory
+    /// 3. Creates a ``RecentItem`` with the provided metadata
+    /// 4. Updates the recent conversions list, removing duplicates and old entries
+    /// 5. Posts a notification to ``NSNotification.Name.recentConversionsDidUpdate``
+    ///
+    /// The maximum number of recent conversions is 10. Older entries are automatically deleted from disk.
+    ///
+    /// - Parameters:
+    ///   - title: The display title for the conversion
+    ///   - duration: The duration string (e.g., "5:30")
+    ///   - tempURL: The temporary file URL of the audio file to be moved
+    ///
+    /// - Returns: The newly created ``RecentItem`` representing the recorded conversion
+    ///
+    /// - Throws: An error if file operations fail (directory creation, file move, etc.)
     @discardableResult
     func recordConversion(title: String, duration: String, tempURL: URL) throws -> RecentItem {
         createDirectoriesIfNeeded()

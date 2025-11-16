@@ -1,5 +1,30 @@
 import SwiftUI
 
+/// A searchable catalog view displaying all available tools in the app.
+///
+/// `ToolsView` presents all tools in a scrollable list with:
+/// - Search functionality to filter tools by title
+/// - Automatic sorting (favorites first, then alphabetically)
+/// - Optional glass effect container on iOS 26+
+/// - Tool overview cards with favorite toggle
+///
+/// The view responds to changes in favorite tools with smooth animations.
+///
+/// Example usage:
+/// ```swift
+/// ToolsView(
+///     accent: .purple,
+///     primary: .primary
+/// )
+/// .environmentObject(contentViewModel)
+/// ```
+///
+/// - Parameters:
+///   - accent: The ``AccentColorOption`` for theming
+///   - primary: The primary text color
+///
+/// - Important: Requires a ``ContentViewModel`` to be provided via `@EnvironmentObject`.
+/// - Note: Uses `@Namespace` for matched geometry effects in animations.
 struct ToolsView: View {
     let accent: AccentColorOption
     let primary: Color
