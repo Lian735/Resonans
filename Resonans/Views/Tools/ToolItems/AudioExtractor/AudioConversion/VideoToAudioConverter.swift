@@ -2,6 +2,7 @@ import AVFoundation
 import Foundation
 import LAME
 
+/// Supported output formats for audio extraction.
 enum AudioFormat: String, CaseIterable {
     case m4a = "M4A"
     case wav = "WAV"
@@ -16,6 +17,7 @@ enum AudioFormat: String, CaseIterable {
     }
 }
 
+/// Converts video files to various audio formats while reporting progress.
 final class VideoToAudioConverter {
     private final class MediaExportContext: @unchecked Sendable {
         let reader: AVAssetReader

@@ -8,8 +8,11 @@
 import AVFoundation
 import SwiftUI
 
+/// Wraps an `AVCaptureSession` for display inside SwiftUI views.
 public struct CameraPreview: UIViewRepresentable {
+    /// Capture session providing the video feed.
     let session: AVCaptureSession
+    /// Controls how the video is scaled within the preview layer.
     let videoGravity: AVLayerVideoGravity
     
     public init(
@@ -30,6 +33,7 @@ public struct CameraPreview: UIViewRepresentable {
     public func updateUIView(_ uiView: UIView, context: Context) { }
 }
 
+/// UIView subclass that exposes its backing `AVCaptureVideoPreviewLayer`.
 private class CameraContainer: UIView {
     public override class var layerClass: AnyClass {
         AVCaptureVideoPreviewLayer.self

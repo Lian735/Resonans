@@ -2,7 +2,9 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
+/// Presents a `PHPickerViewController` to select photos and videos.
 struct PhotoLibraryPicker: UIViewControllerRepresentable {
+    /// Configuration describing selection limits, filters, and completion handler.
     let config: Config
     func makeCoordinator() -> Coordinator {
         Coordinator(config: config)
@@ -84,6 +86,7 @@ extension PhotoLibraryPicker {
         }
         
         // MARK: - Helpers
+        /// Copies the selected file to a temporary URL so it remains accessible.
         private func copyToTemporary(url: URL) -> URL? {
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(url.lastPathComponent)
             try? FileManager.default.removeItem(at: tempURL)
@@ -96,6 +99,7 @@ extension PhotoLibraryPicker {
             }
         }
         
+        /// Saves a `UIImage` as PNG into a temporary file and returns its URL.
         private func saveImageToTemporaryFile(_ image: UIImage) -> URL? {
             guard let data = image.pngData() else { return nil }
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".png")

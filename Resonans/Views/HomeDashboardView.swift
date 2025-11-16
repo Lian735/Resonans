@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Home screen highlighting onboarding actions, favorites, and recent tools.
 struct HomeDashboardView: View {
 
     let accent: AccentColorOption

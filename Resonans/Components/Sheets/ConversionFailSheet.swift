@@ -7,10 +7,15 @@
 
 import SwiftUI
 
+/// Presents an error sheet when a media conversion fails.
 struct ConversionFailSheet: View {
+    /// Accent color used for buttons and highlights.
     let accentColor: Color
+    /// Primary text color that adapts to the current theme.
     let primaryColor: Color
+    /// Callback invoked when the user wants to retry.
     let onRetry: () -> Void
+    /// Callback invoked when the user dismisses the sheet.
     let onDone: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -138,6 +143,7 @@ struct ConversionFailSheet: View {
     }
 
     // MARK: - Helpers
+    /// Builds the stylized capsule button label used across actions.
     private func capsuleLabel(title: String, systemImage: String, foreground: Color) -> some View {
         HStack {
             Spacer()
@@ -148,6 +154,7 @@ struct ConversionFailSheet: View {
         .padding(.vertical, 14)
     }
 
+    /// Drives the sequential halo and symbol animation.
     private func startAnimation() {
         animateError = false
         showHalo = false
@@ -168,6 +175,7 @@ struct ConversionFailSheet: View {
         }
     }
 
+    /// Handles retry taps with a haptic selection callback.
     private func handleRetryTapped() {
         HapticsManager.shared.selection()
         onRetry()

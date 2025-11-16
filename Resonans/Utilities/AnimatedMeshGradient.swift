@@ -7,6 +7,7 @@ import CoreGraphics
 //  Created by Lian on 07.11.25.
 //
 
+/// Animated mesh gradient used for decorative backgrounds.
 struct AnimatedMeshGradient: View {
     // Tunable parameters
     private let period: TimeInterval = 12 // slower, smoother loop

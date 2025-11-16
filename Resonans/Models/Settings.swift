@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Represents the app's appearance override options.
 enum Appearance: String, CaseIterable, Identifiable {
     case light
     case dark
@@ -7,6 +8,7 @@ enum Appearance: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Human-readable text used in settings pickers.
     var label: String {
         switch self {
         case .light: return "Light"
@@ -15,6 +17,7 @@ enum Appearance: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Maps the selection to an optional SwiftUI `ColorScheme` override.
     var colorScheme: ColorScheme? {
         switch self {
         case .light: return .light
@@ -24,6 +27,7 @@ enum Appearance: String, CaseIterable, Identifiable {
     }
 }
 
+/// Enumerates accent color choices exposed to the user.
 enum AccentColorOption: String, CaseIterable, Identifiable {
     case blue
     case green
@@ -34,6 +38,7 @@ enum AccentColorOption: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Materializes the concrete `Color` for the option.
     var color: Color {
         switch self {
         case .blue: return .blue
@@ -45,6 +50,7 @@ enum AccentColorOption: String, CaseIterable, Identifiable {
         }
     }
 
+    /// A softer variant of the accent color for backgrounds and gradients.
     var gradient: Color {
         color.opacity(0.25)
     }

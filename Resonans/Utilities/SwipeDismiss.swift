@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+/// Adds a downward drag gesture to dismiss a presented view.
 struct SwipeToDismiss: ViewModifier {
     @Binding var isPresented: Bool
     @State var verticalDragAmount = 0.0

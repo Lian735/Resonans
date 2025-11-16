@@ -9,6 +9,7 @@ import SwiftUI
 
 // Shimmer Effect Custom View Modifier
 extension View {
+    /// Applies a configurable shimmer overlay to any view.
     @ViewBuilder
     func shimmer(_ config: ShimmerConfig) -> some View {
         self.modifier(ShimmerEffectHelper(config: config))
@@ -84,6 +85,7 @@ fileprivate struct ShimmerEffectHelper: ViewModifier {
 }
 
 // Shimmer Config
+/// Configuration for the shimmer overlay effect.
 struct ShimmerConfig {
     var tint: Color
     var highlight: Color
