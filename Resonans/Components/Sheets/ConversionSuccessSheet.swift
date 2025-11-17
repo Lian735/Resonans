@@ -92,30 +92,29 @@ struct ConversionSuccessSheet: View {
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
 
+    @ViewBuilder
     private var actionButtons: some View {
         VStack(spacing: 14) {
             Button(action: handleSaveTapped) {
-                capsuleLabel(
-                    title: "Save to Files",
-                    systemImage: "tray.and.arrow.down",
-                    foreground: colorScheme == .dark ? .black : .white
-                )
-                .background(accentColor)
-                .clipShape(Capsule())
+                Label("Save to Files", systemImage: "tray.and.arrow.down")
+                    .frame(maxWidth: .infinity)
+                    .typography(.titleSmall, color: .primary, design: .rounded)
+                    .padding(.vertical, 14)
+                    .background(accentColor)
+                    .clipShape(Capsule())
             }
             .buttonStyle(.plain)
 
             ShareLink(item: exportURL) {
-                capsuleLabel(
-                    title: "Share",
-                    systemImage: "square.and.arrow.up",
-                    foreground: accentColor
-                )
-                .background(
-                    Capsule()
-                        .stroke(accentColor.opacity(0.35), lineWidth: 1)
-                        .fill(accentColor.opacity(0.07))
-                )
+                Label("Share", systemImage: "square.and.arrow.up")
+                    .frame(maxWidth: .infinity)
+                    .typography(.titleSmall, color: accentColor, design: .rounded)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .stroke(accentColor.opacity(0.35), lineWidth: 1)
+                            .fill(accentColor.opacity(0.07))
+                    )
             }
             .simultaneousGesture(TapGesture().onEnded { HapticsManager.shared.selection() })
         }
@@ -131,16 +130,6 @@ struct ConversionSuccessSheet: View {
             endPoint: .bottom
         )
         .ignoresSafeArea()
-    }
-
-    private func capsuleLabel(title: String, systemImage: String, foreground: Color) -> some View {
-        HStack {
-            Spacer()
-            Label(title, systemImage: systemImage)
-                .typography(.titleSmall, color: foreground, design: .rounded)
-            Spacer()
-        }
-        .padding(.vertical, 14)
     }
 
     private func startAnimation() {
