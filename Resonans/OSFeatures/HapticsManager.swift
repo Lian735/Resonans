@@ -33,7 +33,7 @@ final class HapticsManager {
 
     /// Triggers a haptic feedback if the user enabled vibrations in settings.
     /// - Parameter style: The impact style to use. Defaults to `.light`.
-    func pulse(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light) {
+    func pulse(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .soft) {
         guard hapticsEnabled else { return }
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.prepare()

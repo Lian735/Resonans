@@ -57,39 +57,63 @@ struct SettingsView: View {
     @AppStorage("Interactive Glass activated") private var interactiveGlassActivated: Bool = false
     @AppStorage("Reduce Transparency activated") private var reduceTransparencyActivated: Bool = true
 
+    @State private var headerIsShown = false
     
     var body: some View {
         NavigationStack{
             ScrollView {
                 VStack(spacing: 24) {
+                    Spacer()
                     appearanceSection
+                        .scrollTransition(.animated) { content, phase in
+                            content
+                                .opacity(phase.isIdentity ? 1 : 0.3)
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                                .blur(radius: phase.isIdentity ? 0 : 1)
+                        }
                     otherSection
+                        .scrollTransition(.animated) { content, phase in
+                            content
+                                .opacity(phase.isIdentity ? 1 : 0.3)
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                                .blur(radius: phase.isIdentity ? 0 : 1)
+                        }
                     experimentalSection
+                        .scrollTransition(.animated) { content, phase in
+                            content
+                                .opacity(phase.isIdentity ? 1 : 0.3)
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                                .blur(radius: phase.isIdentity ? 0 : 1)
+                        }
                     aboutSection
+                        .scrollTransition(.animated) { content, phase in
+                            content
+                                .opacity(phase.isIdentity ? 1 : 0.3)
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                                .blur(radius: phase.isIdentity ? 0 : 1)
+                        }
                     Spacer(minLength: 120)
                 }
                 .padding(.bottom, AppStyle.innerPadding)
             }
             .background(
                 LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
+                    colors: [accent.gradient.opacity(0.7), .clear],
+                    startPoint: .bottomTrailing,
+                    endPoint: .top
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar(content: {
-                ToolbarItem(placement: .topBarTrailing, content: {
-                    Button {
-                        HapticsManager.shared.pulse()
-                        viewModel.showOnboarding = true
-                    } label: {
-                        Image(systemName: "questionmark")
-                    }
-                })
-            })
+            .safeAreaBar(edge: .top) {
+                HStack {
+                    Text("Settings")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .frame(height: 45)
+            }
             .animation(.bouncy, value: glassEffectActivated)
         }
     }
@@ -285,3 +309,4 @@ struct SettingsView: View {
         .background(Color.black)
         .preferredColorScheme(.dark)
 }
+

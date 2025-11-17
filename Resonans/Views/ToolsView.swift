@@ -36,6 +36,10 @@ struct ToolsView: View {
     
     @State private var searchText = ""
     
+    @State private var showSearch: Bool = false
+    
+    @FocusState private var isSearchFocused: Bool
+    
     private var filteredAndSortedTools: [ToolItem] {
         let favorites = viewModel.favoriteToolIds
         let filtered = viewModel.toolManager.tools.filter { tool in
@@ -55,18 +59,56 @@ struct ToolsView: View {
         NavigationStack{
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
-                    if #available(iOS 26, *){
-                        GlassEffectContainer{
-                            ForEach(filteredAndSortedTools) { tool in
-                                ToolOverview(tool: tool)
-                                    .environmentObject(viewModel)
+                    GlassEffectContainer {
+                        HStack {
+                            AppCard {
+                                HStack {
+                                    Image(systemName: "magnifyingglass")
+                                    TextField(
+                                        "Search Tools",
+                                        text: $searchText
+                                    )
+                                    .focused($isSearchFocused)
+                                    .onTapGesture {
+                                        showSearch = true
+                                    }
+                                    .onChange(of: isSearchFocused) { _, newValue in
+                                        showSearch = newValue
+                                        HapticsManager.shared.pulse()
+                                    }
+                                    Spacer()
+                                    if isSearchFocused {
+                                        Button {
+                                            searchText = ""
+                                            isSearchFocused = false
+                                            HapticsManager.shared.pulse()
+                                        } label: {
+                                            Image(systemName: "keyboard.chevron.compact.down.fill")
+                                                .tint(.white)
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }else{
+                    }
+                    .scrollTransition(.animated) { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0.3)
+                            .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                            .blur(radius: phase.isIdentity ? 0 : 1)
+                    }
+                    
+                    GlassEffectContainer {
                         ForEach(filteredAndSortedTools) { tool in
                             ToolOverview(tool: tool)
                                 .environmentObject(viewModel)
                         }
+                    }
+                    .scrollTransition(.animated) { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0.3)
+                            .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                            .blur(radius: phase.isIdentity ? 0 : 1)
                     }
                 }
                 .padding(.horizontal, AppStyle.horizontalPadding)
@@ -76,18 +118,24 @@ struct ToolsView: View {
                     value: viewModel.favoriteToolIds
                 )
             }
-            .padding(.top, -AppStyle.innerPadding)
             .background(
                 LinearGradient(
-                    colors: [accent.gradient, .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottom
+                    colors: [accent.gradient.opacity(0.7), .clear],
+                    startPoint: .bottomTrailing,
+                    endPoint: .top
                 )
                 .ignoresSafeArea()
-                .scaledToFill()
             )
-            .navigationTitle("Tools")
-            .searchable(text: $searchText)
+            .safeAreaBar(edge: .top) {
+                HStack {
+                    Text("Tools")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .frame(height: 45)
+            }
         }
     }
 }

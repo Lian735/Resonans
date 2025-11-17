@@ -89,9 +89,9 @@ struct AudioExtractorView: View {
         }
         .background(
             LinearGradient(
-                colors: [accent.gradient, .clear],
-                startPoint: .topLeading,
-                endPoint: .bottom
+                colors: [accent.gradient.opacity(0.7), .clear],
+                startPoint: .bottomTrailing,
+                endPoint: .top
             )
             .ignoresSafeArea()
         )

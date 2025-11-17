@@ -81,9 +81,9 @@ struct OnboardingFlowView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [accent.opacity(colorScheme == .dark ? 0.3 : 0.2), AppStyle.background(for: colorScheme)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [accent.opacity(0.3), .clear],
+                startPoint: .bottomTrailing,
+                endPoint: .top
             )
             .ignoresSafeArea()
 

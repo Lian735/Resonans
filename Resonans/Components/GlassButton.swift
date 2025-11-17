@@ -30,7 +30,11 @@ struct GlassButton<Label: View>: View {
                 SwiftUI.Button(action: action) {
                     label()
                 }
-                .buttonStyle(.glassProminent)
+                .background {
+                    Capsule()
+                        .glassEffect(.regular.interactive())
+                        .tint(Color(.secondaryLabel))
+                }
             }else{
                 SwiftUI.Button(action: action) {
                     label()

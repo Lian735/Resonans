@@ -14,7 +14,14 @@ struct EditorDetailView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 VStack {
-                    Divider()
+                    HStack {
+                        Text("Cinemator")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                        Spacer()
+                    }
+                    .navigationTitle("Cinemator")
+                    .padding()
                 }
                 
                 VStack {
