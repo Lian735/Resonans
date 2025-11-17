@@ -32,8 +32,8 @@ struct AudioConversionView: View {
     }
 
     private var originalFormatLabel: String {
-        let ext = viewModel.videoURL.pathExtension.uppercased()
-        return ext.isEmpty ? "UNKNOWN" : ext
+        let ext = viewModel.videoURL.pathExtension
+        return ext.isEmpty ? "UNKNOWN" : ".\(ext)"
     }
 
     private var clampedProgress: Double {
@@ -54,7 +54,10 @@ struct AudioConversionView: View {
                         accentColor: accent.color,
                         primaryColor: .primary,
                         onSave: { activeSheet = .exporter(exportUrl) },
-                        onDone: { activeSheet = nil }
+                        onDone: {
+                            activeSheet = nil
+                            dismiss()
+                        }
                     )
                 case .exporter(let exportUrl):
                     ExportPicker(url: exportUrl)
@@ -63,7 +66,10 @@ struct AudioConversionView: View {
                         accentColor: accent.color,
                         primaryColor: .primary,
                         onRetry: { },
-                        onDone: { activeSheet = nil }
+                        onDone: {
+                            activeSheet = nil
+                            dismiss()
+                        }
                     )
                 }
             }
@@ -106,7 +112,6 @@ struct AudioConversionView: View {
                 settingsSection
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
-            .padding(.bottom, 160)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -127,7 +132,7 @@ struct AudioConversionView: View {
 
             Spacer()
 
-            GlassButton(action: {
+            Button(action: {
                 HapticsManager.shared.selection()
                 dismiss()
             }) {
@@ -139,15 +144,12 @@ struct AudioConversionView: View {
                     )
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
-                            .fill(.primary.opacity(0.07))
-                    )
+                    .background(.primary.opacity(0.07))
+                    .clipShape(Capsule())
                     .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.compactCornerRadius, style: .continuous)
+                        Capsule()
                             .stroke(.primary.opacity(0.15), lineWidth: 1)
                     )
-                    .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
             }
         }
         .padding(.top, 18)
@@ -197,27 +199,27 @@ struct AudioConversionView: View {
     private var fileSizePanel: some View {
         settingsCard {
             Text("File Size")
-                .typography(.titleSmall, design: .rounded)
+                .typography(.titleLarge, design: .rounded)
 
             HStack(spacing: 16) {
                 Text("Original: \(viewModel.getVideoFileSize())")
                 Text("Estimated: \(viewModel.getEstimateExportFileSize())")
             }
-            .typography(.caption, color: .primary.opacity(0.8))
+            .typography(.body, color: .primary.opacity(0.8))
         }
     }
 
     private var formatPanel: some View {
         settingsCard {
             Text("Format")
-                .typography(.bodyBold, design: .rounded)
+                .typography(.titleLarge, design: .rounded)
 
             Text("Original: \(originalFormatLabel)")
-                .typography(.caption, color: .primary.opacity(0.8))
+                .typography(.body, color: .primary.opacity(0.8))
 
             HStack {
                 Text("When Exported:")
-                    .typography(.caption, color: .primary.opacity(0.8))
+                    .typography(.body, color: .primary.opacity(0.8))
 
                 Picker("", selection: $viewModel.selectedFormat) {
                     Text("mp3").tag(AudioFormat.mp3)
@@ -225,6 +227,12 @@ struct AudioConversionView: View {
                     Text("m4a").tag(AudioFormat.m4a)
                 }
                 .pickerStyle(.menu)
+            }
+            
+            HStack {
+                Text("File Name:")
+                    .typography(.body, color: .primary.opacity(0.8))
+                TextField("Enter here...", text: $viewModel.fileName)
             }
         }
     }
@@ -262,15 +270,19 @@ struct AudioConversionView: View {
     }
 
     private var advancedToggleButton: some View {
-        GlassButton(action: toggleAdvanced) {
-            Text(showAdvanced ? "Hide" : "More")
-                .typography(.bodyBold, design: .rounded)
-                .frame(maxWidth: .infinity)
+        Button(action: toggleAdvanced) {
+            HStack {
+                Text(showAdvanced ? "Hide" : "More")
+                    .typography(.bodyBold, design: .rounded)
+                Image(systemName: showAdvanced ? "chevron.up" : "chevron.down")
+                    .typography(.bodyBold, design: .rounded)
+            }
+            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(accent.color)
         .padding(.vertical, 8)
         .buttonStyle(.plain)
-        .animation(.spring(), value: showAdvanced)
+        .animation(.bouncy, value: showAdvanced)
     }
 
     private func settingsCard<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
@@ -359,7 +371,7 @@ struct AudioConversionView: View {
     }
 
     private var exportButton: some View {
-        GlassButton(action: convertToAudio) {
+        Button(action: convertToAudio) {
             HStack {
                 Spacer()
                 Text(isProcessing ? "Converting…" : "Convert")

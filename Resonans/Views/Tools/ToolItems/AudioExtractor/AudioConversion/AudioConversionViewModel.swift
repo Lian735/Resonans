@@ -17,6 +17,7 @@ final class AudioConversionViewModel: ObservableObject {
     @Published var audioSampleRate: Double = 0
     @Published var audioChannelCount: Int = 0
     @Published var audioStatus: AudioStatus = .initiate
+    @Published var fileName: String = ""
     private var debounceTask: Task<Void, Never>?
     var videoURL: URL = URL(fileURLWithPath: "")
     var exportUrl: String?
@@ -105,18 +106,14 @@ final class AudioConversionViewModel: ObservableObject {
             bitrate: targetBitrate,
             progress: { [weak self] value in
                 guard let self else { return }
-                debounceTask?.cancel()
-                debounceTask = Task { @MainActor in
-                    try? await Task.sleep(for: .seconds(0.5))
-                    self.audioStatus = .inprogress(value)
-                }
+                self.audioStatus = .inprogress(value)
             },
             completion: { [weak self] result in
                 guard let self else { return }
                 switch result {
                 case .success(let url):
                     self.audioStatus = .completed(url)
-                case .failure:
+                case .failure(_):
                     self.audioStatus = .failed
                 }
             }
@@ -125,7 +122,7 @@ final class AudioConversionViewModel: ObservableObject {
     
     func saveAudioToLocalFile(tempUrl: URL) -> URL? {
         do {
-            let fileName = videoURL.deletingPathExtension().lastPathComponent + ".\(selectedFormat.fileExtension)"
+            let fileName = (fileName.isEmpty ? "Extracted Audio" : fileName) + ".\(selectedFormat.fileExtension)"
             let data = try Data(contentsOf: tempUrl)
             // Add Files to FileStorage
             let savedUrl = try FileStorage.shared.saveFile(
@@ -135,8 +132,7 @@ final class AudioConversionViewModel: ObservableObject {
             )
             
             // Add recent history to with saved URL
-            let durationLabel = formatTime(audioDuration)
-            let metadataDict: [String: Any] = ["duration": durationLabel]
+            let metadataDict: [String: Any] = ["duration": audioDuration]
             let metadata = try JSONSerialization.data(withJSONObject: metadataDict, options: .prettyPrinted)
             let history = History(
                 title: fileName,
