@@ -56,6 +56,7 @@ enum AudioFormat: String, CaseIterable {
 /// - Note: MP3 conversion uses two-stage process: video → WAV → MP3
 /// - Note: Temporary files are automatically cleaned up after MP3 encoding
 final class VideoToAudioConverter {
+    var lastEmittedProgress: Double = 0.0
     private final class MediaExportContext: @unchecked Sendable {
         let reader: AVAssetReader
         let readerOutput: AVAssetReaderTrackOutput
@@ -228,11 +229,16 @@ final class VideoToAudioConverter {
                 completion(.failure(error))
             case .success:
                 do {
-                    try self.wavToMp3(wavURL: wavURL, mp3URL: mp3URL, bitrate: bitrate) { encodeProgress in
+                    try self.wavToMp3(wavURL: wavURL, mp3URL: mp3URL, bitrate: bitrate) { [weak self] encodeProgress in
+                        guard let self else { return }
                         let mapped = min(max(0.85 + (encodeProgress * 0.15), 0), 1)
-                        progress(mapped)
+                        
+                        // Check difference threshold, returning 2 decimal places difference for progress
+                        if abs(mapped - self.lastEmittedProgress) >= 0.01 {
+                            self.lastEmittedProgress = mapped
+                            progress(mapped)
+                        }
                     }
-                    progress(1)
                     completion(.success(mp3URL))
                 } catch {
                     completion(.failure(error))
