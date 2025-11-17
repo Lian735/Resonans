@@ -10,6 +10,10 @@ struct GlassButton<Label: View>: View {
     
     @AppStorage(AppStorageKey.Settings.glassEffectActivated) private var glassEffectActivated: Bool = true
     
+    @AppStorage("accentColor") private var accentRaw: String = AccentColorOption.purple.rawValue
+    
+    private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+    
     private let disableGlassEffect: Bool
     
     init(disableGlassEffect: Bool = false, action: @escaping () -> Void, label: @escaping () -> Label) {
@@ -29,12 +33,20 @@ struct GlassButton<Label: View>: View {
             if glassEffectActivated && !disableGlassEffect{
                 SwiftUI.Button(action: action) {
                     label()
+                        .foregroundStyle(Color(.label))
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 10)
                 }
                 .background {
                     Capsule()
-                        .glassEffect(.regular.interactive())
-                        .tint(Color(.secondaryLabel))
+                        .foregroundStyle(Color(accent.color))
+                        .opacity(0.5)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color(accent.color), lineWidth: 0.75)
+                        )
                 }
+                .glassEffect(.regular.interactive())
             }else{
                 SwiftUI.Button(action: action) {
                     label()
@@ -63,3 +75,4 @@ struct GlassButton<Label: View>: View {
     }
     return Preview()
 }
+
