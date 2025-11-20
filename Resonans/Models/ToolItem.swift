@@ -95,7 +95,7 @@ enum ToolIdentifier: String, Hashable {
         case .bgRemover:
             BgRemoverView(viewModel: BgRemoverViewModel())
         case .editor:
-            EditorView()
+            EditorDetailView()
         }
     }
 }
