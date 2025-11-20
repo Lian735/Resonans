@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct AudioHistoryViewData: Codable, Equatable {
+struct AudioHistory: Codable, Equatable {
     let id: UUID
     let title: String
     let createdAt: Date

@@ -24,3 +24,11 @@ final class ModelContainerProvider {
         }
     }
 }
+
+// MARK: - Mocking for SwiftUI Previews
+extension ModelContainer {
+    static func mock(for type: any PersistentModel.Type) -> ModelContainer {
+        let memoryContainer = try! ModelContainer(for: type.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        return memoryContainer
+    }
+}

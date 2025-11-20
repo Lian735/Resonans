@@ -27,3 +27,23 @@ class History {
         self.metadata = metadata
     }
 }
+
+//MARK: - Fetch Descriptor
+extension History {
+    static func allToolHistoriesDescriptor(_ toolId: ToolIdentifier) -> FetchDescriptor<History> {
+        let toolRawValue = toolId.rawValue
+        return FetchDescriptor(
+            predicate: #Predicate { history in
+                history.tool == toolRawValue
+            },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+    }
+}
+
+// MARK: - Mock
+extension History {
+    static func createMock(tool: ToolIdentifier, title: String, metadata: Data? = nil) -> History {
+        History(title: title, tool: tool.rawValue, fileUrl: URL(fileURLWithPath: ""), metadata: metadata)
+    }
+}

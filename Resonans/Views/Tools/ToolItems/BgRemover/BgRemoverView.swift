@@ -5,10 +5,12 @@
 //  Created by Kevin Dallian on 25/10/25.
 //
 
+import SwiftData
 import SwiftUI
 import PhotosUI
 
 struct BgRemoverView: View {
+    @Environment(\.modelContext) var modelContext
     @StateObject var viewModel: BgRemoverViewModel
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     @State var showAllRecents: Bool = false
@@ -29,11 +31,14 @@ struct BgRemoverView: View {
                 
                 VStack {
                     sourceSection
-                    
                     recentSection
                 }
                 .padding(.horizontal, 24)
             }
+        }
+        .onAppear {
+            viewModel.modelContext = modelContext
+            viewModel.fetchHistories()
         }
         .sheet(item: $viewModel.activeSheet) { type in
             switch type {
@@ -50,13 +55,15 @@ struct BgRemoverView: View {
             case .recents(let url):
                 ExportPicker(url: url)
             case .tool(let image):
-                RemoveBackgroundView(image: image)
+                RemoveBackgroundView(image: image, modelContext: modelContext)
             case .cameraNotAuthorized(let status):
                 AllowCameraSheet(status: status) { isAccept in
                     withAnimation(.spring(duration: 0.3)) {
                         viewModel.useFullScreenSheet = isAccept
                     }
                 }
+            case .filePreview(let url):
+                FilePreviewView(fileURL: url)
             }
         }
         .fullScreenCover(isPresented: $viewModel.useFullScreenSheet) {
@@ -121,29 +128,26 @@ struct BgRemoverView: View {
             
             AppCard {
                 VStack(spacing: 12) {
-                    if viewModel.recents.isEmpty {
+                    if viewModel.histories.isEmpty {
                         Text("No exports yet")
                             .typography(.titleSmall, color: .primary.opacity(0.7), design: .rounded)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 40)
                     } else {
                         let prefixCount = showAllRecents ? viewModel.recents.count : 3
-                        let recents = Array(viewModel.recents.prefix(prefixCount))
-
-                        ForEach(recents.indices, id: \.self) { index in
-                            let item = recents[index]
+                        let histories = Array(viewModel.histories.prefix(prefixCount))
+                        ForEach(histories.indices, id: \.self) { index in
+                            let history = histories[index]
                             VStack(spacing: 12) {
-                                RecentRow(item: item, onSave: viewModel.handleRecentExport)
-                                    .padding(.horizontal, 12)
-                                
-                                if index < recents.count - 1 {
+                                historyCard(history)
+                                if index < histories.count - 1 {
                                     Divider()
                                         .padding(.leading, 12)
                                 }
                             }
                         }
                         
-                        if viewModel.recents.count > 3 {
+                        if viewModel.histories.count > 3 {
                             GlassButton {
                                 HapticsManager.shared.pulse()
                                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -161,6 +165,64 @@ struct BgRemoverView: View {
                 .padding(.bottom, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+    }
+    
+    @ViewBuilder
+    private func historyCard(_ history: BgRemovalHistory) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                .fill(.primary.opacity(AppStyle.iconFillOpacity))
+                .frame(width: 48, height: 48)
+                .overlay(
+                    Image(systemName: "waveform")
+                        .typography(.titleMedium, color: .primary.opacity(0.9))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                        .stroke(.primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
+                )
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(history.title)
+                    .typography(.titleMedium, color: .primary, design: .rounded)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                HStack(alignment: .center, spacing: 6) {
+                    Text(history.createdAt.formatted(date: .abbreviated, time: .omitted))
+                        .typography(.caption, color: .primary)
+                }
+            }
+            Spacer()
+            if let url = history.fileUrl {
+                HStack(spacing: 18) {
+                    Button {
+                        viewModel.activeSheet = .filePreview(url)
+                    } label: {
+                        Image(systemName: "folder")
+                            .typography(.titleMedium, color: .primary.opacity(0.9))
+                    }
+                    optionMenu(id: history.id, url: url)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    @ViewBuilder
+    private func optionMenu(id: UUID, url: URL) -> some View {
+        Menu {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            Button {
+                viewModel.deleteHistory(id: id)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .typography(.titleMedium, color: .primary.opacity(0.9))
         }
     }
     
@@ -215,7 +277,14 @@ struct BgRemoverView: View {
 }
 
 #Preview {
-    NavigationStack {
+    let memoryContainer: ModelContainer = .mock(for: History.self)
+    let mockData: [History] = [
+        .createMock(tool: .bgRemover, title: "Background 1"),
+        .createMock(tool: .bgRemover, title: "Background 2")
+    ]
+    mockData.forEach { memoryContainer.mainContext.insert($0) }
+    return NavigationStack {
         BgRemoverView(viewModel: BgRemoverViewModel())
     }
+    .modelContainer(memoryContainer)
 }

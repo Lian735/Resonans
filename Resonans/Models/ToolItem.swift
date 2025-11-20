@@ -91,7 +91,7 @@ enum ToolIdentifier: String, Hashable {
     var destination: some View {
         switch self {
         case .audioExtractor:
-            AudioExtractorView(viewModel: AudioExtractorViewModel(cacheManager: CacheManager.shared))
+            AudioExtractorView(viewModel: AudioExtractorViewModel())
         case .bgRemover:
             BgRemoverView(viewModel: BgRemoverViewModel())
         case .editor:

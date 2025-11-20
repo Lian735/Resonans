@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RemoveBackgroundView: View {
     @StateObject var viewModel: RemoveBackgroundViewModel
@@ -16,8 +17,8 @@ struct RemoveBackgroundView: View {
     @State var activeSheet: ActiveSheet?
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
-    init(image: UIImage) {
-        self._viewModel = StateObject(wrappedValue: RemoveBackgroundViewModel(image: image))
+    init(image: UIImage, modelContext: ModelContext) {
+        self._viewModel = StateObject(wrappedValue: RemoveBackgroundViewModel(image: image, modelContext: modelContext))
     }
     
     var body: some View {
@@ -44,8 +45,8 @@ struct RemoveBackgroundView: View {
             }
         }
         .onChange(of: viewModel.outputImage) { _, newImage in
-            guard let newImage else { return }
-            activeSheet = .removeSuccess(image: newImage)
+            guard let newImage, let url = viewModel.fileUrl else { return }
+            activeSheet = .removeSuccess(image: newImage, fileUrl: url)
         }
         .sheet(item: $activeSheet) { type in
             switch type {
@@ -56,8 +57,8 @@ struct RemoveBackgroundView: View {
                     onRetry: {},
                     onDone: { activeSheet = nil }
                 )
-            case .removeSuccess(let image):
-                SuccessBackgroundRemovalView(image: image)
+            case .removeSuccess(let image, let fileUrl):
+                SuccessBackgroundRemovalView(image: image, fileUrl: fileUrl)
             }
         }
     }
@@ -106,7 +107,7 @@ struct RemoveBackgroundView: View {
 extension RemoveBackgroundView {
     enum ActiveSheet: Identifiable {
         case removeFailed(errorMessage: String)
-        case removeSuccess(image: UIImage)
+        case removeSuccess(image: UIImage, fileUrl: URL)
         var id: String { String(describing: self) }
     }
 }
@@ -114,13 +115,14 @@ extension RemoveBackgroundView {
 #Preview {
     struct Preview: View {
         @State var isShown: Bool = true
+        let modelContainer: ModelContainer = .mock(for: History.self)
         
         var body: some View {
             GlassButton("Show Sheet") {
                 isShown = true
             }
             .sheet(isPresented: $isShown) {
-                RemoveBackgroundView(image: .resonanslogo)
+                RemoveBackgroundView(image: .resonanslogo, modelContext: modelContainer.mainContext)
             }
         }
     }

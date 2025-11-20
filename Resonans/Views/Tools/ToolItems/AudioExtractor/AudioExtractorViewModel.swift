@@ -11,22 +11,16 @@ import SwiftData
 import SwiftUI
 
 final class AudioExtractorViewModel: ObservableObject {
-    @Published var histories: [AudioHistoryViewData] = []
-    let cacheManager: CacheManager
+    @Published var histories: [AudioHistory] = []
+    var modelContext: ModelContext?
     
-    init(cacheManager: CacheManager) {
-        self.cacheManager = cacheManager
-    }
-    
-    func getAudioHistories(modelContext: ModelContext) {
-        let toolRaw = ToolIdentifier.audioExtractor.rawValue
-        let descriptor = FetchDescriptor<History>(
-            predicate: #Predicate { history in
-                history.tool == toolRaw
-            },
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-        )
+    func getAudioHistories() {
+        guard let modelContext = modelContext else {
+            print("No ModelContext available")
+            return
+        }
         do {
+            let descriptor = History.allToolHistoriesDescriptor(ToolIdentifier.audioExtractor)
             let fetchedHistories = try modelContext.fetch(descriptor)
             let histories = fetchedHistories.compactMap { history in
                 var duration: Double?
@@ -34,7 +28,7 @@ final class AudioExtractorViewModel: ObservableObject {
                     let metadata = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
                     duration = metadata?["duration"] as? Double
                 }
-                return AudioHistoryViewData(
+                return AudioHistory(
                     id: history.id,
                     title: history.title,
                     createdAt: history.createdAt,
@@ -45,10 +39,12 @@ final class AudioExtractorViewModel: ObservableObject {
             self.histories = histories
         } catch let error {
             print("Error getting audio histories : \(error)")
+            self.histories = []
         }
     }
     
-    func deleteHistory(id: UUID, modelContext: ModelContext) {
+    func deleteHistory(id: UUID) {
+        guard let modelContext = modelContext else { return }
         guard let index = histories.firstIndex(where: { $0.id == id }) else { return }
         let historyToBeDeleted = histories[index]
         histories.remove(at: index)

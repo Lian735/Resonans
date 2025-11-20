@@ -59,7 +59,8 @@ struct AudioExtractorView: View {
             }
         }
         .onAppear {
-            viewModel.getAudioHistories(modelContext: modelContext)
+            viewModel.modelContext = modelContext
+            viewModel.getAudioHistories()
         }
         .background(.clear)
         .sheet(item: $activeSheet) { sheetType in
@@ -217,7 +218,7 @@ struct AudioExtractorView: View {
     }
     
     @ViewBuilder
-    private func historyCard(history: AudioHistoryViewData) -> some View {
+    private func historyCard(history: AudioHistory) -> some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
                 .fill(.primary.opacity(AppStyle.iconFillOpacity))
@@ -268,7 +269,7 @@ struct AudioExtractorView: View {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
             Button {
-                viewModel.deleteHistory(id: id, modelContext: modelContext)
+                viewModel.deleteHistory(id: id)
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -303,11 +304,8 @@ extension AudioExtractorView {
 }
 
 #Preview {
-    let memoryContainer = try! ModelContainer(
-        for: History.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
-    let viewModel: AudioExtractorViewModel = AudioExtractorViewModel(cacheManager: CacheManager.shared)
+    let memoryContainer: ModelContainer = try! ModelContainer(for: History.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let viewModel: AudioExtractorViewModel = AudioExtractorViewModel()
     let metadata: Data = {
         let dict: [String: Any] = ["duration": 100]
         let metadata = try! JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
@@ -315,20 +313,8 @@ extension AudioExtractorView {
     }()
     
     let mockHistories: [History] = [
-        History(
-            id: UUID(),
-            title: "History",
-            tool: ToolIdentifier.audioExtractor.rawValue,
-            fileUrl: URL(fileURLWithPath: ""),
-            metadata: metadata
-        ),
-        History(
-            id: UUID(),
-            title: "Another History",
-            tool: ToolIdentifier.audioExtractor.rawValue,
-            fileUrl: URL(fileURLWithPath: ""),
-            metadata: metadata
-        )
+        .createMock(tool: .audioExtractor, title: "History", metadata: metadata),
+        .createMock(tool: .audioExtractor, title: "Another History", metadata: metadata)
     ]
     
     mockHistories.forEach { memoryContainer.mainContext.insert($0) }

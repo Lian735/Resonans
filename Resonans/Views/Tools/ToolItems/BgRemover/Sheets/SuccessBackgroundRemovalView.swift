@@ -13,6 +13,8 @@ struct SuccessBackgroundRemovalView: View {
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
     let image: UIImage
+    let fileUrl: URL
+    
     var body: some View {
         VStack(alignment: .center) {
             Text("Success!")
@@ -27,37 +29,21 @@ struct SuccessBackgroundRemovalView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            if let url = saveImageToTemporaryFile(image) {
-                ShareLink(
-                    item: url,
-                    preview: SharePreview("Image", image: Image(uiImage: image))
-                ) {
-                    capsuleLabel(
-                        title: "Save Image",
-                        systemImage: "tray.and.arrow.down",
-                        foreground: accent.color
-                    )
-                    .background(
-                        Capsule()
-                            .stroke(accent.color.opacity(0.35), lineWidth: 1)
-                            .fill(accent.color.opacity(0.07))
-                    )
-                }
-            } else {
-                Text("Failed to prepare image")
+            ShareLink(
+                item: fileUrl,
+                preview: SharePreview("Image", image: Image(uiImage: image))
+            ) {
+                capsuleLabel(
+                    title: "Save Image",
+                    systemImage: "tray.and.arrow.down",
+                    foreground: accent.color
+                )
+                .background(
+                    Capsule()
+                        .stroke(accent.color.opacity(0.35), lineWidth: 1)
+                        .fill(accent.color.opacity(0.07))
+                )
             }
-        }
-    }
-    
-    private func saveImageToTemporaryFile(_ image: UIImage) -> URL? {
-        guard let data = image.pngData() else { return nil }
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("image.png")
-        do {
-            try data.write(to: tempURL)
-            return tempURL
-        } catch {
-            print("Error saving image:", error)
-            return nil
         }
     }
     
@@ -73,5 +59,5 @@ struct SuccessBackgroundRemovalView: View {
 }
 
 #Preview {
-    SuccessBackgroundRemovalView(image: .resonanslogo)
+    SuccessBackgroundRemovalView(image: .resonanslogo, fileUrl: URL(filePath: ""))
 }
