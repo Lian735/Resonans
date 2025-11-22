@@ -59,11 +59,15 @@ struct RemoveBackgroundView: View {
         .sheet(item: $activeSheet) { type in
             switch type {
             case .removeFailed(_):
-                ConversionFailSheet(
-                    accentColor: accent.color,
-                    primaryColor: .primary,
-                    onRetry: {},
-                    onDone: { activeSheet = nil }
+                FailSheet(
+                    config: .init(
+                        title: "Remove Background Failed!",
+                        accentColor: accent.color,
+                        useRetryButton: false,
+                        onDone: {
+                            activeSheet = nil
+                        }
+                    )
                 )
             case .removeSuccess(let image, let fileUrl):
                 SuccessBackgroundRemovalView(

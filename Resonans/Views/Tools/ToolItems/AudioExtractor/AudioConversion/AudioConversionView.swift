@@ -62,14 +62,16 @@ struct AudioConversionView: View {
                 case .exporter(let exportUrl):
                     ExportPicker(url: exportUrl)
                 case .fail:
-                    ConversionFailSheet(
-                        accentColor: accent.color,
-                        primaryColor: .primary,
-                        onRetry: { },
-                        onDone: {
-                            activeSheet = nil
-                            dismiss()
-                        }
+                    FailSheet(
+                        config: .init(
+                            title: "Conversion Failed",
+                            accentColor: accent.color,
+                            useRetryButton: false,
+                            onDone: {
+                                activeSheet = nil
+                                dismiss()
+                            }
+                        )
                     )
                 }
             }
