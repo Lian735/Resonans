@@ -82,7 +82,10 @@ struct AppCard<Content: View>: View {
             .padding()
             .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .center)
             .glassEffect(
-                interactiveGlassActivated ? (reduceTransparencyActivated ? .clear.interactive() : .regular.interactive()) : (reduceTransparencyActivated ? .clear : .regular),
+                glassEffect(
+                    isInteractive: interactiveGlassActivated,
+                    reduceTransparency: reduceTransparencyActivated
+                ),
                 in: .rect(cornerRadius: AppStyle.cornerRadius)
             )
     }
@@ -90,7 +93,7 @@ struct AppCard<Content: View>: View {
     private var nonGlassView: some View {
         content()
             .padding()
-            .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .leading)
+            .frame(maxWidth: isMaxWidth ? .infinity : nil, alignment: .center)
             .background(
                 RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                     .fill(.primary.opacity(0.09))
@@ -101,6 +104,12 @@ struct AppCard<Content: View>: View {
             )
             .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
             .shadow(ShadowConfiguration.smallConfiguration(for: colorScheme))
+    }
+    
+    @available(iOS 26.0, *)
+    private func glassEffect(isInteractive: Bool, reduceTransparency: Bool) -> Glass {
+        let base: Glass = reduceTransparency ? .clear : .regular
+        return isInteractive ? base.interactive() : base
     }
 }
 
