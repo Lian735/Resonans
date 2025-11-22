@@ -55,15 +55,26 @@ struct BgRemoverView: View {
             case .recents(let url):
                 ExportPicker(url: url)
             case .tool(let image):
-                RemoveBackgroundView(image: image, modelContext: modelContext)
+                RemoveBackgroundView(
+                    image: image,
+                    modelContext: modelContext,
+                    onSuccessRemove: {
+                        viewModel.fetchHistories()
+                    },
+                    onRetake: {
+                        viewModel.handleOpenCamera()
+                    }
+                )
             case .cameraNotAuthorized(let status):
                 AllowCameraSheet(status: status) { isAccept in
                     withAnimation(.spring(duration: 0.3)) {
                         viewModel.useFullScreenSheet = isAccept
                     }
                 }
-            case .filePreview(let url):
-                FilePreviewView(fileURL: url)
+            case .filePreview(let title, let url):
+                if let uiImage = viewModel.getImageFromUrl(url) {
+                    ImagePreview(title: title, image: uiImage)
+                }
             }
         }
         .fullScreenCover(isPresented: $viewModel.useFullScreenSheet) {
@@ -197,9 +208,9 @@ struct BgRemoverView: View {
             if let url = history.fileUrl {
                 HStack(spacing: 18) {
                     Button {
-                        viewModel.activeSheet = .filePreview(url)
+                        viewModel.activeSheet = .filePreview(title: history.title, url: url)
                     } label: {
-                        Image(systemName: "folder")
+                        Image(systemName: "arrow.up.right.square")
                             .typography(.titleMedium, color: .primary.opacity(0.9))
                     }
                     optionMenu(id: history.id, url: url)

@@ -53,7 +53,7 @@ final class RemoveBackgroundViewModel: ObservableObject {
         do {
             let savedUrl = try FileStorage.shared.saveFile(on: .documents, fileName: fileName, fileData: data)
             let history = History(
-                title: fileName,
+                title: "Image",
                 tool: ToolIdentifier.bgRemover.rawValue,
                 fileUrl: savedUrl
             )

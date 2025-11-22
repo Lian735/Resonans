@@ -112,7 +112,12 @@ final class BgRemoverViewModel: ObservableObject {
 
 extension BgRemoverViewModel {
     enum ActiveSheet: Identifiable {
-        case photoLibrary, recents(URL), tool(image: UIImage), cameraNotAuthorized(status: AuthorizationStatus), filePreview(URL)
+        case photoLibrary
+        case recents(URL)
+        case tool(image: UIImage)
+        case cameraNotAuthorized(status: AuthorizationStatus)
+        case filePreview(title: String, url: URL)
+        
         var id: String { String(describing: self) }
     }
     

@@ -16,9 +16,18 @@ struct RemoveBackgroundView: View {
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     @State var activeSheet: ActiveSheet?
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
+    var onSuccessRemove: () -> Void
+    var onRetake: () -> Void
     
-    init(image: UIImage, modelContext: ModelContext) {
+    init(
+        image: UIImage,
+        modelContext: ModelContext,
+        onSuccessRemove: @escaping ()-> Void,
+        onRetake: @escaping ()-> Void
+    ) {
         self._viewModel = StateObject(wrappedValue: RemoveBackgroundViewModel(image: image, modelContext: modelContext))
+        self.onSuccessRemove = onSuccessRemove
+        self.onRetake = onRetake
     }
     
     var body: some View {
@@ -28,7 +37,6 @@ struct RemoveBackgroundView: View {
             Spacer()
             footerButton
         }
-        .presentationDetents([.medium])
         .padding(.top, 12)
         .padding(.horizontal, 24)
         .background(
@@ -58,7 +66,14 @@ struct RemoveBackgroundView: View {
                     onDone: { activeSheet = nil }
                 )
             case .removeSuccess(let image, let fileUrl):
-                SuccessBackgroundRemovalView(image: image, fileUrl: fileUrl)
+                SuccessBackgroundRemovalView(
+                    image: image,
+                    fileUrl: fileUrl,
+                    onDone: {
+                        dismiss()
+                        onSuccessRemove()
+                    }
+                )
             }
         }
     }
@@ -73,7 +88,7 @@ struct RemoveBackgroundView: View {
                 dismiss()
             }) {
                 AppCard(isMaxWidth: false) {
-                    Text("Done")
+                    Text("Cancel")
                         .typography(.titleSmall, design: .rounded)
                 }
             }
@@ -89,16 +104,28 @@ struct RemoveBackgroundView: View {
                 Text("Image")
                     .typography(.titleLarge)
             }
+            .padding(.horizontal, 24)
         }
-        .frame(width: 250)
     }
     
     private var footerButton: some View {
-        GlassButton(action: viewModel.removeBackground) {
-            Text("Convert")
-                .typography(.titleMedium, color: .white)
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity)
+        HStack {
+            Button {
+                dismiss()
+                onRetake()
+            } label: {
+                AppCard {
+                    Text("Retake")
+                        .typography(.titleMedium, color: .primary)
+                }
+            }
+            Button(action: viewModel.removeBackground) {
+                AppCard {
+                    Text("Convert")
+                        .typography(.titleMedium, color: .primary)
+                        .multilineTextAlignment(.center)
+                }
+            }
         }
         .disabled(viewModel.isLoading)
     }
@@ -122,7 +149,12 @@ extension RemoveBackgroundView {
                 isShown = true
             }
             .sheet(isPresented: $isShown) {
-                RemoveBackgroundView(image: .resonanslogo, modelContext: modelContainer.mainContext)
+                RemoveBackgroundView(
+                    image: .resonanslogo,
+                    modelContext: modelContainer.mainContext,
+                    onSuccessRemove: { print("onSuccessRemove") },
+                    onRetake: { print("onRetake") }
+                )
             }
         }
     }

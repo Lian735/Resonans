@@ -8,15 +8,28 @@
 import SwiftUI
 
 struct SuccessBackgroundRemovalView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
     let image: UIImage
     let fileUrl: URL
+    let onDone: () -> Void
     
     var body: some View {
         VStack(alignment: .center) {
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                    onDone()
+                } label: {
+                    AppCard(isMaxWidth: false) {
+                        Text("Done")
+                    }
+                }
+            }
             Text("Success!")
                 .typography(.displayLarge, color: .green)
             AppCard {
@@ -48,16 +61,17 @@ struct SuccessBackgroundRemovalView: View {
     }
     
     private func capsuleLabel(title: String, systemImage: String, foreground: Color) -> some View {
-        HStack {
-            Spacer()
-            Label(title, systemImage: systemImage)
-                .typography(.titleSmall, color: foreground, design: .rounded)
-            Spacer()
-        }
-        .padding(.vertical, 14)
+        Label(title, systemImage: systemImage)
+            .typography(.titleSmall, color: foreground, design: .rounded)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
     }
 }
 
 #Preview {
-    SuccessBackgroundRemovalView(image: .resonanslogo, fileUrl: URL(filePath: ""))
+    SuccessBackgroundRemovalView(
+        image: .resonanslogo,
+        fileUrl: URL(filePath: ""),
+        onDone: {}
+    )
 }
