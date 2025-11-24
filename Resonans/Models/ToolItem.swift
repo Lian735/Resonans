@@ -95,7 +95,11 @@ enum ToolIdentifier: String, Hashable {
         case .bgRemover:
             BgRemoverView(viewModel: BgRemoverViewModel())
         case .editor:
-            EditorDetailView()
+            if UserDefaults.standard.bool(forKey: AppStorageKey.Settings.experimentalEditor){
+                EditorView2()
+            }else{
+                EditorDetailView()
+            }
         }
     }
 }

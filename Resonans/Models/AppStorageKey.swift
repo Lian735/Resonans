@@ -22,5 +22,6 @@ struct AppStorageKey {
         static let hapticsEnabled = "hapticsEnabled"
         static let soundsEnabled = "soundsEnabled"
         static let experimentalEnabled = "experimentalEnabled"
+        static let experimentalEditor = "ExperimentalEditor"
     }
 }

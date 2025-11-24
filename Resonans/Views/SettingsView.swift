@@ -55,8 +55,10 @@ struct SettingsView: View {
 
     @AppStorage("Glass Effect activated") private var glassEffectActivated: Bool = true
     @AppStorage("Interactive Glass activated") private var interactiveGlassActivated: Bool = false
-    @AppStorage("Reduce Transparency activated") private var reduceTransparencyActivated: Bool = true
+    @AppStorage(AppStorageKey.Settings.reduceTransparencyActivated) private var reduceTransparencyActivated: Bool = true
 
+    @AppStorage(AppStorageKey.Settings.experimentalEditor) private var experimentalEditor: Bool = false
+    
     @State private var headerIsShown = false
     
     var body: some View {
@@ -239,6 +241,7 @@ struct SettingsView: View {
                             
                     }
                 }
+                Toggle("Experimental Editor", isOn: $experimentalEditor)
             }
         }
     }

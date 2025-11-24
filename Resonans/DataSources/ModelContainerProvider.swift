@@ -16,7 +16,7 @@ final class ModelContainerProvider {
             let storeURL = URL.documentsDirectory.appending(path: "coredata.sqlite")
             let config = ModelConfiguration(url: storeURL)
             self.container = try ModelContainer(
-                for: History.self,
+                for: History.self, VideoProject.self,
                 configurations: config
             )
         } catch let error {
