@@ -51,20 +51,27 @@ final class BgRemoverViewModel: ObservableObject {
     func handleOpenCamera() {
         let status = getCameraAuthorization()
         if status == .authorized {
-            withAnimation(.spring) {
-                self.useFullScreenSheet = true
+            self.activeSheet = .camera
+        } else if status == .notDetermined {
+            Task { @MainActor in
+                let granted = await CameraManager.shared.requestCameraAccess()
+                if granted {
+                    self.activeSheet = .camera
+                } else {
+                    self.activeSheet = .cameraNotAuthorized(status: .denied)
+                }
             }
-            
         } else {
             activeSheet = .cameraNotAuthorized(status: status)
         }
     }
     
-    private func handleOpenTool(with image: UIImage) {
+    func handleOpenTool(with image: UIImage) {
         if activeSheet != nil {
             self.activeSheet = nil
         }
-        self.activeSheet = .tool(image: image)
+        let normalized = image.normalizedUp()
+        self.activeSheet = .tool(image: normalized)
     }
     
     private func getCameraAuthorization() -> AuthorizationStatus {
@@ -115,9 +122,9 @@ extension BgRemoverViewModel {
         case photoLibrary
         case recents(URL)
         case tool(image: UIImage)
+        case camera
         case cameraNotAuthorized(status: AuthorizationStatus)
         case filePreview(title: String, url: URL)
-        
         var id: String { String(describing: self) }
     }
     

@@ -31,6 +31,7 @@ struct AudioExtractorView: View {
     @StateObject var viewModel: AudioExtractorViewModel
     @State private var showAllRecents = false
     @State private var activeSheet: ActiveSheet?
+    @State private var isLoading: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
@@ -67,13 +68,24 @@ struct AudioExtractorView: View {
             switch sheetType {
             case .filePicker:
                 FilePicker { url in
-                    activeSheet = .conversion(url)
+                    withAnimation {
+                        isLoading = true
+                    }
+                    // Defer sheet switch to next runloop to show overlay promptly
+                    DispatchQueue.main.async {
+                        activeSheet = .conversion(url)
+                    }
                 }
             case .photoPicker:
                 PhotoLibraryPicker(
                     config: .init(filter: .videos) { urls in
                         guard let firstUrl = urls.first else { return }
-                        activeSheet = .conversion(firstUrl)
+                        withAnimation {
+                            isLoading = true
+                        }
+                        DispatchQueue.main.async {
+                            activeSheet = .conversion(firstUrl)
+                        }
                     }
                 )
             case .conversion(let url):
@@ -84,6 +96,12 @@ struct AudioExtractorView: View {
                     ),
                     videoUrl: url
                 )
+                .onAppear { withAnimation {
+                    isLoading = true
+                } }
+                .onDisappear { withAnimation {
+                    isLoading = false
+                } }
             case .recents(let url):
                 ExportPicker(url: url)
             case .filePreview(let url):
@@ -98,6 +116,18 @@ struct AudioExtractorView: View {
             )
             .ignoresSafeArea()
         )
+        .overlay(
+            Group {
+                if isLoading {
+                    ZStack {
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .ignoresSafeArea()
+                    }
+                }
+            }
+        )
+        .allowsHitTesting(!isLoading)
     }
 
     private var headerSection: some View {
@@ -173,13 +203,14 @@ struct AudioExtractorView: View {
                         let prefixCount = showAllRecents ? viewModel.histories.count : 3
                         let histories = viewModel.histories.prefix(prefixCount)
                         ScrollView {
-                            LazyVStack(spacing: 18) {
+                            LazyVStack(spacing: 12) {
                                 ForEach(histories.indices, id: \.self) { index in
                                     let history = histories[index]
                                     historyCard(history: history)
                                     
                                     if index < histories.count - 1 {
                                         Divider()
+                                            .padding(.leading, 12)
                                     }
                                 }
                             }
@@ -187,7 +218,7 @@ struct AudioExtractorView: View {
                         if viewModel.histories.count > 3 {
                             Button {
                                 HapticsManager.shared.pulse()
-                                withAnimation(.bouncy) {
+                                withAnimation(.default) {
                                     showAllRecents.toggle()
                                 }
                             } label: {
@@ -198,13 +229,10 @@ struct AudioExtractorView: View {
                                         .typography(.bodyBold, color: .primary)
                                 }
                             }
-                            .padding(.top, 6)
                         }
                     }
                 }
                 .animation(.easeInOut, value: viewModel.histories)
-                .padding(.top, 12)
-                .padding(.bottom, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -252,7 +280,7 @@ struct AudioExtractorView: View {
                     Button {
                         activeSheet = .filePreview(url)
                     } label: {
-                        Image(systemName: "folder")
+                        Image(systemName: "square.and.arrow.down")
                             .typography(.titleMedium, color: .primary.opacity(0.9))
                     }
                     optionMenu(id: history.id, url: url)
@@ -313,6 +341,8 @@ extension AudioExtractorView {
     }()
     
     let mockHistories: [History] = [
+        .createMock(tool: .audioExtractor, title: "History", metadata: metadata),
+        .createMock(tool: .audioExtractor, title: "Another History", metadata: metadata),
         .createMock(tool: .audioExtractor, title: "History", metadata: metadata),
         .createMock(tool: .audioExtractor, title: "Another History", metadata: metadata)
     ]

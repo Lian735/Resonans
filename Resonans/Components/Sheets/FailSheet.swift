@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FailSheet: View {
     let config: Config
+    let accentColor: Color
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -33,7 +34,7 @@ struct FailSheet: View {
     // MARK: - Header
     private var header: some View {
         HStack {
-            Text("Conversion Failed")
+            Text("Error")
                 .typography(.displayMedium, color: config.primaryColor)
 
             Spacer()
@@ -42,7 +43,7 @@ struct FailSheet: View {
                 HapticsManager.shared.selection()
                 config.onDone?()
             }) {
-                Text("Dismiss")
+                Text("Cancel")
                     .typography(.titleSmall, color: colorScheme == .dark ? .white: .black)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
@@ -73,20 +74,14 @@ struct FailSheet: View {
                     .contentTransition(.symbolEffect(.replace))
                     .typography(.custom(size: 96, weight: .bold), color: .red, design: .rounded)
                     .scaleEffect(animateError ? 1 : 0.65)
-                    .shadow(color: Color.red.opacity(0.35), radius: 18, x: 0, y: 12)
+                    .shadow(color: Color.red.opacity(0.35), radius: 18, x: 0, y: 0)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 150)
             .onAppear(perform: startAnimation)
-
             Text("Something went wrong while saving.")
                 .typography(.titleLarge, color: config.primaryColor)
                 .multilineTextAlignment(.center)
-
-            Text("Please try again or check your storage permissions.")
-                .typography(.titleSmall, color: .secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
@@ -96,35 +91,34 @@ struct FailSheet: View {
         VStack(spacing: 14) {
             if config.useRetryButton {
                 Button(action: handleRetryTapped) {
-                    capsuleLabel(
-                        title: "Try Again",
-                        systemImage: "arrow.clockwise",
-                        foreground: colorScheme == .dark ? .black : .white
-                    )
-                    .background(config.accentColor)
-                    .clipShape(Capsule())
+                    Label("Try Again", systemImage: "arrow.clockwise")
+                        .frame(maxWidth: .infinity)
+                        .typography(.titleSmall, color: .primary, design: .rounded)
+                        .padding(.vertical, 14)
+                        .background(config.accentColor)
+                        .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
             
             Button {
+                HapticsManager.shared.selection()
                 config.onDone?()
             } label: {
-                capsuleLabel(
-                    title: "Cancel",
-                    systemImage: "xmark",
-                    foreground: config.accentColor
-                )
-                .background(
-                    Capsule()
-                        .stroke(config.accentColor.opacity(0.35), lineWidth: 1)
-                        .fill(config.accentColor.opacity(0.07))
-                )
+                Label("Cancel", systemImage: "xmark")
+                    .frame(maxWidth: .infinity)
+                    .typography(.titleSmall, color: config.accentColor, design: .rounded)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .stroke(config.accentColor.opacity(0.35), lineWidth: 1)
+                            .fill(config.accentColor.opacity(0.07))
+                    )
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
-        .shadow(color: config.accentColor.opacity(0.35), radius: 14, x: 0, y: 8)
+        .shadow(color: config.accentColor.opacity(0.35), radius: 14, x: 0, y: 0)
         .padding(.bottom, 30)
     }
 
@@ -205,6 +199,7 @@ extension FailSheet {
 
 #Preview {
     FailSheet(
-        config: .init(title: "Failed", useRetryButton: true)
+        config: .init(title: "Failed", useRetryButton: true), accentColor: .purple
     )
 }
+
