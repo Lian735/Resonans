@@ -13,12 +13,12 @@ import Vision
 
 final class BgRemoverTool {
     func removeBackground(from image: UIImage) async throws -> UIImage? {
-        guard let inputImage = CIImage(image: image) else {
+        guard let inputCI = CIImage(image: image) else {
             throw BgRemoverError.convertError
         }
-        let maskImage = try createMask(from: inputImage)
-        let outputImage = applyMask(mask: maskImage, to: inputImage)
-        return try convertToUIImage(ciImage: outputImage)
+        let maskImage = try createMask(from: inputCI)
+        let outputImage = applyMask(mask: maskImage, to: inputCI)
+        return try convertToUIImage(ciImage: outputImage, scale: image.scale)
     }
     
     private func createMask(from inputImage: CIImage) throws -> CIImage {
@@ -52,12 +52,14 @@ final class BgRemoverTool {
         return filter.outputImage ?? image
     }
     
-    private func convertToUIImage(ciImage: CIImage) throws -> UIImage {
-        guard let cgImage = CIContext(options: nil).createCGImage(ciImage, from: ciImage.extent) else {
+    private func convertToUIImage(ciImage: CIImage, scale: CGFloat) throws -> UIImage {
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
             throw BgRemoverError.convertError
         }
-        
-        return UIImage(cgImage: cgImage)
+        // Create UIImage with explicit scale and up orientation, then normalize to .up
+        let uiImage = UIImage(cgImage: cgImage, scale: scale, orientation: .up)
+        return uiImage.normalizedUp()
     }
 }
 
@@ -80,5 +82,16 @@ extension BgRemoverTool {
                 return "An unknown error occurred."
             }
         }
+    }
+}
+
+extension UIImage {
+    func normalizedUp() -> UIImage {
+        if imageOrientation == .up { return self }
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        draw(in: CGRect(origin: .zero, size: size))
+        let normalized = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return normalized ?? self
     }
 }

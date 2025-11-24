@@ -7,17 +7,26 @@
 
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct RemoveBackgroundView: View {
     @StateObject var viewModel: RemoveBackgroundViewModel
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    private var background: Color { AppStyle.background(for: colorScheme) }
+    @available(*, deprecated)
+    private var primary: Color { AppStyle.primary(for: colorScheme) }
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
-    @State var activeSheet: ActiveSheet?
+    @State private var revealProgress: CGFloat = 1
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     var onSuccessRemove: () -> Void
     var onRetake: () -> Void
+    
+    // App Storage for "custom" AppCard:
+    @AppStorage(AppStorageKey.Settings.glassEffectActivated) private var glassEffectActivated: Bool = true
+    @AppStorage(AppStorageKey.Settings.interactiveGlassActivated) private var interactiveGlassActivated: Bool = false
+    @AppStorage(AppStorageKey.Settings.reduceTransparencyActivated) private var reduceTransparencyActivated: Bool = true
     
     init(
         image: UIImage,
@@ -33,52 +42,67 @@ struct RemoveBackgroundView: View {
     var body: some View {
         VStack {
             headerSection
-            imageSection
             Spacer()
-            footerButton
+            animatedImageSection
+            Spacer()
+            if let output = viewModel.outputImage, let url = viewModel.fileUrl {
+                VStack(spacing: 12) {
+                    Button(action: {
+                        HapticsManager.shared.selection()
+                        if let url = viewModel.fileUrl, let data = try? Data(contentsOf: url), let pngImage = UIImage(data: data) {
+                            saveToPhotos(pngImage)
+                        } else if let output = viewModel.outputImage {
+                            saveToPhotos(output)
+                        }
+                        onSuccessRemove()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.down")
+                                .foregroundStyle(Color.white)
+                            Text("Save to Photos")
+                                .typography(.titleSmall, color: .white, design: .rounded)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(accent.color)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+
+                    ShareLink(
+                        item: url,
+                        preview: SharePreview("Image", image: Image(uiImage: output))
+                    ) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(accent.color)
+                            Text("Share")
+                                .typography(.titleSmall, color: accent.color, design: .rounded)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            Capsule()
+                                .stroke(accent.color.opacity(0.35), lineWidth: 1)
+                                .fill(accent.color.opacity(0.07))
+                        )
+                    }
+                    .simultaneousGesture(TapGesture().onEnded { HapticsManager.shared.selection() })
+                }
+            }
         }
-        .padding(.top, 12)
+        .padding(.top, 23)
         .padding(.horizontal, 24)
         .background(
             LinearGradient(
-                colors: [accent.gradient.opacity(0.7), .clear],
-                startPoint: .bottomTrailing,
-                endPoint: .top
+                colors: [accent.gradient.opacity(0.7), colorScheme == .dark ? .black : .white],
+                startPoint: .topLeading,
+                endPoint: .bottom
             )
             .ignoresSafeArea()
         )
-        .onChange(of: viewModel.errorMessage) { oldError, newError in
-            if let newError, oldError != newError, !newError.isEmpty {
-                activeSheet = .removeFailed(errorMessage: newError)
-            }
-        }
-        .onChange(of: viewModel.outputImage) { _, newImage in
-            guard let newImage, let url = viewModel.fileUrl else { return }
-            activeSheet = .removeSuccess(image: newImage, fileUrl: url)
-        }
-        .sheet(item: $activeSheet) { type in
-            switch type {
-            case .removeFailed(_):
-                FailSheet(
-                    config: .init(
-                        title: "Remove Background Failed!",
-                        accentColor: accent.color,
-                        useRetryButton: false,
-                        onDone: {
-                            activeSheet = nil
-                        }
-                    )
-                )
-            case .removeSuccess(let image, let fileUrl):
-                SuccessBackgroundRemovalView(
-                    image: image,
-                    fileUrl: fileUrl,
-                    onDone: {
-                        dismiss()
-                        onSuccessRemove()
-                    }
-                )
-            }
+        .onAppear {
+            viewModel.removeBackground()
         }
     }
     
@@ -91,55 +115,141 @@ struct RemoveBackgroundView: View {
                 HapticsManager.shared.selection()
                 dismiss()
             }) {
-                AppCard(isMaxWidth: false) {
-                    Text("Cancel")
-                        .typography(.titleSmall, design: .rounded)
+                Text("Cancel")
+                    .typography(
+                        .titleSmall,
+                        color: colorScheme == .dark ? .white : .black,
+                        design: .rounded
+                    )
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                    .background(primary.opacity(0.07))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(primary.opacity(0.15), lineWidth: 1)
+                    )
+            }
+        }
+    }
+    
+    struct TransparencyGrid: View {
+        let size: CGFloat = 20
+
+        var body: some View {
+            Canvas { context, rect in
+                let cols = Int(rect.width / size) + 2
+                let rows = Int(rect.height / size) + 2
+
+                for y in 0..<rows {
+                    for x in 0..<cols {
+                        let isDark = (x + y).isMultiple(of: 2)
+                        let color = isDark ? Color.gray.opacity(0.35) : Color.gray.opacity(0.12)
+                        let rect = CGRect(x: CGFloat(x) * size,
+                                          y: CGFloat(y) * size,
+                                          width: size,
+                                          height: size)
+                        context.fill(Path(rect), with: .color(color))
+                    }
                 }
             }
         }
     }
     
-    private var imageSection: some View {
-        AppCard {
-            VStack {
-                Image(uiImage: viewModel.image)
+    private var animatedImageSection: some View {
+        ZStack {
+            //Transparency grid
+            
+            TransparencyGrid()
+            
+            // Back layer: converted output if available, else original
+            if let output = viewModel.outputImage {
+                Image(uiImage: output.normalizedOrientation())
                     .resizable()
                     .scaledToFit()
-                Text("Image")
-                    .typography(.titleLarge)
+            } else {
+                Image(uiImage: viewModel.image.normalizedOrientation())
+                    .resizable()
+                    .scaledToFit()
             }
-            .padding(.horizontal, 24)
+
+            // Top layer: original image that will be masked OUT to reveal the converted result
+            Image(uiImage: viewModel.image.normalizedOrientation())
+                .resizable()
+                .scaledToFit()
+                .opacity(revealProgress)
+        }
+        .ignoresSafeArea()
+        .onChange(of: viewModel.outputImage) { _, newValue in
+            guard newValue != nil else { return }
+            // Start from fully showing the original, then fade it out to reveal the output
+            revealProgress = 1
+            withAnimation(.easeInOut(duration: 0.6)) {
+                revealProgress = 0
+            }
+        }
+        .frame(width: 350, height: 350, alignment: .center)
+        .glassEffect(
+            .regular,
+            in: .rect(cornerRadius: AppStyle.cornerRadius)
+        )
+        .mask {
+            RoundedRectangle(cornerRadius: AppStyle.cornerRadius)
+        }
+        .contextMenu {
+            if let output = viewModel.outputImage {
+                Button {
+                    HapticsManager.shared.selection()
+                    if let url = viewModel.fileUrl, let data = try? Data(contentsOf: url), let pngImage = UIImage(data: data) {
+                        saveToPhotos(pngImage)
+                    } else {
+                        saveToPhotos(output)
+                    }
+                } label: {
+                    Label("Save Image", systemImage: "square.and.arrow.down")
+                }
+            } else {
+                Label("Save Image", systemImage: "square.and.arrow.down")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
     
-    private var footerButton: some View {
-        HStack {
-            Button {
-                dismiss()
-                onRetake()
-            } label: {
-                AppCard {
-                    Text("Retake")
-                        .typography(.titleMedium, color: .primary)
-                }
+    private func capsuleLabel(title: String, systemImage: String, foreground: Color) -> some View {
+        Label(title, systemImage: systemImage)
+            .typography(.titleMedium, color: foreground)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 24)
+    }
+    
+    private func saveToPhotos(_ image: UIImage) {
+        let save = {
+            UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        }
+        if #available(iOS 14, *) {
+            let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+            if status == .authorized || status == .limited { save(); return }
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { newStatus in
+                if newStatus == .authorized || newStatus == .limited { save() }
             }
-            Button(action: viewModel.removeBackground) {
-                AppCard {
-                    Text("Convert")
-                        .typography(.titleMedium, color: .primary)
-                        .multilineTextAlignment(.center)
-                }
+        } else {
+            let status = PHPhotoLibrary.authorizationStatus()
+            if status == .authorized { save(); return }
+            PHPhotoLibrary.requestAuthorization { newStatus in
+                if newStatus == .authorized { save() }
             }
         }
-        .disabled(viewModel.isLoading)
     }
 }
 
-extension RemoveBackgroundView {
-    enum ActiveSheet: Identifiable {
-        case removeFailed(errorMessage: String)
-        case removeSuccess(image: UIImage, fileUrl: URL)
-        var id: String { String(describing: self) }
+extension UIImage {
+    func normalizedOrientation() -> UIImage {
+        if imageOrientation == .up { return self }
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        draw(in: CGRect(origin: .zero, size: size))
+        let normalized = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return normalized ?? self
     }
 }
 

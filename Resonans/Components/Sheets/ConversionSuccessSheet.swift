@@ -79,7 +79,7 @@ struct ConversionSuccessSheet: View {
                     .contentTransition(.symbolEffect(.replace))
                     .typography(.custom(size: 96, weight: .bold), color: .green, design: .rounded)
                     .scaleEffect(animateCheck ? 1 : 0.65)
-                    .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 12)
+                    .shadow(color: Color.green.opacity(0.35), radius: 18, x: 0, y: 0)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 150)
@@ -96,30 +96,38 @@ struct ConversionSuccessSheet: View {
     private var actionButtons: some View {
         VStack(spacing: 14) {
             Button(action: handleSaveTapped) {
-                Label("Save to Files", systemImage: "tray.and.arrow.down")
-                    .frame(maxWidth: .infinity)
-                    .typography(.titleSmall, color: .primary, design: .rounded)
-                    .padding(.vertical, 14)
-                    .background(accentColor)
-                    .clipShape(Capsule())
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.down")
+                        .foregroundStyle(Color.white)
+                    Text("Save to Files")
+                        .typography(.titleSmall, color: .white, design: .rounded)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(accentColor)
+                .clipShape(Capsule())
             }
             .buttonStyle(.plain)
 
             ShareLink(item: exportURL) {
-                Label("Share", systemImage: "square.and.arrow.up")
-                    .frame(maxWidth: .infinity)
-                    .typography(.titleSmall, color: accentColor, design: .rounded)
-                    .padding(.vertical, 14)
-                    .background(
-                        Capsule()
-                            .stroke(accentColor.opacity(0.35), lineWidth: 1)
-                            .fill(accentColor.opacity(0.07))
-                    )
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.up")
+                        .foregroundStyle(accentColor)
+                    Text("Share")
+                        .typography(.titleSmall, color: accentColor, design: .rounded)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    Capsule()
+                        .stroke(accentColor.opacity(0.35), lineWidth: 1)
+                        .fill(accentColor.opacity(0.07))
+                )
             }
             .simultaneousGesture(TapGesture().onEnded { HapticsManager.shared.selection() })
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
-        .shadow(color: accentColor.opacity(0.35), radius: 14, x: 0, y: 8)
+        .shadow(color: accentColor.opacity(0.35), radius: 14, x: 0, y: 0)
         .padding(.bottom, 30)
     }
 

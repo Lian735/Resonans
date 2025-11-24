@@ -43,8 +43,15 @@ struct AudioConversionView: View {
     var body: some View {
         mainScrollView
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(backgroundGradient)
-            .safeAreaInset(edge: .bottom) { footer }
+            .background(
+                LinearGradient(
+                    colors: [accent.gradient.opacity(0.7), colorScheme == .dark ? .black : .white],
+                    startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
+            .safeAreaBar(edge: .bottom) { footer }
             .sheet(item: $activeSheet) { sheetType in
                 switch sheetType {
                 case .success(let exportUrl):
@@ -71,7 +78,7 @@ struct AudioConversionView: View {
                                 activeSheet = nil
                                 dismiss()
                             }
-                        )
+                        ), accentColor: accent.color
                     )
                 }
             }
@@ -112,19 +119,11 @@ struct AudioConversionView: View {
                 previewSection
                 Spacer(minLength: 20)
                 settingsSection
+                Spacer(minLength: 120)
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [accent.gradient.opacity(0.7), .clear],
-            startPoint: .bottomTrailing,
-            endPoint: .top
-        )
-        .ignoresSafeArea()
     }
 
     private var headerRow: some View {
@@ -138,7 +137,7 @@ struct AudioConversionView: View {
                 HapticsManager.shared.selection()
                 dismiss()
             }) {
-                Text("Done")
+                Text("Cancel")
                     .typography(
                         .titleSmall,
                         color: colorScheme == .dark ? .white : .black,
@@ -146,11 +145,11 @@ struct AudioConversionView: View {
                     )
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(.primary.opacity(0.07))
+                    .background(primary.opacity(0.07))
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(.primary.opacity(0.15), lineWidth: 1)
+                            .stroke(primary.opacity(0.15), lineWidth: 1)
                     )
             }
         }
@@ -166,23 +165,21 @@ struct AudioConversionView: View {
             actionButtons
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
-        .padding(.top, 12)
-        .padding(.bottom, 28)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(footerBackground)
+//        .background(footerBackground)
     }
 
-    private var footerBackground: some View {
-        LinearGradient(
-            colors: [
-                Color.clear,
-                colorScheme == .dark ? .black : .white.opacity(0.8)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea(edges: .bottom)
-    }
+//    private var footerBackground: some View {
+//        LinearGradient(
+//            colors: [
+//                Color.clear,
+//                colorScheme == .dark ? .black : .white.opacity(0.8)
+//            ],
+//            startPoint: .top,
+//            endPoint: .bottom
+//        )
+//        .ignoresSafeArea(edges: .bottom)
+//    }
 
     // MARK: - Settings Section
     private var settingsSection: some View {
@@ -243,11 +240,11 @@ struct AudioConversionView: View {
         settingsCard {
             HStack {
                 Text("Bitrate")
-                    .typography(.bodyBold, design: .rounded)
+                    .typography(.titleLarge, design: .rounded)
                 Spacer()
                 Text(bitrateLabel)
                     .typography(.caption, color: .primary.opacity(0.8))
-                GlassButton(action: { withAnimation { showBitrateInfo.toggle() } }) {
+                Button(action: { withAnimation { showBitrateInfo.toggle() } }) {
                     Image(systemName: "info.circle")
                         .opacity(0.5)
                 }
@@ -274,7 +271,7 @@ struct AudioConversionView: View {
     private var advancedToggleButton: some View {
         Button(action: toggleAdvanced) {
             HStack {
-                Text(showAdvanced ? "Hide" : "More")
+                Text(showAdvanced ? "Show Less" : "Show More")
                     .typography(.bodyBold, design: .rounded)
                 Image(systemName: showAdvanced ? "chevron.up" : "chevron.down")
                     .typography(.bodyBold, design: .rounded)
@@ -292,8 +289,7 @@ struct AudioConversionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 content()
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 18)
+            .padding(6)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -389,7 +385,7 @@ struct AudioConversionView: View {
                 RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
                     .stroke(accent.color.opacity(0.35), lineWidth: 1)
             )
-            .shadow(color: accent.color.opacity(0.3), radius: 16, x: 0, y: 10)
+            .shadow(color: accent.color.opacity(0.3), radius: 16, x: 0, y: 0)
         }
         .disabled(isProcessing)
         .opacity(isProcessing ? 0.9 : 1)
@@ -514,7 +510,6 @@ private struct VideoPreviewCard: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous))
-        .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
         .onTapGesture {
             showControls = true
             resetHideControlsTimer()

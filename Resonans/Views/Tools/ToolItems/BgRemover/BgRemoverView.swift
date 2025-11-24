@@ -13,6 +13,10 @@ struct BgRemoverView: View {
     @Environment(\.modelContext) var modelContext
     @StateObject var viewModel: BgRemoverViewModel
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
+    @Environment(\.colorScheme) private var colorScheme
+    private var background: Color { AppStyle.background(for: colorScheme) }
+    @available(*, deprecated)
+    private var primary: Color { AppStyle.primary(for: colorScheme) }
     @State var showAllRecents: Bool = false
 
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -73,18 +77,25 @@ struct BgRemoverView: View {
                 }
             case .filePreview(let title, let url):
                 if let uiImage = viewModel.getImageFromUrl(url) {
-                    ImagePreview(title: title, image: uiImage)
+                    ImagePreview(primary: accent.color, title: title, image: uiImage)
                 }
+            case .camera:
+                // Present the full-screen camera picker
+                SystemCameraPicker(
+                    onImagePicked: { image in
+                        // This sets activeSheet = .tool(image:) internally
+                        viewModel.handleImageFromPhotoLibrary(image)
+                    },
+                    onCancel: { /* no-op is fine; the sheet will dismiss itself */ }
+                )
+                .ignoresSafeArea(edges: .bottom)
             }
         }
-        .fullScreenCover(isPresented: $viewModel.useFullScreenSheet) {
-            cameraView
-            }
         .background(
             LinearGradient(
                 colors: [accent.gradient.opacity(0.7), .clear],
-                startPoint: .bottomTrailing,
-                endPoint: .top
+                startPoint: .topLeading,
+                endPoint: .bottom
             )
             .ignoresSafeArea()
         )
@@ -145,7 +156,7 @@ struct BgRemoverView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 40)
                     } else {
-                        let prefixCount = showAllRecents ? viewModel.recents.count : 3
+                        let prefixCount = showAllRecents ? viewModel.histories.count : 3
                         let histories = Array(viewModel.histories.prefix(prefixCount))
                         ForEach(histories.indices, id: \.self) { index in
                             let history = histories[index]
@@ -159,21 +170,22 @@ struct BgRemoverView: View {
                         }
                         
                         if viewModel.histories.count > 3 {
-                            GlassButton {
+                            Button {
                                 HapticsManager.shared.pulse()
-                                withAnimation(.easeInOut(duration: 0.25)) {
+                                withAnimation(.default) {
                                     showAllRecents.toggle()
                                 }
                             } label: {
-                                Text(showAllRecents ? "Show less" : "Show more")
-                                    .typography(.bodyBold, color: .primary.opacity(0.75), design: .rounded)
+                                HStack {
+                                    Text(showAllRecents ? "Show less" : "Show more")
+                                        .typography(.bodyBold, color: .primary, design: .rounded)
+                                    Image(systemName: showAllRecents ? "chevron.up" : "chevron.down")
+                                        .typography(.bodyBold, color: .primary)
+                                }
                             }
-                            .padding(.top, 6)
                         }
                     }
                 }
-                .padding(.top, 12)
-                .padding(.bottom, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -182,36 +194,40 @@ struct BgRemoverView: View {
     @ViewBuilder
     private func historyCard(_ history: BgRemovalHistory) -> some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                .fill(.primary.opacity(AppStyle.iconFillOpacity))
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Image(systemName: "waveform")
-                        .typography(.titleMedium, color: .primary.opacity(0.9))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
-                        .stroke(.primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
-                )
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(history.title)
-                    .typography(.titleMedium, color: .primary, design: .rounded)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                HStack(alignment: .center, spacing: 6) {
-                    Text(history.createdAt.formatted(date: .abbreviated, time: .omitted))
-                        .typography(.caption, color: .primary)
+            ZStack {
+                RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                    .fill(.primary.opacity(AppStyle.iconFillOpacity))
+
+                if let url = history.fileUrl, let uiImage = viewModel.getImageFromUrl(url) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .clipped()
                 }
             }
-            Spacer()
+            .frame(width: 48, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
+                    .stroke(.primary.opacity(AppStyle.iconStrokeOpacity), lineWidth: 1)
+            )
+            
             if let url = history.fileUrl {
                 HStack(spacing: 18) {
                     Button {
                         viewModel.activeSheet = .filePreview(title: history.title, url: url)
                     } label: {
-                        Image(systemName: "arrow.up.right.square")
-                            .typography(.titleMedium, color: .primary.opacity(0.9))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(history.title)
+                                .typography(.titleMedium, color: .primary, design: .rounded)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            HStack(alignment: .center, spacing: 6) {
+                                Text(history.createdAt.formatted(date: .abbreviated, time: .omitted))
+                                    .typography(.caption, color: .primary)
+                            }
+                        }
+                        Spacer()
                     }
                     optionMenu(id: history.id, url: url)
                 }
@@ -259,26 +275,6 @@ struct BgRemoverView: View {
         .buttonStyle(.plain)
     }
     
-    private var cameraView: some View {
-        BgRemoverCameraView(
-            cameraManager: CameraManager.shared,
-            onPhotoCaptured: { image in
-                withAnimation(.spring(duration: 0.3)) {
-                    viewModel.useFullScreenSheet = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    viewModel.handleImageFromPhotoLibrary(image)
-                }
-            },
-            onClose: {
-                withAnimation(.spring(duration: 0.3)) {
-                    viewModel.useFullScreenSheet = false
-                }
-            }
-        )
-        .transition(.opacity)
-        .zIndex(1)
-    }
     private func titleBox<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
             VStack(alignment: .leading, spacing: 16) {
                 content()
@@ -291,6 +287,8 @@ struct BgRemoverView: View {
     let memoryContainer: ModelContainer = .mock(for: History.self)
     let mockData: [History] = [
         .createMock(tool: .bgRemover, title: "Background 1"),
+        .createMock(tool: .bgRemover, title: "Background 2"),
+        .createMock(tool: .bgRemover, title: "Background 1"),
         .createMock(tool: .bgRemover, title: "Background 2")
     ]
     mockData.forEach { memoryContainer.mainContext.insert($0) }
@@ -299,3 +297,4 @@ struct BgRemoverView: View {
     }
     .modelContainer(memoryContainer)
 }
+
