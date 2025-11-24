@@ -9,7 +9,7 @@ import SwiftUI
 
 extension Color {
     init?(hex: String) {
-        var hexString = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
+        let hexString = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
         guard hexString.count == 6,
               let intCode = Int(hexString, radix: 16) else { return nil }
         
