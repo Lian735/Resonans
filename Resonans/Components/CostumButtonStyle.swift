@@ -77,3 +77,5 @@ struct ResonansDefaultButtonStyle: ButtonStyle{
         }
     }
 }
+
+typealias DefaultButtonStyle = ResonansDefaultButtonStyle

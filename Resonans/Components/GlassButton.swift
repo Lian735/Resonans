@@ -4,6 +4,7 @@
 
 import SwiftUI
 
+@available(*, deprecated, message: "Please use SwiftUI's `Button` with `DefaultButtonStyle` instead.")
 struct GlassButton<Label: View>: View {
     var action: () -> Void
     @ViewBuilder var label: () -> Label
