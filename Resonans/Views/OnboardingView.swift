@@ -35,24 +35,6 @@ struct OnboardingFlowView: View {
     /// Predefined workflow scenarios presented during onboarding.
     ///
     /// Each workflow provides context-specific descriptions to help users understand how to use the app.
-    enum WorkflowOption: String, CaseIterable, Identifiable {
-        case contentCreator = "Content creator"
-        case lecture = "Lecture notes"
-        case podcast = "Podcast cleanup"
-
-        var id: String { rawValue }
-
-        var description: String {
-            switch self {
-            case .contentCreator:
-                return "Extract audio from your latest shoot and repurpose it for shorts, reels or voiceovers."
-            case .lecture:
-                return "Pull crisp audio from recorded talks to build searchable study notes."
-            case .podcast:
-                return "Split video interviews into clean audio tracks ready for your feed."
-            }
-        }
-    }
 
     let accent: Color
     let primary: Color
@@ -61,11 +43,31 @@ struct OnboardingFlowView: View {
     
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var viewModel: ContentViewModel
 
     @State private var currentStep = 0
     @State private var selectedFavorites: Set<ToolIdentifier>
-    @State private var selectedWorkflow: WorkflowOption = .contentCreator
     @State private var showTips = true
+    
+    @State private var favouritedemo: Bool = false
+    @State private var favouritedemocompleted: Bool = false
+    @State private var handOffset: CGSize = .zero
+    @State private var handScale: CGFloat = 1.0
+    @State private var isDragging: Bool = false
+    @State private var logoRotation: CGFloat = .zero
+
+    // Backing state for appearance and accent selections
+    @AppStorage("appearance") private var appearanceRaw: String = Appearance.system.rawValue
+    @AppStorage("accent") private var accentRaw: String = AccentColorOption.purple.rawValue
+
+    // Convenience computed properties
+    private var appearance: Appearance {
+        Appearance(rawValue: appearanceRaw) ?? .system
+    }
+    private var accentOption: AccentColorOption {
+        AccentColorOption(rawValue: accentRaw) ?? .purple
+    }
+
 
     init(
         accent: Color,
@@ -87,25 +89,25 @@ struct OnboardingFlowView: View {
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 28) {
+            VStack(spacing: 12) {
                 header
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, AppStyle.innerPadding)
                 TabView(selection: $currentStep) {
                     Group {
                         introStep.tag(0)
                         favoritesStep.tag(1)
-                        workflowStep.tag(2)
+                        adjustments.tag(2)
                     }
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, AppStyle.innerPadding)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.3), value: currentStep)
-
+                Spacer()
+                
                 Group {
                     progressIndicators
                     footerButtons
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, AppStyle.innerPadding)
             }
             .padding(.top, 36)
             .padding(.bottom, 32)
@@ -115,142 +117,224 @@ struct OnboardingFlowView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Welcome to Resonans")
-                    .typography(.titleLarge, color: primary, design: .rounded)
-                Text(stepSubtitle)
-                    .typography(.body, color: primary.opacity(0.7), design: .rounded)
+                Text("Welcome to Resonans!")
+                    .typography(.displaySmall, color: primary, design: .rounded)
+                HStack {
+                    Text(stepSubtitle)
+                        .typography(.body, color: primary.opacity(0.7), design: .rounded)
+                    Spacer()
+//                    Button("Skip") {
+//                        finish()
+//                    }
+//                    .typography(.captionBold, color: primary.opacity(0.8), design: .rounded)
+//                    .padding(5)
+//                    .background {
+//                        RoundedRectangle(cornerRadius: 9)
+//                            .opacity(0.3)
+//                            .foregroundColor(.yellow)
+//                    }
+                }
             }
-            Spacer()
-            Button("Skip") {
-                finish()
-            }
-            .typography(.captionBold, color: primary.opacity(0.8), design: .rounded)
         }
     }
 
     private var introStep: some View {
-        VStack(spacing: 26) {
-            Spacer()
-            ZStack {
-                RoundedRectangle(cornerRadius: 36, style: .continuous)
-                    .fill(primary.opacity(AppStyle.cardFillOpacity))
-                    .frame(height: 240)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 36, style: .continuous)
-                            .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-                    )
-                    .shadow(ShadowConfiguration.largeConfiguration(for: colorScheme))
-
+        VStack(spacing: 18) {
+            AppCard {
                 VStack(spacing: 18) {
-                    Image(systemName: "waveform.circle.fill")
+                    Image("resonanslogo.SFSymbol")
                         .typography(.custom(size: 64, weight: .bold), color: accent)
-                    Text("One workspace for every creative routine")
+                        .shadow(color: accent.opacity(0.35), radius: 14, x: 0, y: 0)
+                        .symbolEffect(.breathe, options: .nonRepeating)
+                        .scaleEffect(logoRotation / 50 + 1)
+                        .rotationEffect(.degrees(logoRotation))
+                        .gesture(
+                            DragGesture()
+                                .onChanged { value in
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                                        logoRotation = value.translation.width / 4 + value.translation.height / 4
+                                        HapticsManager.shared.pulse()
+                                    }
+                                }
+                                .onEnded { _ in
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                                        logoRotation = .zero
+                                        HapticsManager.shared.pulse()
+                                    }
+                                }
+                        )
+                    Text("Multiple Editing Tools")
                         .typography(.titleLarge, color: primary, design: .rounded)
                         .multilineTextAlignment(.center)
-                    Text("Resonans keeps all of your media tools organised. Pin favourites, pick up where you left off and stay in the loop with app news.")
+                    Text("Resonans keeps all of your media tools organised. Pin favourites, pick up where you left off.")
                         .typography(.caption, color: primary.opacity(0.75), design: .rounded)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 12)
                 }
-                .padding(.horizontal, 22)
             }
             .frame(maxWidth: .infinity)
-
+        
             VStack(spacing: 18) {
-                Label("Tap the heart icon to favourite tools you love", systemImage: "heart.circle.fill")
-                    .typography(.callout, color: primary, design: .rounded)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(primary.opacity(AppStyle.cardFillOpacity))
-                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                Label("Swipe through onboarding to learn the essentials", systemImage: "hand.draw.fill")
-                    .typography(.callout, color: primary, design: .rounded)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(primary.opacity(AppStyle.cardFillOpacity))
-                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                AppCard {
+                    HStack {
+                        if favouritedemocompleted {
+                            Text("Tap the star icon to favourite tools you love, great!")
+                                .typography(.callout, color: primary, design: .rounded)
+                        } else {
+                            Text("Tap the star icon to favourite tools you love")
+                                .typography(.callout, color: primary, design: .rounded)
+                        }
+                        Spacer()
+                        Button {
+                            if favouritedemo {
+                                // turning off
+                                favouritedemo = false
+                            } else {
+                                // turning on
+                                favouritedemo = true
+                                favouritedemocompleted = true
+                            }
+                            HapticsManager.shared.selection()
+                        } label: {
+                            Group {
+                                Image(systemName: favouritedemo ? "star.fill" : "star")
+                                    .foregroundStyle(favouritedemo ? .yellow : Color(.gray))
+                            }
+                            .modifier(ConditionalSymbolBounce(apply: favouritedemo))
+                        }
+                    }
+                    .padding(.horizontal, 5)
+                }
+                AppCard {
+                    HStack {
+                        Text("Swipe through onboarding to learn the essentials")
+                            .typography(.callout, color: primary, design: .rounded)
+                        Spacer()
+                        Image(systemName: "hand.draw.fill")
+                            .foregroundStyle(Color(isDragging ? accent.opacity(0.35) : .gray))
+                            .scaleEffect(handScale)
+                            .offset(handOffset)
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                                            handOffset = value.translation
+                                            handScale = 1.5
+                                            HapticsManager.shared.pulse()
+                                            isDragging = true
+                                        }
+                                    }
+                                    .onEnded { _ in
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                                            handOffset = .zero
+                                            handScale = 1.0
+                                            HapticsManager.shared.pulse()
+                                            isDragging = false
+                                        }
+                                    }
+                            )
+                    }
+                    .padding(.horizontal, 5)
+                }
             }
 
             Spacer()
         }
+        .padding(.vertical, AppStyle.innerPadding)
+
     }
 
     private var favoritesStep: some View {
-        VStack(spacing: 24) {
-            Text("Choose your go-to tools")
-                .typography(.titleLarge, color: primary, design: .rounded)
-
-            Text("Tap to pin tools you use the most. We'll show them right on the home screen so they’re always ready.")
-                .typography(.callout, color: primary.opacity(0.75), design: .rounded)
-                .multilineTextAlignment(.center)
-
+        VStack(spacing: 18) {
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    ForEach(toolManager.tools) { tool in
-                        FavoriteSelectionCard(
-                            tool: tool,
-                            isSelected: selectedFavorites.contains(tool.id),
-                            accent: accent,
-                            primary: primary,
-                            colorScheme: colorScheme
-                        ) {
-                            if selectedFavorites.contains(tool.id) {
-                                selectedFavorites.remove(tool.id)
-                            } else {
-                                selectedFavorites.insert(tool.id)
-                            }
+                GlassEffectContainer {
+                    LazyVStack(spacing: 18) {
+                        ForEach(toolManager.tools) { tool in
+                            ToolOverview(tool: tool)
+                        }
+                        .onAppear { selectedFavorites = viewModel.favoriteToolIds }
+                        .onChange(of: viewModel.favoriteToolIds) { _, newValue in
+                            selectedFavorites = newValue
                         }
                     }
                 }
-                .padding(.top, 12)
+                .scrollTransition(.animated) { content, phase in
+                    content
+                        .opacity(phase.isIdentity ? 1 : 0.3)
+                        .scaleEffect(phase.isIdentity ? 1.0 : 0.98)
+                        .blur(radius: phase.isIdentity ? 0 : 1)
+                }
             }
         }
+        .padding(.vertical, AppStyle.innerPadding)
     }
 
-    private var workflowStep: some View {
-        VStack(spacing: 26) {
-            Text("Plan your first session")
-                .typography(.titleLarge, color: primary, design: .rounded)
-
-            Text("Tell us what you’re working on and we'll highlight the best starting point.")
-                .typography(.body, color: primary.opacity(0.75), design: .rounded)
-                .multilineTextAlignment(.center)
-
-            Picker("Workflow", selection: $selectedWorkflow) {
-                ForEach(WorkflowOption.allCases) { option in
-                    Text(option.rawValue).tag(option)
-                }
+    private var adjustments: some View {
+        VStack {
+            HStack {
+                Text("Choose Appearance")
+                    .typography(.titleLarge, color: primary, design: .rounded)
+                Spacer()
             }
-            .pickerStyle(.segmented)
-
-            VStack(alignment: .leading, spacing: 18) {
-                Label(selectedWorkflow.rawValue, systemImage: "sparkles")
-                    .typography(.titleSmall, color: primary, design: .rounded)
-                Text(selectedWorkflow.description)
-                    .typography(.callout, color: primary.opacity(0.75), design: .rounded)
-
-                Toggle(isOn: $showTips) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Show guided tips")
-                            .typography(.callout, color: primary, design: .rounded)
-                        Text("We'll highlight useful gestures and shortcuts while you explore.")
-                            .typography(.caption, color: primary.opacity(0.6), design: .rounded)
+            HStack(spacing: 12) {
+                ForEach(Appearance.allCases) { mode in
+                    VStack(spacing: 6) {
+                        ZStack {
+                            themePreview(for: mode)
+                                .transition(.opacity)
+                                .animation(.easeInOut(duration: 0.3), value: appearance)
+                                .background {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .inset(by: -4)
+                                        .stroke(mode == appearance ? accent : .clear, lineWidth: 3)
+                                        .scaleEffect(mode == appearance ? 1 : 0.9)
+                                        .animation(.easeInOut(duration: 0.2), value: appearance)
+                                }
+                        }
+                        .onTapGesture {
+                            HapticsManager.shared.pulse()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                appearanceRaw = mode.rawValue
+                            }
+                        }
+                        Text(mode.label)
+                            .typography(.callout, color: .primary.opacity(0.8), design: .rounded)
                     }
                 }
-                .toggleStyle(SwitchToggleStyle(tint: accent))
-                .padding(.top, 8)
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(primary.opacity(AppStyle.cardFillOpacity))
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(primary.opacity(AppStyle.strokeOpacity), lineWidth: 1)
-            )
-            .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
+                    
+            HStack {
+                Text("Choose Accent Color")
+                    .typography(.titleLarge, color: primary, design: .rounded)
+                Spacer()
+            }
+            .padding(.top, AppStyle.innerPadding)
+            
+            HStack(spacing: 16) {
+                ForEach(AccentColorOption.allCases) { option in
+                    ZStack {
+                        Circle()
+                            .stroke(.primary, lineWidth: option == accentOption ? 3 : 0)
+                            .frame(width: 28, height: 28)
+                            .scaleEffect(option == accentOption ? 1.3 : 1.0)
+                            .animation(.easeInOut(duration: 0.25), value: accentOption)
+                        Circle()
+                            .fill(option.color)
+                            .frame(width: 28, height: 28)
+                    }
+                    .animation(.easeInOut(duration: 0.25), value: accentOption)
+                    .onTapGesture {
+                        HapticsManager.shared.pulse()
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            accentRaw = option.rawValue
+                        }
+                    }
+                }
+                Spacer()
+            }
+            
             Spacer()
         }
+        .padding(.vertical, AppStyle.innerPadding)
     }
 
     private var progressIndicators: some View {
@@ -304,9 +388,9 @@ struct OnboardingFlowView: View {
 
     private var stepSubtitle: String {
         switch currentStep {
-        case 0: return "Swipe to explore the essentials"
-        case 1: return "Pick your favourites to pin on Home"
-        default: return "Get personalised tips before you start"
+        case 0: return "The Video-Editing Tools App"
+        case 1: return "Pick your favorites to pin on Home"
+        default: return "Make it your own!"
         }
     }
 
@@ -326,7 +410,7 @@ private struct FavoriteSelectionCard: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        AppCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top) {
                     ZStack {
@@ -337,34 +421,63 @@ private struct FavoriteSelectionCard: View {
                                 RoundedRectangle(cornerRadius: AppStyle.iconCornerRadius, style: .continuous)
                                     .stroke(Color.white.opacity(0.18), lineWidth: 1)
                             )
+                            .glassEffect(.regular)
                         Image(systemName: tool.iconName)
                             .typography(.titleLarge, color: .white)
                     }
-
+                    
                     Spacer()
+                    Button(action: action) {
+                        Group {
+                            Image(systemName: isSelected ? "star.fill" : "star")
+                                .foregroundStyle(isSelected ? .yellow : Color(.gray))
+                        }
+                        .modifier(ConditionalSymbolBounce(apply: isSelected))
+                    }
 
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .typography(.custom(size: 24, weight: .semibold), color: isSelected ? accent : primary.opacity(0.35))
                 }
-
+                
                 Text(tool.title)
                     .typography(.bodyBold, color: primary, design: .rounded)
                 Text(tool.subtitle)
                     .typography(.caption, color: primary.opacity(0.7), design: .rounded)
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                    .fill(primary.opacity(AppStyle.cardFillOpacity))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.cornerRadius, style: .continuous)
-                            .stroke(primary.opacity(isSelected ? 0.35 : AppStyle.strokeOpacity), lineWidth: isSelected ? 2 : 1)
-                    )
-            )
-            .shadow(ShadowConfiguration.mediumConfiguration(for: colorScheme))
         }
-        .buttonStyle(.plain)
+    }
+}
+
+private struct ConditionalSymbolBounce: ViewModifier {
+    let apply: Bool
+    func body(content: Content) -> some View {
+        if apply {
+            content.symbolEffect(.bounce, options: .nonRepeating)
+        } else {
+            content
+        }
+    }
+}
+
+@ViewBuilder
+private func themePreview(for mode: Appearance) -> some View {
+    switch mode {
+    case .light:
+        Image("white")
+            .resizable()
+            .scaledToFit()
+            .cornerRadius(12)
+            .transition(.opacity)
+    case .dark:
+        Image("dark")
+            .resizable()
+            .scaledToFit()
+            .cornerRadius(12)
+            .transition(.opacity)
+    case .system:
+        Image("darkandwhite")
+            .resizable()
+            .scaledToFit()
+            .cornerRadius(12)
+            .transition(.opacity)
     }
 }
 
@@ -373,4 +486,6 @@ private struct FavoriteSelectionCard: View {
         accent: Color.purple,
         primary: .black
     ) { _, _ in }
+    .environmentObject(ContentViewModel())
 }
+

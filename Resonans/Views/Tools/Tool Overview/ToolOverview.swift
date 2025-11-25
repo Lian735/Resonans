@@ -59,6 +59,7 @@ struct ToolOverview: View {
                                 } label: {
                                     Image(systemName: isFavorite ? "star.fill" : "star")
                                         .foregroundStyle(isFavorite ? .yellow : Color(.gray))
+                                        .modifier(ConditionalSymbolBounce(apply: isFavorite))
                                 }
                                      
                                 Spacer()
@@ -111,6 +112,7 @@ struct ToolOverview: View {
                                     } label: {
                                         Image(systemName: isFavorite ? "star.fill" : "star")
                                             .foregroundStyle(isFavorite ? .yellow : Color(.gray))
+                                            .modifier(ConditionalSymbolBounce(apply: isFavorite))
                                     }
                                          
                                     Spacer()
@@ -178,6 +180,17 @@ var betaBadge: some View {
                     )
             }
         )
+}
+
+private struct ConditionalSymbolBounce: ViewModifier {
+    let apply: Bool
+    func body(content: Content) -> some View {
+        if apply {
+            content.symbolEffect(.bounce, options: .nonRepeating)
+        } else {
+            content
+        }
+    }
 }
 
 #Preview {
