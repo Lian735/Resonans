@@ -112,6 +112,7 @@ struct OnboardingFlowView: View {
             .padding(.top, 36)
             .padding(.bottom, 32)
         }
+        .animation(.easeInOut, value: currentStep)
     }
 
     private var header: some View {

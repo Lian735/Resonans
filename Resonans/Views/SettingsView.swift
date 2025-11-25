@@ -241,7 +241,13 @@ struct SettingsView: View {
                             
                     }
                 }
+                Divider()
                 Toggle("Experimental Editor", isOn: $experimentalEditor)
+                Divider()
+                Button("Show onboarding"){
+                    viewModel.showOnboarding = true
+                }
+                .buttonStyle(ResonansDefaultButtonStyle())
             }
         }
     }
