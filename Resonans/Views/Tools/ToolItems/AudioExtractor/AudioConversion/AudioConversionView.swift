@@ -11,8 +11,6 @@ struct AudioConversionView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
-    @available(*, deprecated)
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
     
     @StateObject var viewModel: AudioConversionViewModel
     @State private var isProcessing = false
@@ -145,11 +143,11 @@ struct AudioConversionView: View {
                     )
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(primary.opacity(0.07))
+                    .background(Color.primary.opacity(0.07))
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(primary.opacity(0.15), lineWidth: 1)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                     )
             }
         }

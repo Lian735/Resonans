@@ -15,8 +15,6 @@ struct RemoveBackgroundView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     private var background: Color { AppStyle.background(for: colorScheme) }
-    @available(*, deprecated)
-    private var primary: Color { AppStyle.primary(for: colorScheme) }
     @AppStorage(AppStorageKey.Settings.accentColor) private var accentRaw = AccentColorOption.purple.rawValue
     @State private var revealProgress: CGFloat = 1
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
@@ -123,11 +121,11 @@ struct RemoveBackgroundView: View {
                     )
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(primary.opacity(0.07))
+                    .background(Color.primary.opacity(0.07))
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(primary.opacity(0.15), lineWidth: 1)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                     )
             }
         }
@@ -274,3 +272,4 @@ extension UIImage {
     }
     return Preview()
 }
+
