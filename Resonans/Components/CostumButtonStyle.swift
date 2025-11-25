@@ -48,6 +48,8 @@ struct ResonansDefaultButtonStyle: ButtonStyle{
     
     @AppStorage("accentColor") private var accentRaw: String = AccentColorOption.purple.rawValue
     
+    @AppStorage(AppStorageKey.Settings.useNativeGlass) private var nativeGlass: Bool = false
+    
     private var accent: AccentColorOption { AccentColorOption(rawValue: accentRaw) ?? .purple }
     
     private let disableGlassEffect: Bool
@@ -58,20 +60,28 @@ struct ResonansDefaultButtonStyle: ButtonStyle{
     
     func makeBody(configuration config : Configuration) -> some View {
         if glassEffectActivated && !disableGlassEffect{
-            config.label
-                .foregroundStyle(Color(.label))
-                .padding(.vertical, 7)
-                .padding(.horizontal, 10)
-                .background {
-                    Capsule()
-                        .foregroundStyle(Color(accent.color))
-                        .opacity(0.5)
-                        .overlay(
-                            Capsule()
-                                .stroke(Color(accent.color), lineWidth: 0.75)
-                        )
-                }
-                .glassEffect(.regular.interactive())
+            if nativeGlass{
+                config.label
+                    .foregroundStyle(Color(.label))
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, 10)
+                    .glassEffect(.regular.tint(.accentColor).interactive())
+            }else{
+                config.label
+                    .foregroundStyle(Color(.label))
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, 10)
+                    .background {
+                        Capsule()
+                            .foregroundStyle(Color(accent.color))
+                            .opacity(0.5)
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color(accent.color), lineWidth: 0.75)
+                            )
+                    }
+                    .glassEffect(.regular.interactive())
+            }
         }else{
             config.label
         }

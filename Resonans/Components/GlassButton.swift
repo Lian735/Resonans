@@ -60,20 +60,3 @@ struct GlassButton<Label: View>: View {
         }
     }
 }
-
-#Preview {
-    struct Preview: View {
-        var body: some View {
-            VStack {
-                GlassButton("Hello") {
-                    
-                }
-                SwiftUI.Button("Hello") {
-                    
-                }
-            }
-        }
-    }
-    return Preview()
-}
-

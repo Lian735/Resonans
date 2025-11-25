@@ -29,6 +29,8 @@ struct SettingsView: View {
     @AppStorage(AppStorageKey.Settings.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(AppStorageKey.Settings.soundsEnabled) private var soundsEnabled = true
     @AppStorage(AppStorageKey.Settings.experimentalEnabled) private var experimentalEnabled = false
+    @AppStorage(AppStorageKey.Settings.useNativeGlass) private var nativeGlass: Bool = false
+    
     @State private var showTopBorder = false
 
     private var appearance: Appearance {
@@ -243,6 +245,8 @@ struct SettingsView: View {
                 }
                 Divider()
                 Toggle("Experimental Editor", isOn: $experimentalEditor)
+                Divider()
+                Toggle("Native Glass Design", isOn: $nativeGlass)
                 Divider()
                 Button("Show onboarding"){
                     viewModel.showOnboarding = true

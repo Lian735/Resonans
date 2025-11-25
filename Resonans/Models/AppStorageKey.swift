@@ -23,5 +23,6 @@ struct AppStorageKey {
         static let soundsEnabled = "soundsEnabled"
         static let experimentalEnabled = "experimentalEnabled"
         static let experimentalEditor = "ExperimentalEditor"
+        static let useNativeGlass = "useNativeGlass"
     }
 }
