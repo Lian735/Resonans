@@ -109,9 +109,10 @@ struct EditorDetailView: View {
                     HStack {
                         Image(systemName: "xmark")
                         Spacer()
-                        GlassButton("Export") {
+                        Button("Export") {
                             HapticsManager.shared.pulse()
                         }
+                        .buttonStyle(DefaultButtonStyle())
                     }
                     .padding()
                 }

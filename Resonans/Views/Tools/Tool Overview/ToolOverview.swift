@@ -75,7 +75,7 @@ struct ToolOverview: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             else {
-                GlassButton(disableGlassEffect: true){
+                Button{
                     HapticsManager.shared.selection()
                     viewModel.selectedTool = tool.id
                 } label: {
@@ -127,6 +127,7 @@ struct ToolOverview: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .buttonStyle(DefaultButtonStyle(disableGlassEffect: true))
             }
         }
         .navigationDestination(isPresented: Binding(get: {

@@ -60,14 +60,14 @@ struct RecentRow: View {
                     HapticsManager.shared.selection()
                 })
                 
-                GlassButton(action: {
+                Button(action: {
                     HapticsManager.shared.pulse()
                     onSave(item)
                 }) {
                     Image(systemName: "tray.and.arrow.down")
                         .typography(.custom(size: 22, weight: .bold))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(DefaultButtonStyle())
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -257,9 +257,10 @@ extension UIImage {
         let modelContainer: ModelContainer = .mock(for: History.self)
         
         var body: some View {
-            GlassButton("Show Sheet") {
+            Button("Show Sheet") {
                 isShown = true
             }
+            .buttonStyle(DefaultButtonStyle())
             .sheet(isPresented: $isShown) {
                 RemoveBackgroundView(
                     image: .resonanslogo,

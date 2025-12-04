@@ -218,10 +218,11 @@ struct SettingsView: View {
 
             Divider()
 
-            GlassButton("Clear Cache") {
+            Button("Clear Cache") {
                 CacheManager.shared.clear()
                 HapticsManager.shared.notify(.success)
             }
+            .buttonStyle(DefaultButtonStyle())
             .padding(.top, 4)
         }
     }
@@ -270,12 +271,13 @@ struct SettingsView: View {
 
             Divider()
             
-            GlassButton("Send Feedback") {
+            Button("Send Feedback") {
                 HapticsManager.shared.pulse()
                 if let url = URL(string: "mailto:feedback.lian@gmail.com") {
                     openURL(url)
                 }
             }
+            .buttonStyle(DefaultButtonStyle())
             .padding(.top, 4)
         }
     }

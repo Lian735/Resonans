@@ -86,7 +86,7 @@ struct HomeDashboardView: View {
                         
                         Divider()
                         
-                        GlassButton {
+                        Button {
                             HapticsManager.shared.selection()
                             viewModel.selectedTab = .tools
                         } label: {
@@ -110,7 +110,7 @@ struct HomeDashboardView: View {
                             .shadow(color: accent.color.opacity(colorScheme == .dark ? 0.25 : 0.2), radius: 16, x: 0, y: 10)
                             
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(DefaultButtonStyle())
                         .padding(.top, 4)
                     }
                     .scrollTransition(.animated) { content, phase in
