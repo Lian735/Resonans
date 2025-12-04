@@ -147,7 +147,6 @@ extension AllowCameraSheet {
     }
 }
 
-
 #Preview {
     struct Preview: View {
         @State var status: AuthorizationStatus?

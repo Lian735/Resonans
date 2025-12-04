@@ -261,16 +261,19 @@ struct SettingsView: View {
         settingsBox {
             Text("About")
                 .typography(.displaySmall, design: .rounded)
-
+            
             HStack {
                 Text("Version")
                 Spacer()
                 Text(versionDisplayString)
             }
             .foregroundStyle(.primary.opacity(0.8))
-
-            Divider()
             
+            Divider()
+#if DEBUG
+            Text("This is a DEBUG-Build")
+#endif
+            Divider()
             Button("Send Feedback") {
                 HapticsManager.shared.pulse()
                 if let url = URL(string: "mailto:feedback.lian@gmail.com") {
